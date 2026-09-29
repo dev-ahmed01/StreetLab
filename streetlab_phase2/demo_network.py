@@ -18,13 +18,17 @@ def _find_binary(name: str) -> str:
 
 
 def write_demo_network(workdir: str | Path) -> Path:
-    """Create a junction with one direct turn and one valid detour."""
+    """Create a junction with one direct turn and one valid detour.
+
+    netconvert is allowed to infer junction connections from geometry. This is
+    intentionally simpler and more portable across SUMO versions than forcing
+    hand-written connection records for the M1 toy network.
+    """
     workdir = Path(workdir)
     workdir.mkdir(parents=True, exist_ok=True)
 
     nod = workdir / "decision_lab.nod.xml"
     edg = workdir / "decision_lab.edg.xml"
-    con = workdir / "decision_lab.con.xml"
     net = workdir / "decision_lab.net.xml"
 
     nod.write_text(
@@ -41,6 +45,7 @@ def write_demo_network(workdir: str | Path) -> Path:
 """,
         encoding="utf-8",
     )
+
     edg.write_text(
         """<?xml version="1.0" encoding="UTF-8"?>
 <edges>
@@ -55,29 +60,15 @@ def write_demo_network(workdir: str | Path) -> Path:
 """,
         encoding="utf-8",
     )
-    con.write_text(
-        """<?xml version="1.0" encoding="UTF-8"?>
-<connections>
-  <connection from="WJ" to="JN" fromLane="0" toLane="0"/>
-  <connection from="JN" to="NS" fromLane="0" toLane="0"/>
-  <connection from="WJ" to="JE" fromLane="0" toLane="0"/>
-  <connection from="JE" to="EE" fromLane="0" toLane="0"/>
-  <connection from="JE" to="EN" fromLane="0" toLane="0"/>
-  <connection from="EN" to="N2" fromLane="0" toLane="0"/>
-  <connection from="N2" to="NS" fromLane="0" toLane="0"/>
-</connections>
-""",
-        encoding="utf-8",
-    )
 
     subprocess.run(
         [
             _find_binary("netconvert"),
             "--node-files", str(nod),
             "--edge-files", str(edg),
-            "--connection-files", str(con),
             "--output-file", str(net),
             "--no-turnarounds", "true",
+            "--junctions.join", "false",
         ],
         check=True,
         capture_output=True,
