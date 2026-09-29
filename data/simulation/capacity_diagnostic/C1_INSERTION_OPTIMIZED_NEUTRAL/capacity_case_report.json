@@ -1,0 +1,28 @@
+{
+  "case": "C1_INSERTION_OPTIMIZED_NEUTRAL",
+  "case_config": {
+    "name": "C1_INSERTION_OPTIMIZED_NEUTRAL",
+    "feeder_length_m": 400.0,
+    "tau_s": 1.2,
+    "min_gap_m": 2.5,
+    "min_gap_lat_m": 0.6,
+    "lc_pushy": 0.0,
+    "depart_lane": "best_prob",
+    "depart_pos": "last",
+    "depart_speed": "avg",
+    "extrapolate_departpos": true
+  },
+  "scheduled_vehicles": 1513,
+  "departed_vehicles": 1395,
+  "departed_fraction": 0.922009253139458,
+  "e0_entered_vehicles": 1394,
+  "e0_entered_fraction": 0.9213483146067416,
+  "mean_depart_delay_s": 60.16379928315412,
+  "p95_depart_delay_s": 120.5,
+  "max_depart_delay_observed_s": 121.0,
+  "teleport_events": 0,
+  "collision_events": 0,
+  "scheduled_rate_veh_per_h": 6232.036613272311,
+  "departed_rate_veh_per_h": 5745.995423340961,
+  "e0_entry_rate_veh_per_h": 5741.87643020595
+}

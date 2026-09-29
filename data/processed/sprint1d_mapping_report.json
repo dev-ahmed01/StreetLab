@@ -1,0 +1,107 @@
+{
+  "sprint": "1D_SUMO_PARAMETER_BRIDGE",
+  "status": "PARAMETER_PRIORS_ONLY_NOT_CALIBRATED",
+  "mapping_principles": {
+    "speed_preference": "relative ordering -> speedFactor seed; final value must be simulation-calibrated",
+    "spacing_preference": "relative ordering -> tau seed; moving headway data supports tau better than minGap",
+    "side_clearance_preference": "relative ordering -> minGapLat seed",
+    "lateral_assertiveness_proxy": "NOT directly mapped yet; lcPushy kept broad for Stage-C calibration",
+    "accel_decel": "excluded because Sprint 1B.6 showed split drift",
+    "ttc": "excluded from personality; retained for safety validation",
+    "minGap": "only data-derived if enough low-speed leader-gap observations exist"
+  },
+  "sumo_detection": {
+    "eclipse_sumo_python_package": true,
+    "sumolib_import": false,
+    "traci_import": false,
+    "sumo_home": "C:\\Users\\Admin\\Desktop\\StreetLab\\.venv\\Lib\\site-packages\\sumo",
+    "error": "import sumolib failed: No module named 'sumolib'"
+  },
+  "classes": [
+    1,
+    2,
+    6
+  ],
+  "persona_rows": 7,
+  "physical_profiles": [
+    {
+      "vehicle_class": 1,
+      "vehicles": 852,
+      "length_m": 1.8,
+      "width_m": 0.6,
+      "median_vehicle_mean_speed_mps": 6.186318329249446,
+      "median_vehicle_p95_speed_mps": 7.896293698189142,
+      "vehicle_class_name": "MOTORCYCLE"
+    },
+    {
+      "vehicle_class": 2,
+      "vehicles": 401,
+      "length_m": 4.53,
+      "width_m": 1.52,
+      "median_vehicle_mean_speed_mps": 6.184378402223728,
+      "median_vehicle_p95_speed_mps": 7.613643961149945,
+      "vehicle_class_name": "CAR"
+    },
+    {
+      "vehicle_class": 6,
+      "vehicles": 192,
+      "length_m": 2.6,
+      "width_m": 1.4,
+      "median_vehicle_mean_speed_mps": 5.202596602665551,
+      "median_vehicle_p95_speed_mps": 6.628838599390733,
+      "vehicle_class_name": "AUTO_RICKSHAW"
+    }
+  ],
+  "low_speed_gap_priors": [
+    {
+      "vehicle_class": 1,
+      "vehicle_class_name": "MOTORCYCLE",
+      "n": 18,
+      "p10_low_speed_front_gap_m": NaN,
+      "median_low_speed_front_gap_m": NaN,
+      "minGap_seed_m": NaN,
+      "status": "INSUFFICIENT_LOW_SPEED_DATA_DO_NOT_MAP"
+    },
+    {
+      "vehicle_class": 2,
+      "vehicle_class_name": "CAR",
+      "n": 1,
+      "p10_low_speed_front_gap_m": NaN,
+      "median_low_speed_front_gap_m": NaN,
+      "minGap_seed_m": NaN,
+      "status": "INSUFFICIENT_LOW_SPEED_DATA_DO_NOT_MAP"
+    },
+    {
+      "vehicle_class": 6,
+      "vehicle_class_name": "AUTO_RICKSHAW",
+      "n": 8,
+      "p10_low_speed_front_gap_m": NaN,
+      "median_low_speed_front_gap_m": NaN,
+      "minGap_seed_m": NaN,
+      "status": "INSUFFICIENT_LOW_SPEED_DATA_DO_NOT_MAP"
+    }
+  ],
+  "config": {
+    "base_tau_s": 1.2,
+    "base_min_gap_lat_m": 0.6,
+    "base_speed_factor": 1.0,
+    "tau_min_s": 0.45,
+    "tau_max_s": 2.5,
+    "min_gap_lat_min_m": 0.15,
+    "min_gap_lat_max_m": 1.2,
+    "speed_factor_min": 0.7,
+    "speed_factor_max": 1.35,
+    "low_speed_threshold_mps": 1.0,
+    "low_speed_min_n": 30,
+    "low_speed_gap_floor_m": 0.2,
+    "low_speed_gap_cap_m": 3.0,
+    "lc_pushy_seed": 0.0,
+    "lc_sublane_seed": 1.0
+  },
+  "next_calibration_order": [
+    "A: speedFactor -> match speed distributions",
+    "B: tau (+ data-supported minGap if available) -> match headway/front-gap distributions",
+    "C: minGapLat and lcPushy -> match side-clearance and lateral-motion distributions",
+    "D: joint holdout validation on untouched 3:00-3:15 period"
+  ]
+}

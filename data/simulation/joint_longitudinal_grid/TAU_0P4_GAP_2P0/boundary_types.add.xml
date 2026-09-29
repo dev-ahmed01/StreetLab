@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<additional>
+  <!-- A6 diagnostic: behavior parameters remain provisional/fixed. -->
+  <vType id="sl_c1_p1" vClass="motorcycle" length="1.8000" width="0.6000" carFollowModel="Krauss" laneChangeModel="SL2015" tau="0.4000" minGap="2.0000" minGapLat="0.6000" lcPushy="0.0000" lcSublane="1.0000" speedFactor="1.0" speedDev="0.0"/>
+  <vType id="sl_c1_p2" vClass="motorcycle" length="1.8000" width="0.6000" carFollowModel="Krauss" laneChangeModel="SL2015" tau="0.4000" minGap="2.0000" minGapLat="0.6000" lcPushy="0.0000" lcSublane="1.0000" speedFactor="1.0" speedDev="0.0"/>
+  <vType id="sl_c1_p3" vClass="motorcycle" length="1.8000" width="0.6000" carFollowModel="Krauss" laneChangeModel="SL2015" tau="0.4000" minGap="2.0000" minGapLat="0.6000" lcPushy="0.0000" lcSublane="1.0000" speedFactor="1.0" speedDev="0.0"/>
+  <vType id="sl_c2_p1" vClass="passenger" length="4.5300" width="1.5200" carFollowModel="Krauss" laneChangeModel="SL2015" tau="0.4000" minGap="2.0000" minGapLat="0.6000" lcPushy="0.0000" lcSublane="1.0000" speedFactor="1.0" speedDev="0.0"/>
+  <vType id="sl_c2_p2" vClass="passenger" length="4.5300" width="1.5200" carFollowModel="Krauss" laneChangeModel="SL2015" tau="0.4000" minGap="2.0000" minGapLat="0.6000" lcPushy="0.0000" lcSublane="1.0000" speedFactor="1.0" speedDev="0.0"/>
+  <vType id="sl_c3_bg" vClass="passenger" length="12.0700" width="2.5000" carFollowModel="Krauss" laneChangeModel="SL2015" tau="0.4000" minGap="2.0000" minGapLat="0.6000" lcPushy="0.0000" lcSublane="1.0000" speedFactor="1.0" speedDev="0.0"/>
+  <vType id="sl_c4_bg" vClass="passenger" length="8.6400" width="2.1200" carFollowModel="Krauss" laneChangeModel="SL2015" tau="0.4000" minGap="2.0000" minGapLat="0.6000" lcPushy="0.0000" lcSublane="1.0000" speedFactor="1.0" speedDev="0.0"/>
+  <vType id="sl_c5_bg" vClass="passenger" length="6.3400" width="1.7300" carFollowModel="Krauss" laneChangeModel="SL2015" tau="0.4000" minGap="2.0000" minGapLat="0.6000" lcPushy="0.0000" lcSublane="1.0000" speedFactor="1.0" speedDev="0.0"/>
+  <vType id="sl_c6_p1" vClass="passenger" length="2.6000" width="1.4000" carFollowModel="Krauss" laneChangeModel="SL2015" tau="0.4000" minGap="2.0000" minGapLat="0.6000" lcPushy="0.0000" lcSublane="1.0000" speedFactor="1.0" speedDev="0.0"/>
+  <vType id="sl_c6_p2" vClass="passenger" length="2.6000" width="1.4000" carFollowModel="Krauss" laneChangeModel="SL2015" tau="0.4000" minGap="2.0000" minGapLat="0.6000" lcPushy="0.0000" lcSublane="1.0000" speedFactor="1.0" speedDev="0.0"/>
+</additional>

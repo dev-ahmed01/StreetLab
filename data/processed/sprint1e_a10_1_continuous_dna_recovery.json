@@ -1,0 +1,259 @@
+{
+  "sprint": "1E_A10_1_CONTINUOUS_DNA_RECOVERY",
+  "purpose": "Recover the actual continuous spacing-preference feature from earlier StreetLab calibration artifacts and test it against A10 longitudinal evidence before defaulting to a non-persona empirical class mixture.",
+  "why_needed": "A10 did not actually test continuous Behaviour DNA because the loaded calibration_behavior_dna.parquet contained only vehicle_id, vehicle_class and persona. Persona structure was weak, but continuous DNA remains unresolved.",
+  "candidate_sources_found": 1,
+  "candidate_sources": [
+    {
+      "file": "data\\processed\\calibration_behavior_dna.parquet",
+      "id_column": "vehicle_id",
+      "feature_column": "dna_spacing_preference",
+      "feature_name_normalized": "dna_spacing_preference",
+      "name_score": 100,
+      "file_bonus": 20,
+      "total_discovery_score": 120,
+      "reason": "exact_spacing_preference_alias",
+      "rows": 1445,
+      "unique_vehicle_ids": 1445,
+      "unique_id_ratio": 1.0
+    }
+  ],
+  "analyses": [
+    {
+      "source": {
+        "file": "data\\processed\\calibration_behavior_dna.parquet",
+        "id_column": "vehicle_id",
+        "feature_column": "dna_spacing_preference",
+        "feature_name_normalized": "dna_spacing_preference",
+        "name_score": 100,
+        "file_bonus": 20,
+        "total_discovery_score": 120,
+        "reason": "exact_spacing_preference_alias",
+        "rows": 1445,
+        "unique_vehicle_ids": 1445,
+        "unique_id_ratio": 1.0
+      },
+      "joined_vehicle_count": 1406,
+      "signal_classes": [
+        1,
+        2,
+        6
+      ],
+      "class_analysis": [
+        {
+          "vehicle_class": 1,
+          "vehicle_class_name": "MOTORCYCLE",
+          "eligible_joined_vehicles": 452,
+          "tests": {
+            "tau_proxy_p20_s": {
+              "n": 452,
+              "spearman_rho": 0.2317312923945732,
+              "p_value": 6.325881871920176e-07,
+              "signal": false
+            },
+            "time_headway_p20_s": {
+              "n": 452,
+              "spearman_rho": 0.2977025404614411,
+              "p_value": 1.0558238505909593e-10,
+              "signal": true
+            },
+            "front_gap_median_m": {
+              "n": 452,
+              "spearman_rho": 0.1604927506814774,
+              "p_value": 0.0006150230605169461,
+              "signal": false
+            }
+          }
+        },
+        {
+          "vehicle_class": 2,
+          "vehicle_class_name": "CAR",
+          "eligible_joined_vehicles": 288,
+          "tests": {
+            "tau_proxy_p20_s": {
+              "n": 288,
+              "spearman_rho": 0.36291192481984963,
+              "p_value": 2.15557780980848e-10,
+              "signal": true
+            },
+            "time_headway_p20_s": {
+              "n": 288,
+              "spearman_rho": 0.40875289967619904,
+              "p_value": 5.02397533502456e-13,
+              "signal": true
+            },
+            "front_gap_median_m": {
+              "n": 288,
+              "spearman_rho": 0.27665513724474877,
+              "p_value": 1.8610136574419877e-06,
+              "signal": true
+            }
+          }
+        },
+        {
+          "vehicle_class": 6,
+          "vehicle_class_name": "AUTO_RICKSHAW",
+          "eligible_joined_vehicles": 137,
+          "tests": {
+            "tau_proxy_p20_s": {
+              "n": 137,
+              "spearman_rho": 0.3006798736629467,
+              "p_value": 0.0003568433560142957,
+              "signal": true
+            },
+            "time_headway_p20_s": {
+              "n": 137,
+              "spearman_rho": 0.4570123128658729,
+              "p_value": 1.9808380265982202e-08,
+              "signal": true
+            },
+            "front_gap_median_m": {
+              "n": 137,
+              "spearman_rho": 0.2935509426875617,
+              "p_value": 0.0004986701975021159,
+              "signal": true
+            }
+          }
+        }
+      ],
+      "pooled_within_class_standardized": [
+        {
+          "target": "tau_proxy_p20_s",
+          "n": 877,
+          "spearman_rho": 0.2855597058820259,
+          "p_value": 6.421917792135755e-18
+        },
+        {
+          "target": "time_headway_p20_s",
+          "n": 877,
+          "spearman_rho": 0.3576789808832212,
+          "p_value": 7.316332640607528e-28
+        }
+      ],
+      "evidence_strength_score": 1.6162448295537153
+    }
+  ],
+  "best_candidate": {
+    "source": {
+      "file": "data\\processed\\calibration_behavior_dna.parquet",
+      "id_column": "vehicle_id",
+      "feature_column": "dna_spacing_preference",
+      "feature_name_normalized": "dna_spacing_preference",
+      "name_score": 100,
+      "file_bonus": 20,
+      "total_discovery_score": 120,
+      "reason": "exact_spacing_preference_alias",
+      "rows": 1445,
+      "unique_vehicle_ids": 1445,
+      "unique_id_ratio": 1.0
+    },
+    "joined_vehicle_count": 1406,
+    "signal_classes": [
+      1,
+      2,
+      6
+    ],
+    "class_analysis": [
+      {
+        "vehicle_class": 1,
+        "vehicle_class_name": "MOTORCYCLE",
+        "eligible_joined_vehicles": 452,
+        "tests": {
+          "tau_proxy_p20_s": {
+            "n": 452,
+            "spearman_rho": 0.2317312923945732,
+            "p_value": 6.325881871920176e-07,
+            "signal": false
+          },
+          "time_headway_p20_s": {
+            "n": 452,
+            "spearman_rho": 0.2977025404614411,
+            "p_value": 1.0558238505909593e-10,
+            "signal": true
+          },
+          "front_gap_median_m": {
+            "n": 452,
+            "spearman_rho": 0.1604927506814774,
+            "p_value": 0.0006150230605169461,
+            "signal": false
+          }
+        }
+      },
+      {
+        "vehicle_class": 2,
+        "vehicle_class_name": "CAR",
+        "eligible_joined_vehicles": 288,
+        "tests": {
+          "tau_proxy_p20_s": {
+            "n": 288,
+            "spearman_rho": 0.36291192481984963,
+            "p_value": 2.15557780980848e-10,
+            "signal": true
+          },
+          "time_headway_p20_s": {
+            "n": 288,
+            "spearman_rho": 0.40875289967619904,
+            "p_value": 5.02397533502456e-13,
+            "signal": true
+          },
+          "front_gap_median_m": {
+            "n": 288,
+            "spearman_rho": 0.27665513724474877,
+            "p_value": 1.8610136574419877e-06,
+            "signal": true
+          }
+        }
+      },
+      {
+        "vehicle_class": 6,
+        "vehicle_class_name": "AUTO_RICKSHAW",
+        "eligible_joined_vehicles": 137,
+        "tests": {
+          "tau_proxy_p20_s": {
+            "n": 137,
+            "spearman_rho": 0.3006798736629467,
+            "p_value": 0.0003568433560142957,
+            "signal": true
+          },
+          "time_headway_p20_s": {
+            "n": 137,
+            "spearman_rho": 0.4570123128658729,
+            "p_value": 1.9808380265982202e-08,
+            "signal": true
+          },
+          "front_gap_median_m": {
+            "n": 137,
+            "spearman_rho": 0.2935509426875617,
+            "p_value": 0.0004986701975021159,
+            "signal": true
+          }
+        }
+      }
+    ],
+    "pooled_within_class_standardized": [
+      {
+        "target": "tau_proxy_p20_s",
+        "n": 877,
+        "spearman_rho": 0.2855597058820259,
+        "p_value": 6.421917792135755e-18
+      },
+      {
+        "target": "time_headway_p20_s",
+        "n": 877,
+        "spearman_rho": 0.3576789808832212,
+        "p_value": 7.316332640607528e-28
+      }
+    ],
+    "evidence_strength_score": 1.6162448295537153
+  },
+  "recommendation": "CONTINUOUS_DNA_TAU_MAPPING_SUPPORTED",
+  "decision_rules": [
+    "Do not treat A10's missing continuous-DNA columns as evidence that continuous DNA has no longitudinal signal.",
+    "Use only vehicle-level calibration/normalized feature sources; interaction or simulation outputs are excluded to avoid target leakage.",
+    "A continuous mapping is supported when at least two core vehicle classes show |rho| >= 0.25 with p < 0.01 and n >= 100 for tau-proxy/headway evidence.",
+    "If no valid feature source is found, derive the stable spacing_preference explicitly from the existing context-normalized vehicle features before running another SUMO model.",
+    "If a valid feature is found but has weak longitudinal correlation, proceed with an empirical within-class tau mixture rather than persona labels.",
+    "Validation remains untouched."
+  ],
+  "validation_untouched": true
+}

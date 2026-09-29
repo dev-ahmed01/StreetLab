@@ -1,0 +1,135 @@
+{
+  "sprint": "1C_BEHAVIOR_MODEL_CONTEST",
+  "candidate_features": [
+    "speed_preference",
+    "spacing_preference",
+    "side_clearance_preference",
+    "lateral_assertiveness_proxy"
+  ],
+  "excluded_from_persona_model": [
+    "acceleration/braking residuals (split drift after context normalisation)",
+    "TTC (safety outcome/context variable, not a stable personality trait)",
+    "vehicle dimensions (physics, not behaviour)",
+    "local density (environment, not behaviour)"
+  ],
+  "model_a": "K=1 multivariate Gaussian per vehicle class",
+  "model_b": "K=2..5 Gaussian mixture personas, K selected from calibration BIC",
+  "model_c": "continuous robust-scaled Behaviour DNA retained for every vehicle",
+  "decision_rule": "Use personas only if they improve holdout density fit AND remain separated, supported and profile-stable in validation. Continuous DNA is always retained.",
+  "overall_representation_decision": "HYBRID_PERSONA_PLUS_CONTINUOUS_DNA",
+  "classes_supporting_personas": 3,
+  "classes_tested": 3,
+  "per_class": [
+    {
+      "vehicle_class": 1,
+      "vehicle_class_name": "MOTORCYCLE",
+      "calibration_n": 852,
+      "validation_n": 843,
+      "chosen_k_by_calibration_bic": 3,
+      "bic_improvement_vs_k1": 477.91546286761513,
+      "validation_loglik_gain_vs_k1": 0.22583723039423553,
+      "checks": {
+        "multiple_components": true,
+        "strong_bic_improvement": true,
+        "holdout_loglik_gain": true,
+        "calibration_separation": true,
+        "validation_separation": true,
+        "calibration_cluster_support": true,
+        "validation_cluster_support": true,
+        "validation_assignment_confidence": true,
+        "median_profile_stability": true,
+        "worst_profile_stability": true
+      },
+      "persona_evidence_supported": true,
+      "representation_decision": "HYBRID_PERSONA_PLUS_CONTINUOUS_DNA",
+      "profile_stability": {
+        "median_profile_drift_scaled": 0.0337663081119641,
+        "max_profile_drift_scaled": 0.18122478846107198,
+        "calibration_min_cluster_share": 0.19014084507042253,
+        "validation_min_cluster_share": 0.1981020166073547,
+        "validation_mean_assignment_confidence": 0.8597074497008627
+      }
+    },
+    {
+      "vehicle_class": 2,
+      "vehicle_class_name": "CAR",
+      "calibration_n": 401,
+      "validation_n": 399,
+      "chosen_k_by_calibration_bic": 2,
+      "bic_improvement_vs_k1": 156.94394402821717,
+      "validation_loglik_gain_vs_k1": 0.14408984213325837,
+      "checks": {
+        "multiple_components": true,
+        "strong_bic_improvement": true,
+        "holdout_loglik_gain": true,
+        "calibration_separation": true,
+        "validation_separation": true,
+        "calibration_cluster_support": true,
+        "validation_cluster_support": true,
+        "validation_assignment_confidence": true,
+        "median_profile_stability": true,
+        "worst_profile_stability": true
+      },
+      "persona_evidence_supported": true,
+      "representation_decision": "HYBRID_PERSONA_PLUS_CONTINUOUS_DNA",
+      "profile_stability": {
+        "median_profile_drift_scaled": 0.10752787569532385,
+        "max_profile_drift_scaled": 0.2575061320157057,
+        "calibration_min_cluster_share": 0.3192019950124688,
+        "validation_min_cluster_share": 0.38345864661654133,
+        "validation_mean_assignment_confidence": 0.8889210298531889
+      }
+    },
+    {
+      "vehicle_class": 6,
+      "vehicle_class_name": "AUTO_RICKSHAW",
+      "calibration_n": 192,
+      "validation_n": 174,
+      "chosen_k_by_calibration_bic": 2,
+      "bic_improvement_vs_k1": 29.49431114772574,
+      "validation_loglik_gain_vs_k1": 0.10222116412193838,
+      "checks": {
+        "multiple_components": true,
+        "strong_bic_improvement": true,
+        "holdout_loglik_gain": true,
+        "calibration_separation": true,
+        "validation_separation": true,
+        "calibration_cluster_support": true,
+        "validation_cluster_support": true,
+        "validation_assignment_confidence": true,
+        "median_profile_stability": true,
+        "worst_profile_stability": true
+      },
+      "persona_evidence_supported": true,
+      "representation_decision": "HYBRID_PERSONA_PLUS_CONTINUOUS_DNA",
+      "profile_stability": {
+        "median_profile_drift_scaled": 0.1772769863443864,
+        "max_profile_drift_scaled": 0.38928029811960496,
+        "calibration_min_cluster_share": 0.3072916666666667,
+        "validation_min_cluster_share": 0.2471264367816092,
+        "validation_mean_assignment_confidence": 0.8914958627411496
+      }
+    }
+  ],
+  "config": {
+    "primary_classes": [
+      1,
+      2,
+      6
+    ],
+    "max_components": 5,
+    "random_state": 42,
+    "n_init": 20,
+    "reg_covar": 1e-05,
+    "clip_low_q": 0.01,
+    "clip_high_q": 0.99,
+    "min_bic_improvement": 10.0,
+    "min_validation_loglik_gain": 0.05,
+    "min_calibration_silhouette": 0.2,
+    "min_validation_silhouette": 0.15,
+    "min_cluster_share": 0.08,
+    "min_validation_confidence": 0.75,
+    "max_median_profile_drift_scaled": 0.25,
+    "max_single_profile_drift_scaled": 0.75
+  }
+}

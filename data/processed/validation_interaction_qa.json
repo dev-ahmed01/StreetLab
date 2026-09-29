@@ -1,0 +1,28 @@
+{
+  "rows": 53419,
+  "timestamps": 1814,
+  "vehicles": 1491,
+  "road_longitudinal_min_m": 2.7501724412193673,
+  "road_longitudinal_max_m": 244.647817664935,
+  "edge_buffer_m": 10.0,
+  "interior_rows": 52993,
+  "leader_observations_interior": 42403,
+  "leader_fraction_interior": 0.8001622855848886,
+  "finite_headway_observations_interior": 42397,
+  "finite_ttc_observations_interior": 18308,
+  "candidate_pairs": 88843,
+  "negative_gap_candidate_pairs": 627,
+  "negative_gap_candidate_fraction": 0.00705739337933208,
+  "large_negative_side_overlap_pairs": 206,
+  "config": {
+    "lateral_safety_margin_m": 0.2,
+    "max_leader_distance_m": 50.0,
+    "side_longitudinal_margin_m": 0.5,
+    "local_density_radius_m": 20.0,
+    "min_speed_for_headway_mps": 0.5,
+    "min_closing_speed_for_ttc_mps": 0.1,
+    "max_ttc_s": 60.0,
+    "edge_buffer_m": 10.0
+  },
+  "warnings": []
+}

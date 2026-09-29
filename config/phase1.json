@@ -1,0 +1,7 @@
+{
+  "expected_sample_seconds": 0.5,
+  "minimum_track_seconds": 3.0,
+  "drop_flagged_rows": true,
+  "calibration_file": "data/raw/ChennaiTrajectoryData2.45-3.00PM.xlsx",
+  "validation_file": "data/raw/ChennaiTrajectoryData3.00-3.15PM.xlsx"
+}

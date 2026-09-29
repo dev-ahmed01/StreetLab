@@ -1,0 +1,11 @@
+{
+  "sprint": "1E_A_SPEED_CORRIDOR",
+  "geometry_status": "PROVISIONAL_STAGE_A_NOT_FINAL_CHENNAI_GEOMETRY",
+  "corridor_length_m": 245.0,
+  "lanes": 3,
+  "lane_width_m": 3.5,
+  "edge_speed_mps": 16.7,
+  "lateral_resolution_m": 0.2,
+  "warmup_s": 60.0,
+  "note": "Stage A calibrates desired speed only. Geometry/lane assumptions are provisional and must not be presented as verified site geometry."
+}

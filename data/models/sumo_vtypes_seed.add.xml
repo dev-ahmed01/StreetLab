@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<additional>
+    <!-- StreetLab Phase 1D seed parameters. NOT final calibrated values. -->
+    <!-- Sublane behavior requires SUMO --lateral-resolution > 0. -->
+    <vType id="sl_motorcycle_p1" vClass="motorcycle" probability="0.537559" length="1.8000" width="0.6000" carFollowModel="Krauss" laneChangeModel="SL2015" speedFactor="0.9981" tau="1.1614" minGapLat="0.4288" lcPushy="0.0000" lcSublane="1.0000"/>
+    <vType id="sl_motorcycle_p2" vClass="motorcycle" probability="0.272300" length="1.8000" width="0.6000" carFollowModel="Krauss" laneChangeModel="SL2015" speedFactor="0.8761" tau="1.3845" minGapLat="0.9680" lcPushy="0.0000" lcSublane="1.0000"/>
+    <vType id="sl_motorcycle_p3" vClass="motorcycle" probability="0.190141" length="1.8000" width="0.6000" carFollowModel="Krauss" laneChangeModel="SL2015" speedFactor="1.1828" tau="1.0447" minGapLat="0.5570" lcPushy="0.0000" lcSublane="1.0000"/>
+    <vType id="sl_car_p1" vClass="passenger" probability="0.680798" length="4.5300" width="1.5200" carFollowModel="Krauss" laneChangeModel="SL2015" speedFactor="0.9652" tau="1.1978" minGapLat="0.4760" lcPushy="0.0000" lcSublane="1.0000"/>
+    <vType id="sl_car_p2" vClass="passenger" probability="0.319202" length="4.5300" width="1.5200" carFollowModel="Krauss" laneChangeModel="SL2015" speedFactor="1.0741" tau="1.2047" minGapLat="0.8644" lcPushy="0.0000" lcSublane="1.0000"/>
+    <vType id="sl_auto_rickshaw_p1" vClass="passenger" probability="0.692708" length="2.6000" width="1.4000" carFollowModel="Krauss" laneChangeModel="SL2015" speedFactor="0.9639" tau="1.2477" minGapLat="0.4865" lcPushy="0.0000" lcSublane="1.0000"/>
+    <vType id="sl_auto_rickshaw_p2" vClass="passenger" probability="0.307292" length="2.6000" width="1.4000" carFollowModel="Krauss" laneChangeModel="SL2015" speedFactor="1.0813" tau="1.0924" minGapLat="0.8558" lcPushy="0.0000" lcSublane="1.0000"/>
+</additional>

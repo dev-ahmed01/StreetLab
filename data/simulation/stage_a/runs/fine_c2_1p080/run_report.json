@@ -1,0 +1,65 @@
+{
+  "run_name": "fine_c2_1p080",
+  "class_multipliers": {
+    "1": 0.9,
+    "2": 1.08,
+    "6": 1.0
+  },
+  "objective": 0.9733665903667253,
+  "infrastructure_gate_pass": true,
+  "simulation": {
+    "scheduled_vehicles": 1513,
+    "departed_vehicles": 1513,
+    "departed_fraction": 1.0,
+    "mean_depart_delay_s": 0.786186384666226,
+    "p95_depart_delay_s": 3.0,
+    "teleport_events": 0,
+    "collision_events": 0,
+    "simulation_end_s": 973.0,
+    "trajectory_rows": 104870
+  },
+  "speed_fit": [
+    {
+      "vehicle_class": 1,
+      "vehicle_class_name": "MOTORCYCLE",
+      "observed_n": 814,
+      "simulated_n": 843,
+      "observed_median_speed_mps": 6.171248212012626,
+      "simulated_median_speed_mps": 6.254055796462953,
+      "median_delta_mps": 0.08280758445032621,
+      "ks_statistic": 0.22357265061891407,
+      "wasserstein_mps": 0.37287737439781704,
+      "normalized_wasserstein": 0.26314189892327494,
+      "objective": 0.4041471397712499,
+      "status": "OK"
+    },
+    {
+      "vehicle_class": 2,
+      "vehicle_class_name": "CAR",
+      "observed_n": 391,
+      "simulated_n": 397,
+      "observed_median_speed_mps": 6.139159185095748,
+      "simulated_median_speed_mps": 6.946241928688807,
+      "median_delta_mps": 0.8070827435930594,
+      "ks_statistic": 0.3956721446655544,
+      "wasserstein_mps": 0.6871484449353746,
+      "normalized_wasserstein": 0.5582465468042601,
+      "objective": 1.0839238286434543,
+      "status": "OK"
+    },
+    {
+      "vehicle_class": 6,
+      "vehicle_class_name": "AUTO_RICKSHAW",
+      "observed_n": 191,
+      "simulated_n": 192,
+      "observed_median_speed_mps": 5.203125120535687,
+      "simulated_median_speed_mps": 6.052308058250401,
+      "median_delta_mps": 0.8491829377147138,
+      "ks_statistic": 0.5916503054101222,
+      "wasserstein_mps": 0.8881045848448565,
+      "normalized_wasserstein": 0.7686986397339863,
+      "objective": 1.4320288026854717,
+      "status": "OK"
+    }
+  ]
+}

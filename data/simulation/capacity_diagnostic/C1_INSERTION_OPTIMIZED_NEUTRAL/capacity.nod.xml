@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nodes>
+  <node id="npre" x="-400.000" y="0" type="priority"/>
+  <node id="n0" x="0" y="0" type="priority"/>
+  <node id="n1" x="245.000" y="0" type="priority"/>
+</nodes>

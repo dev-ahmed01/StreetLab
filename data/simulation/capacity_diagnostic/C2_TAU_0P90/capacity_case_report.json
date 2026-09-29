@@ -1,0 +1,28 @@
+{
+  "case": "C2_TAU_0P90",
+  "case_config": {
+    "name": "C2_TAU_0P90",
+    "feeder_length_m": 400.0,
+    "tau_s": 0.9,
+    "min_gap_m": 2.5,
+    "min_gap_lat_m": 0.6,
+    "lc_pushy": 0.0,
+    "depart_lane": "best_prob",
+    "depart_pos": "last",
+    "depart_speed": "avg",
+    "extrapolate_departpos": true
+  },
+  "scheduled_vehicles": 1513,
+  "departed_vehicles": 1513,
+  "departed_fraction": 1.0,
+  "e0_entered_vehicles": 1513,
+  "e0_entered_fraction": 1.0,
+  "mean_depart_delay_s": 15.928618638466622,
+  "p95_depart_delay_s": 58.0,
+  "max_depart_delay_observed_s": 68.0,
+  "teleport_events": 0,
+  "collision_events": 0,
+  "scheduled_rate_veh_per_h": 6232.036613272311,
+  "departed_rate_veh_per_h": 6232.036613272311,
+  "e0_entry_rate_veh_per_h": 6232.036613272311
+}

@@ -1,0 +1,65 @@
+{
+  "run_name": "d4_speed_target_lat_035_pushy_020",
+  "class_multipliers": {
+    "1": 0.9,
+    "2": 0.9,
+    "6": 0.9
+  },
+  "objective": 0.542160954233525,
+  "infrastructure_gate_pass": false,
+  "simulation": {
+    "scheduled_vehicles": 1513,
+    "departed_vehicles": 1513,
+    "departed_fraction": 1.0,
+    "mean_depart_delay_s": 1.8499669530733642,
+    "p95_depart_delay_s": 12.5,
+    "teleport_events": 0,
+    "collision_events": 0,
+    "simulation_end_s": 973.0,
+    "trajectory_rows": 108408
+  },
+  "speed_fit": [
+    {
+      "vehicle_class": 1,
+      "vehicle_class_name": "MOTORCYCLE",
+      "observed_n": 814,
+      "simulated_n": 842,
+      "observed_median_speed_mps": 6.171248212012626,
+      "simulated_median_speed_mps": 6.226494558660902,
+      "median_delta_mps": 0.05524634664827577,
+      "ks_statistic": 0.21865862839734584,
+      "wasserstein_mps": 0.35080171816231714,
+      "normalized_wasserstein": 0.24756297002964536,
+      "objective": 0.37638613068263654,
+      "status": "OK"
+    },
+    {
+      "vehicle_class": 2,
+      "vehicle_class_name": "CAR",
+      "observed_n": 391,
+      "simulated_n": 397,
+      "observed_median_speed_mps": 6.139159185095748,
+      "simulated_median_speed_mps": 6.195613206306619,
+      "median_delta_mps": 0.05645402121087084,
+      "ks_statistic": 0.1931236189580421,
+      "wasserstein_mps": 0.348963924031922,
+      "normalized_wasserstein": 0.2835019230355764,
+      "objective": 0.4029956496472536,
+      "status": "OK"
+    },
+    {
+      "vehicle_class": 6,
+      "vehicle_class_name": "AUTO_RICKSHAW",
+      "observed_n": 191,
+      "simulated_n": 192,
+      "observed_median_speed_mps": 5.203125120535687,
+      "simulated_median_speed_mps": 5.43511796407997,
+      "median_delta_mps": 0.2319928435442824,
+      "ks_statistic": 0.5707078970331588,
+      "wasserstein_mps": 0.5330098068221136,
+      "normalized_wasserstein": 0.46134646804082025,
+      "objective": 0.8471010823706846,
+      "status": "OK"
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+vehicle_class,vehicles,length_m,width_m,median_vehicle_mean_speed_mps,median_vehicle_p95_speed_mps,vehicle_class_name
+1,852,1.8,0.6,6.186318329249446,7.896293698189142,MOTORCYCLE
+2,401,4.53,1.52,6.184378402223728,7.613643961149945,CAR
+6,192,2.6,1.4,5.202596602665551,6.628838599390733,AUTO_RICKSHAW

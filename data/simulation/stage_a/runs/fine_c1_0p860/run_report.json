@@ -1,0 +1,65 @@
+{
+  "run_name": "fine_c1_0p860",
+  "class_multipliers": {
+    "1": 0.86,
+    "2": 1.0,
+    "6": 1.0
+  },
+  "objective": 0.896329363941804,
+  "infrastructure_gate_pass": false,
+  "simulation": {
+    "scheduled_vehicles": 1513,
+    "departed_vehicles": 1513,
+    "departed_fraction": 1.0,
+    "mean_depart_delay_s": 2.2280237937871776,
+    "p95_depart_delay_s": 14.199999999999932,
+    "teleport_events": 0,
+    "collision_events": 0,
+    "simulation_end_s": 973.0,
+    "trajectory_rows": 108152
+  },
+  "speed_fit": [
+    {
+      "vehicle_class": 1,
+      "vehicle_class_name": "MOTORCYCLE",
+      "observed_n": 814,
+      "simulated_n": 843,
+      "observed_median_speed_mps": 6.171248212012626,
+      "simulated_median_speed_mps": 5.939710195425216,
+      "median_delta_mps": -0.23153801658741013,
+      "ks_statistic": 0.337950049693822,
+      "wasserstein_mps": 0.4863738504510734,
+      "normalized_wasserstein": 0.3432370730485107,
+      "objective": 0.5939110122585353,
+      "status": "OK"
+    },
+    {
+      "vehicle_class": 2,
+      "vehicle_class_name": "CAR",
+      "observed_n": 391,
+      "simulated_n": 397,
+      "observed_median_speed_mps": 6.139159185095748,
+      "simulated_median_speed_mps": 6.841173514042507,
+      "median_delta_mps": 0.7020143289467589,
+      "ks_statistic": 0.3227015918622405,
+      "wasserstein_mps": 0.4763296588110367,
+      "normalized_wasserstein": 0.38697517127717734,
+      "objective": 0.8334878400394989,
+      "status": "OK"
+    },
+    {
+      "vehicle_class": 6,
+      "vehicle_class_name": "AUTO_RICKSHAW",
+      "observed_n": 191,
+      "simulated_n": 192,
+      "observed_median_speed_mps": 5.203125120535687,
+      "simulated_median_speed_mps": 5.995077689503194,
+      "median_delta_mps": 0.7919525689675071,
+      "ks_statistic": 0.46081479057591623,
+      "wasserstein_mps": 0.795384381894844,
+      "normalized_wasserstein": 0.6884446976873019,
+      "objective": 1.2615892395273778,
+      "status": "OK"
+    }
+  ]
+}

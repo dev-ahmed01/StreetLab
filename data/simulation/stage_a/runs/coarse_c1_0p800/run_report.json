@@ -1,0 +1,65 @@
+{
+  "run_name": "coarse_c1_0p800",
+  "class_multipliers": {
+    "1": 0.8,
+    "2": 1.0,
+    "6": 1.0
+  },
+  "objective": 0.9348957474954229,
+  "infrastructure_gate_pass": false,
+  "simulation": {
+    "scheduled_vehicles": 1513,
+    "departed_vehicles": 1513,
+    "departed_fraction": 1.0,
+    "mean_depart_delay_s": 8.33013879709187,
+    "p95_depart_delay_s": 39.0,
+    "teleport_events": 0,
+    "collision_events": 2,
+    "simulation_end_s": 973.0,
+    "trajectory_rows": 112256
+  },
+  "speed_fit": [
+    {
+      "vehicle_class": 1,
+      "vehicle_class_name": "MOTORCYCLE",
+      "observed_n": 814,
+      "simulated_n": 820,
+      "observed_median_speed_mps": 6.171248212012626,
+      "simulated_median_speed_mps": 5.465971100271335,
+      "median_delta_mps": -0.7052771117412915,
+      "ks_statistic": 0.5282765026667465,
+      "wasserstein_mps": 0.8642167139599564,
+      "normalized_wasserstein": 0.6098831487427117,
+      "objective": 1.1228806379829757,
+      "status": "OK"
+    },
+    {
+      "vehicle_class": 2,
+      "vehicle_class_name": "CAR",
+      "observed_n": 391,
+      "simulated_n": 392,
+      "observed_median_speed_mps": 6.139159185095748,
+      "simulated_median_speed_mps": 6.485943037695193,
+      "median_delta_mps": 0.34678385259944555,
+      "ks_statistic": 0.13929484837413236,
+      "wasserstein_mps": 0.26021649000300534,
+      "normalized_wasserstein": 0.21140258416704263,
+      "objective": 0.4219154135136337,
+      "status": "OK"
+    },
+    {
+      "vehicle_class": 6,
+      "vehicle_class_name": "AUTO_RICKSHAW",
+      "observed_n": 191,
+      "simulated_n": 190,
+      "observed_median_speed_mps": 5.203125120535687,
+      "simulated_median_speed_mps": 6.028840581027984,
+      "median_delta_mps": 0.8257154604922965,
+      "ks_statistic": 0.48046293744833296,
+      "wasserstein_mps": 0.7651910232146288,
+      "normalized_wasserstein": 0.6623108457260082,
+      "objective": 1.2598911909896595,
+      "status": "OK"
+    }
+  ]
+}

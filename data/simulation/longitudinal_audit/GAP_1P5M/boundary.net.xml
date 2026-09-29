@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-09-29T15:25:23.752224+05:30 by Eclipse SUMO netconvert 1.27.1
+<netconvertConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
+
+    <input>
+        <node-files value="data\simulation\longitudinal_audit\GAP_1P5M\boundary.nod.xml"/>
+        <edge-files value="data\simulation\longitudinal_audit\GAP_1P5M\boundary.edg.xml"/>
+    </input>
+
+    <output>
+        <output-file value="data\simulation\longitudinal_audit\GAP_1P5M\boundary.net.xml"/>
+    </output>
+
+    <junctions>
+        <no-turnarounds value="true"/>
+    </junctions>
+
+</netconvertConfiguration>
+-->
+
+<net version="1.20" junctionCornerDetail="5" limitTurnSpeed="5.50" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/net_file.xsd">
+
+    <location netOffset="0.00,0.00" convBoundary="0.00,0.00,190.00,0.00" origBoundary="0.00,0.00,190.00,0.00" projParameter="!"/>
+
+    <edge id="E0" from="n0" to="n1" priority="-1">
+        <lane id="E0_0" index="0" speed="16.70" length="190.00" width="3.50" shape="0.00,-8.75 190.00,-8.75"/>
+        <lane id="E0_1" index="1" speed="16.70" length="190.00" width="3.50" shape="0.00,-5.25 190.00,-5.25"/>
+        <lane id="E0_2" index="2" speed="16.70" length="190.00" width="3.50" shape="0.00,-1.75 190.00,-1.75"/>
+    </edge>
+
+    <junction id="n0" type="dead_end" x="0.00" y="0.00" incLanes="" intLanes="" shape="0.00,0.00 0.00,-10.50"/>
+    <junction id="n1" type="dead_end" x="190.00" y="0.00" incLanes="E0_0 E0_1 E0_2" intLanes="" shape="190.00,-10.50 190.00,0.00"/>
+
+</net>

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-09-29T13:45:15.910370+05:30 by Eclipse SUMO netconvert 1.27.1
+<netconvertConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
+
+    <input>
+        <node-files value="data\simulation\capacity_diagnostic\C2_TAU_0P90\capacity.nod.xml"/>
+        <edge-files value="data\simulation\capacity_diagnostic\C2_TAU_0P90\capacity.edg.xml"/>
+    </input>
+
+    <output>
+        <output-file value="data\simulation\capacity_diagnostic\C2_TAU_0P90\capacity.net.xml"/>
+    </output>
+
+    <junctions>
+        <no-turnarounds value="true"/>
+    </junctions>
+
+</netconvertConfiguration>
+-->
+
+<net version="1.20" junctionCornerDetail="5" limitTurnSpeed="5.50" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/net_file.xsd">
+
+    <location netOffset="400.00,0.00" convBoundary="0.00,0.00,645.00,0.00" origBoundary="-400.00,0.00,245.00,0.00" projParameter="!"/>
+
+    <edge id=":n0_0" function="internal">
+        <lane id=":n0_0_0" index="0" speed="16.70" length="0.10" width="3.50" shape="400.00,-8.75 400.00,-8.75"/>
+        <lane id=":n0_0_1" index="1" speed="16.70" length="0.10" width="3.50" shape="400.00,-5.25 400.00,-5.25"/>
+        <lane id=":n0_0_2" index="2" speed="16.70" length="0.10" width="3.50" shape="400.00,-1.75 400.00,-1.75"/>
+    </edge>
+
+    <edge id="E0" from="n0" to="n1" priority="-1">
+        <lane id="E0_0" index="0" speed="16.70" length="245.00" width="3.50" shape="400.00,-8.75 645.00,-8.75"/>
+        <lane id="E0_1" index="1" speed="16.70" length="245.00" width="3.50" shape="400.00,-5.25 645.00,-5.25"/>
+        <lane id="E0_2" index="2" speed="16.70" length="245.00" width="3.50" shape="400.00,-1.75 645.00,-1.75"/>
+    </edge>
+    <edge id="E_pre" from="npre" to="n0" priority="-1">
+        <lane id="E_pre_0" index="0" speed="16.70" length="400.00" width="3.50" shape="0.00,-8.75 400.00,-8.75"/>
+        <lane id="E_pre_1" index="1" speed="16.70" length="400.00" width="3.50" shape="0.00,-5.25 400.00,-5.25"/>
+        <lane id="E_pre_2" index="2" speed="16.70" length="400.00" width="3.50" shape="0.00,-1.75 400.00,-1.75"/>
+    </edge>
+
+    <junction id="n0" type="priority" x="400.00" y="0.00" incLanes="E_pre_0 E_pre_1 E_pre_2" intLanes=":n0_0_0 :n0_0_1 :n0_0_2" shape="400.00,0.00 400.00,-10.50 400.00,0.00">
+        <request index="0" response="000" foes="000" cont="0"/>
+        <request index="1" response="000" foes="000" cont="0"/>
+        <request index="2" response="000" foes="000" cont="0"/>
+    </junction>
+    <junction id="n1" type="dead_end" x="645.00" y="0.00" incLanes="E0_0 E0_1 E0_2" intLanes="" shape="645.00,-10.50 645.00,0.00"/>
+    <junction id="npre" type="dead_end" x="0.00" y="0.00" incLanes="" intLanes="" shape="0.00,0.00 0.00,-10.50"/>
+
+    <connection from="E_pre" to="E0" fromLane="0" toLane="0" via=":n0_0_0" dir="s" state="M"/>
+    <connection from="E_pre" to="E0" fromLane="1" toLane="1" via=":n0_0_1" dir="s" state="M"/>
+    <connection from="E_pre" to="E0" fromLane="2" toLane="2" via=":n0_0_2" dir="s" state="M"/>
+
+    <connection from=":n0_0" to="E0" fromLane="0" toLane="0" dir="s" state="M"/>
+    <connection from=":n0_0" to="E0" fromLane="1" toLane="1" dir="s" state="M"/>
+    <connection from=":n0_0" to="E0" fromLane="2" toLane="2" dir="s" state="M"/>
+
+</net>

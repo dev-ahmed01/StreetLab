@@ -1,0 +1,233 @@
+{
+  "sprint": "PHASE1_FINAL_HELDOUT_VALIDATION",
+  "run_timestamp_utc": "2026-09-29T11:32:47.976582+00:00",
+  "calibration_locked": true,
+  "validation_was_untouched_before_this_run": true,
+  "validation_is_now_unblinded": true,
+  "selection_source": {
+    "a11_selected_case": "H0_GLOBAL_TAU_0P50",
+    "a11_status": "FREEZE_BASELINE_AND_VALIDATE"
+  },
+  "frozen_model": {
+    "selected_from_a11": "H0_GLOBAL_TAU_0P50",
+    "tau_s": 0.5,
+    "min_gap_m": 0.5,
+    "speed_multipliers": {
+      "1": 0.9,
+      "2": 0.9,
+      "6": 0.9
+    },
+    "min_gap_lat_m": 0.6,
+    "lc_pushy": 0.0,
+    "step_length_s": 0.1,
+    "eager_insert": true,
+    "depart_lane": "best_prob",
+    "depart_speed": "avg",
+    "persona_source": "deterministic assignment from calibration persona shares; no validation Behaviour-DNA used",
+    "speed_reference_source": "calibration_clean.parquet",
+    "physical_profile_source": "calibration_clean.parquet"
+  },
+  "validation_dataset": {
+    "file": "data/processed/validation_clean.parquet",
+    "vehicle_counts_by_class": {
+      "1": 843,
+      "2": 399,
+      "3": 50,
+      "4": 2,
+      "5": 23,
+      "6": 174
+    },
+    "observed_speed_target_rows": 1416,
+    "observed_interaction_rows": 31427
+  },
+  "simulation": {
+    "validation_total_vehicles": 1491,
+    "boundary_crossing_vehicles": 1446,
+    "boundary_crossing_coverage": 0.9698189134808853,
+    "scheduled_vehicles": 1446,
+    "departed_vehicles": 1446,
+    "departed_fraction": 1.0,
+    "mean_depart_delay_s": 0.6365136662132364,
+    "median_depart_delay_s": 0.18431657968321247,
+    "p95_depart_delay_s": 2.8557834722500957,
+    "max_depart_delay_s": 26.65596757788137,
+    "teleport_events": 0,
+    "collision_events": 0,
+    "trajectory_rows": 81973,
+    "interaction_rows_scored": 65737
+  },
+  "capacity_gate_pass": false,
+  "speed_objective": 0.9102359351906765,
+  "speed_fit": [
+    {
+      "vehicle_class": 1,
+      "vehicle_class_name": "MOTORCYCLE",
+      "observed_n": 843,
+      "simulated_n": 815,
+      "observed_median_speed_mps": 6.1100206680909,
+      "simulated_median_speed_mps": 6.879413336183476,
+      "median_delta_mps": 0.7693926680925758,
+      "ks_statistic": 0.41678638226025955,
+      "wasserstein_mps": 0.739595043058277,
+      "normalized_wasserstein": 0.5303391169350602,
+      "objective": 1.0145853116800172,
+      "status": "OK"
+    },
+    {
+      "vehicle_class": 2,
+      "vehicle_class_name": "CAR",
+      "observed_n": 399,
+      "simulated_n": 389,
+      "observed_median_speed_mps": 6.242643617079536,
+      "simulated_median_speed_mps": 6.547704293251049,
+      "median_delta_mps": 0.30506067617151267,
+      "ks_statistic": 0.3328694486859823,
+      "wasserstein_mps": 0.5577368830042141,
+      "normalized_wasserstein": 0.4167642642778942,
+      "objective": 0.697176019851019,
+      "status": "OK"
+    },
+    {
+      "vehicle_class": 6,
+      "vehicle_class_name": "AUTO_RICKSHAW",
+      "observed_n": 174,
+      "simulated_n": 167,
+      "observed_median_speed_mps": 5.360586811018582,
+      "simulated_median_speed_mps": 5.688429104425283,
+      "median_delta_mps": 0.3278422934067011,
+      "ks_statistic": 0.6954022988505747,
+      "wasserstein_mps": 0.6388733914872717,
+      "normalized_wasserstein": 0.5341849709438147,
+      "objective": 1.0189464740409933,
+      "status": "OK"
+    }
+  ],
+  "spacing_objective": 0.678780995893249,
+  "spacing_fit": [
+    {
+      "vehicle_class": 1,
+      "vehicle_class_name": "MOTORCYCLE",
+      "front_gap": {
+        "status": "OK",
+        "observed_n": 17522,
+        "simulated_n": 36818,
+        "observed_p10": 4.190788604600344,
+        "simulated_p10": 3.5006571639908595,
+        "p10_delta": -0.690131440609485,
+        "observed_median": 13.727917471484488,
+        "simulated_median": 7.334214454160332,
+        "median_delta": -6.393703017324157,
+        "ks_statistic": 0.2887785237823896,
+        "wasserstein": 6.061833046191532,
+        "normalized_wasserstein": 0.3911157008137132,
+        "score": 0.6064522548134869
+      },
+      "time_headway": {
+        "status": "OK",
+        "observed_n": 17522,
+        "simulated_n": 36818,
+        "observed_p10": 0.7013035010228168,
+        "simulated_p10": 0.5897366489370889,
+        "p10_delta": -0.11156685208572792,
+        "observed_median": 2.300878381489011,
+        "simulated_median": 1.0821010202635473,
+        "median_delta": -1.2187773612254638,
+        "ks_statistic": 0.3404875944382103,
+        "wasserstein": 1.2848561762667938,
+        "normalized_wasserstein": 0.5018144353616704,
+        "score": 0.750880163106642
+      },
+      "class_spacing_score": 0.6786662089600644
+    },
+    {
+      "vehicle_class": 2,
+      "vehicle_class_name": "CAR",
+      "front_gap": {
+        "status": "OK",
+        "observed_n": 9083,
+        "simulated_n": 18811,
+        "observed_p10": 4.196731099965109,
+        "simulated_p10": 3.4731117514540415,
+        "p10_delta": -0.7236193485110674,
+        "observed_median": 12.55420220068487,
+        "simulated_median": 6.464501691021592,
+        "median_delta": -6.0897005096632775,
+        "ks_statistic": 0.32944988810830517,
+        "wasserstein": 5.8338726372223455,
+        "normalized_wasserstein": 0.43425034839216614,
+        "score": 0.6763469382574157
+      },
+      "time_headway": {
+        "status": "OK",
+        "observed_n": 9083,
+        "simulated_n": 18811,
+        "observed_p10": 0.717558448445923,
+        "simulated_p10": 0.5969086049090475,
+        "p10_delta": -0.12064984353687547,
+        "observed_median": 2.0456698657413717,
+        "simulated_median": 0.9926176632632302,
+        "median_delta": -1.0530522024781415,
+        "ks_statistic": 0.3748141559356735,
+        "wasserstein": 1.04982866858237,
+        "normalized_wasserstein": 0.4942854259513876,
+        "score": 0.7636224031198409
+      },
+      "class_spacing_score": 0.7199846706886283
+    },
+    {
+      "vehicle_class": 6,
+      "vehicle_class_name": "AUTO_RICKSHAW",
+      "front_gap": {
+        "status": "OK",
+        "observed_n": 4359,
+        "simulated_n": 9282,
+        "observed_p10": 4.0032987081161995,
+        "simulated_p10": 3.6606356831557347,
+        "p10_delta": -0.34266302496046475,
+        "observed_median": 15.203513375171667,
+        "simulated_median": 10.386318999748312,
+        "median_delta": -4.817194375423355,
+        "ks_statistic": 0.2892259556159803,
+        "wasserstein": 5.9905408412146635,
+        "normalized_wasserstein": 0.38131149524338953,
+        "score": 0.5646497328194421
+      },
+      "time_headway": {
+        "status": "OK",
+        "observed_n": 4359,
+        "simulated_n": 9282,
+        "observed_p10": 0.8156380636676458,
+        "simulated_p10": 0.6223260369997978,
+        "p10_delta": -0.19331202666784797,
+        "observed_median": 2.9113602629173467,
+        "simulated_median": 1.787338969436941,
+        "median_delta": -1.1240212934804057,
+        "ks_statistic": 0.3403227880172134,
+        "wasserstein": 1.5248289931910928,
+        "normalized_wasserstein": 0.486538646715779,
+        "score": 0.7107344832426671
+      },
+      "class_spacing_score": 0.6376921080310546
+    }
+  ],
+  "precommitted_generalization_guards": {
+    "calibration_speed_objective": 0.960820937308807,
+    "validation_speed_objective_max": 1.1529851247705685,
+    "speed_guard_pass": true,
+    "calibration_spacing_objective": 0.8169023738890587,
+    "validation_spacing_objective_max": 0.9802828486668704,
+    "spacing_guard_pass": true,
+    "max_relative_degradation": 0.2,
+    "note": "These guards test holdout degradation relative to the frozen calibration model. They do not erase the known absolute spacing bias."
+  },
+  "holdout_generalization_pass": false,
+  "phase1_status": "CLOSED_HELDOUT_GENERALIZATION_FAIL_NO_RETUNING",
+  "known_limitations": [
+    "Calibration H0 materially under-reproduced observed median front gaps and time headways even though capacity passed.",
+    "This held-out test evaluates whether that frozen behavior generalizes without substantial further degradation; it does not claim perfect microscopic spacing fidelity.",
+    "Only one Chennai mid-block site and two short time windows have been evaluated; no citywide or universal-India claim is supported."
+  ],
+  "retuning_allowed": false,
+  "phase1_closed": true,
+  "next_project_phase": "Phase 2 \u2014 StreetLab product workflow: Study Contract, ObservationPackage, data-sufficiency gate, Scenario Lab, simulation comparison, verification/evidence record."
+}

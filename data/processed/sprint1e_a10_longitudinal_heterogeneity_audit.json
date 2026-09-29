@@ -1,0 +1,325 @@
+{
+  "sprint": "1E_A10_LONGITUDINAL_HETEROGENEITY_AUDIT",
+  "purpose": "Determine whether the now-validated global tau/minGap failure should be addressed with persona-level tau, continuous Behaviour-DNA tau, or a simpler empirical class mixture before running another SUMO search.",
+  "canonical_interaction_metric": {
+    "lookahead_front_front_m": 50.0,
+    "per_vehicle_lateral_safety_expansion_m": 0.2,
+    "pairwise_body_clearance_threshold_m": 0.4,
+    "observed_window_m": [
+      65.0,
+      235.0
+    ]
+  },
+  "baseline_for_seeding_only": {
+    "global_tau_s": 0.5,
+    "provisional_min_gap_m": 0.5,
+    "note": "These are not frozen calibration parameters; they are the best global capacity/spacing compromise from A9.3 and are used only as shrinkage anchors for the next experiment."
+  },
+  "evidence": {
+    "canonical_interaction_rows": 31072,
+    "vehicles_total": 1406,
+    "vehicles_eligible_min_20_interactions": 877,
+    "eligibility_fraction": 0.6237553342816501,
+    "tau_proxy_definition": "time_headway - 0.50 / follower_speed",
+    "tau_proxy_per_vehicle_statistic": "20th percentile of valid instantaneous proxies",
+    "warning": "The tau proxy is an equilibrium-style calibration seed only. Dynamic microscopic observations are not assumed to equal SUMO tau exactly."
+  },
+  "dna_columns": {
+    "spacing_preference_column": null,
+    "speed_preference_column": null,
+    "available_columns": [
+      "vehicle_id",
+      "vehicle_class",
+      "persona"
+    ]
+  },
+  "persona_analysis": [
+    {
+      "vehicle_class": 1,
+      "vehicle_class_name": "MOTORCYCLE",
+      "eligible_vehicles": 452,
+      "persona_groups": [
+        {
+          "persona": "P1",
+          "vehicles": 248,
+          "tau_proxy_p20_s": {
+            "n": 248,
+            "p10": 0.471858001010066,
+            "p25": 0.7329407990155261,
+            "median": 1.132333763929501,
+            "p75": 1.6800145551638082,
+            "p90": 2.178541948801333
+          },
+          "time_headway_p20_s": {
+            "n": 248,
+            "p10": 0.5836790757860427,
+            "p25": 0.8978657832446806,
+            "median": 1.4093518752921936,
+            "p75": 2.0076116906099952,
+            "p90": 2.6569985822977644
+          },
+          "front_gap_median_m": {
+            "n": 248,
+            "p10": 6.509276789409615,
+            "p25": 8.941650589697204,
+            "median": 12.561725781501263,
+            "p75": 18.38846418886895,
+            "p90": 23.853068458952933
+          },
+          "dna_spacing_preference": {
+            "n": 0
+          }
+        },
+        {
+          "persona": "P2",
+          "vehicles": 126,
+          "tau_proxy_p20_s": {
+            "n": 126,
+            "p10": 0.37704233710404933,
+            "p25": 0.5598720329675637,
+            "median": 0.899562757192751,
+            "p75": 1.4490094511463292,
+            "p90": 2.0958962547705444
+          },
+          "time_headway_p20_s": {
+            "n": 126,
+            "p10": 0.4703728277238181,
+            "p25": 0.6592661175168271,
+            "median": 1.228067614360238,
+            "p75": 1.8729913742948459,
+            "p90": 2.450148841426129
+          },
+          "front_gap_median_m": {
+            "n": 126,
+            "p10": 5.015282648775759,
+            "p25": 7.483974193921348,
+            "median": 11.462860692952809,
+            "p75": 17.600682917935725,
+            "p90": 20.44268893590241
+          },
+          "dna_spacing_preference": {
+            "n": 0
+          }
+        },
+        {
+          "persona": "P3",
+          "vehicles": 78,
+          "tau_proxy_p20_s": {
+            "n": 78,
+            "p10": 0.4572720402391694,
+            "p25": 0.7204396980272363,
+            "median": 1.1546768301304222,
+            "p75": 1.5040283188385417,
+            "p90": 2.0908221249436836
+          },
+          "time_headway_p20_s": {
+            "n": 78,
+            "p10": 0.6183830371677207,
+            "p25": 0.886465099607158,
+            "median": 1.3062360326315554,
+            "p75": 1.8778632918343687,
+            "p90": 2.447791077743606
+          },
+          "front_gap_median_m": {
+            "n": 78,
+            "p10": 6.971752635019373,
+            "p25": 9.524218051215838,
+            "median": 13.546974303305714,
+            "p75": 19.516527761761232,
+            "p90": 23.26042443791249
+          },
+          "dna_spacing_preference": {
+            "n": 0
+          }
+        }
+      ],
+      "kruskal_h": 6.037941450753124,
+      "kruskal_p": 0.048851474076694976,
+      "epsilon_squared": 0.008993188086309853,
+      "persona_structure_signal": false
+    },
+    {
+      "vehicle_class": 2,
+      "vehicle_class_name": "CAR",
+      "eligible_vehicles": 288,
+      "persona_groups": [
+        {
+          "persona": "P1",
+          "vehicles": 198,
+          "tau_proxy_p20_s": {
+            "n": 198,
+            "p10": 0.542673158346707,
+            "p25": 0.8577060021882799,
+            "median": 1.1909587482544146,
+            "p75": 1.6435971015580404,
+            "p90": 2.083922809871823
+          },
+          "time_headway_p20_s": {
+            "n": 198,
+            "p10": 0.6671543104383656,
+            "p25": 0.9705882198225582,
+            "median": 1.4010808900492724,
+            "p75": 1.9628796990523432,
+            "p90": 2.3849192678121343
+          },
+          "front_gap_median_m": {
+            "n": 198,
+            "p10": 6.016393329053263,
+            "p25": 7.703403866581761,
+            "median": 12.108759750352178,
+            "p75": 16.384409491911835,
+            "p90": 20.44739536137006
+          },
+          "dna_spacing_preference": {
+            "n": 0
+          }
+        },
+        {
+          "persona": "P2",
+          "vehicles": 90,
+          "tau_proxy_p20_s": {
+            "n": 90,
+            "p10": 0.7671776225555443,
+            "p25": 1.0081237518563755,
+            "median": 1.3150618644714873,
+            "p75": 1.764299391134322,
+            "p90": 2.3602273791077506
+          },
+          "time_headway_p20_s": {
+            "n": 90,
+            "p10": 0.9081148388380201,
+            "p25": 1.1160442783206832,
+            "median": 1.4933361806871854,
+            "p75": 2.1563461299389863,
+            "p90": 2.6306553669799944
+          },
+          "front_gap_median_m": {
+            "n": 90,
+            "p10": 6.819807760143334,
+            "p25": 9.185780394197753,
+            "median": 12.419930741314076,
+            "p75": 16.891117503250115,
+            "p90": 20.932681374457584
+          },
+          "dna_spacing_preference": {
+            "n": 0
+          }
+        }
+      ],
+      "kruskal_h": 4.360616546083747,
+      "kruskal_p": 0.03677899189814905,
+      "epsilon_squared": 0.011750407503789327,
+      "persona_structure_signal": false
+    },
+    {
+      "vehicle_class": 6,
+      "vehicle_class_name": "AUTO_RICKSHAW",
+      "eligible_vehicles": 137,
+      "persona_groups": [
+        {
+          "persona": "P1",
+          "vehicles": 92,
+          "tau_proxy_p20_s": {
+            "n": 92,
+            "p10": 0.39113102511265224,
+            "p25": 0.6371245399460883,
+            "median": 1.073248888100847,
+            "p75": 1.5715175309587042,
+            "p90": 2.0131559251957376
+          },
+          "time_headway_p20_s": {
+            "n": 92,
+            "p10": 0.5799254535438081,
+            "p25": 1.0914508653584347,
+            "median": 1.5934932171101241,
+            "p75": 2.2389396902386576,
+            "p90": 3.0199721265845705
+          },
+          "front_gap_median_m": {
+            "n": 92,
+            "p10": 7.514165330566488,
+            "p25": 9.542248440801146,
+            "median": 13.581290581394569,
+            "p75": 18.901779647689835,
+            "p90": 23.413069461356926
+          },
+          "dna_spacing_preference": {
+            "n": 0
+          }
+        },
+        {
+          "persona": "P2",
+          "vehicles": 45,
+          "tau_proxy_p20_s": {
+            "n": 45,
+            "p10": 0.3431037562167782,
+            "p25": 0.5503667247671287,
+            "median": 1.06482801792317,
+            "p75": 1.4889048255117114,
+            "p90": 1.9292000077645137
+          },
+          "time_headway_p20_s": {
+            "n": 45,
+            "p10": 0.5380147534385317,
+            "p25": 0.8593011445465074,
+            "median": 1.5279868918853168,
+            "p75": 2.1440839408122385,
+            "p90": 2.7228433670924295
+          },
+          "front_gap_median_m": {
+            "n": 45,
+            "p10": 5.999128974398125,
+            "p25": 8.819238471006855,
+            "median": 12.690594528594929,
+            "p75": 16.863349818402803,
+            "p90": 22.76788095386838
+          },
+          "dna_spacing_preference": {
+            "n": 0
+          }
+        }
+      ],
+      "kruskal_h": 0.27777777777777146,
+      "kruskal_p": 0.5981614526835322,
+      "epsilon_squared": 0.0,
+      "persona_structure_signal": false
+    }
+  ],
+  "continuous_dna_analysis": [
+    {
+      "vehicle_class": 1,
+      "vehicle_class_name": "MOTORCYCLE",
+      "eligible_vehicles": 452,
+      "spacing_preference_vs_tau_proxy": null,
+      "spacing_preference_vs_headway_p20": null
+    },
+    {
+      "vehicle_class": 2,
+      "vehicle_class_name": "CAR",
+      "eligible_vehicles": 288,
+      "spacing_preference_vs_tau_proxy": null,
+      "spacing_preference_vs_headway_p20": null
+    },
+    {
+      "vehicle_class": 6,
+      "vehicle_class_name": "AUTO_RICKSHAW",
+      "eligible_vehicles": 137,
+      "spacing_preference_vs_tau_proxy": null,
+      "spacing_preference_vs_headway_p20": null
+    }
+  ],
+  "persona_signal_classes": [],
+  "continuous_signal_classes": [],
+  "recommended_next_model": "EMPIRICAL_CLASS_MIXTURE_NOT_PERSONA",
+  "seed_file": "data/models/a10_persona_tau_seeds.csv",
+  "vehicle_evidence_file": "data/processed/a10_vehicle_longitudinal_evidence.parquet",
+  "decision_rules": [
+    "Do not infer that personas deserve longitudinal parameters just because personas exist; require class-level structure in observed lower-tail following behavior.",
+    "Prefer persona tau only where persona groups have adequate sample sizes and non-trivial separation.",
+    "Prefer continuous DNA mapping where spacing_preference has a stronger monotonic relationship with observed following behavior than persona labels do.",
+    "Keep minGap at 0.50 m provisionally in the next test; low-speed standstill-gap evidence remains too sparse to justify persona-specific minGap.",
+    "The next SUMO sprint should test only the supported heterogeneity form against capacity + canonical spacing + speed simultaneously.",
+    "Validation period remains untouched."
+  ],
+  "validation_untouched": true
+}

@@ -1,0 +1,80 @@
+{
+  "1": {
+    "median_speed_ratio_to_stream": {
+      "median": 1.0326426300506353,
+      "scale_iqr": 0.21445036736961165,
+      "clip_low": 0.6625955704287643,
+      "clip_high": 1.5912806079970436
+    },
+    "median_headway_context_ratio": {
+      "median": 0.9775916687650352,
+      "scale_iqr": 0.27585600286029677,
+      "clip_low": 0.39866213462455996,
+      "clip_high": 1.6601516808630963
+    },
+    "median_side_clearance_context_ratio": {
+      "median": 0.9945197168762584,
+      "scale_iqr": 0.73520506113893,
+      "clip_low": 0.31403411052827795,
+      "clip_high": 2.9563127526516317
+    },
+    "median_lateral_activity_excess_mps": {
+      "median": 5.7761327797861695e-06,
+      "scale_iqr": 0.0421008805678249,
+      "clip_low": -0.04512633883170054,
+      "clip_high": 0.156910632765538
+    }
+  },
+  "2": {
+    "median_speed_ratio_to_stream": {
+      "median": 1.0521766711812683,
+      "scale_iqr": 0.1875770037655694,
+      "clip_low": 0.8395476746488459,
+      "clip_high": 1.5505770543502675
+    },
+    "median_headway_context_ratio": {
+      "median": 0.9960920499599912,
+      "scale_iqr": 0.2269312996647609,
+      "clip_low": 0.5236583228113281,
+      "clip_high": 1.5046223305813564
+    },
+    "median_side_clearance_context_ratio": {
+      "median": 1.0029069709010785,
+      "scale_iqr": 0.5940623549484307,
+      "clip_low": 0.3820017401772173,
+      "clip_high": 2.89828610371266
+    },
+    "median_lateral_activity_excess_mps": {
+      "median": -0.0013111787559767912,
+      "scale_iqr": 0.03699383607660144,
+      "clip_low": -0.03940855027156165,
+      "clip_high": 0.1026659888482668
+    }
+  },
+  "6": {
+    "median_speed_ratio_to_stream": {
+      "median": 0.8976069464941034,
+      "scale_iqr": 0.17285767632112548,
+      "clip_low": 0.5409972660013064,
+      "clip_high": 1.283461181191912
+    },
+    "median_headway_context_ratio": {
+      "median": 0.988523354736631,
+      "scale_iqr": 0.24834879219146133,
+      "clip_low": 0.4742180798585353,
+      "clip_high": 1.5626723659916752
+    },
+    "median_side_clearance_context_ratio": {
+      "median": 1.0251171634588874,
+      "scale_iqr": 0.6456313702966543,
+      "clip_low": 0.29909749678773595,
+      "clip_high": 2.7124569767330877
+    },
+    "median_lateral_activity_excess_mps": {
+      "median": 0.0013288962006582344,
+      "scale_iqr": 0.02082855624036302,
+      "clip_low": -0.03475056797209151,
+      "clip_high": 0.08410197409557019
+    }
+  }
+}

@@ -1,0 +1,141 @@
+{
+  "sprint": "1E_A_SPEED_CORRIDOR",
+  "mode": "baseline",
+  "geometry_status": "PROVISIONAL_STAGE_A_NOT_FINAL_CHENNAI_GEOMETRY",
+  "purpose": "Validate SUMO execution and calibrate desired-speed behavior only, using a provisional capacity-enabling tau baseline.",
+  "capacity_baseline": {
+    "source_case": "C3_TAU_0P72",
+    "provisional_tau_s": 0.72,
+    "final_spacing_calibration": false
+  },
+  "explicit_non_goals": [
+    "Do not claim final Chennai geometry from this stage.",
+    "Do not interpret tau=0.72 as final spacing calibration; it is a provisional capacity-enabling baseline for Stage A.",
+    "Do not calibrate lateral behavior in Stage A.",
+    "Do not use the untouched validation period for tuning."
+  ],
+  "corridor": {
+    "measurement_length_m": 245.0,
+    "feeder_length_m": 400.0,
+    "lanes": 3,
+    "lane_width_m": 3.5,
+    "edge_speed_mps": 16.7,
+    "lateral_resolution_m": 0.2,
+    "step_length_s": 0.5
+  },
+  "demand": {
+    "calibration_only": true,
+    "initial_stock_rule": "remove only vehicles first seen within ~1 s of recording start",
+    "scheduled_vehicles": 1513,
+    "class_counts": {
+      "1": 851,
+      "2": 401,
+      "3": 45,
+      "4": 7,
+      "5": 17,
+      "6": 192
+    }
+  },
+  "result": {
+    "run_name": "baseline",
+    "class_multipliers": {
+      "1": 1.0,
+      "2": 1.0,
+      "6": 1.0
+    },
+    "objective": 1.2808986479079918,
+    "infrastructure_gate_pass": true,
+    "simulation": {
+      "scheduled_vehicles": 1513,
+      "departed_vehicles": 1513,
+      "departed_fraction": 1.0,
+      "mean_depart_delay_s": 0.5,
+      "p95_depart_delay_s": 0.5,
+      "teleport_events": 0,
+      "collision_events": 0,
+      "simulation_end_s": 973.0,
+      "trajectory_rows": 98002
+    },
+    "speed_fit": [
+      {
+        "vehicle_class": 1,
+        "vehicle_class_name": "MOTORCYCLE",
+        "observed_n": 814,
+        "simulated_n": 838,
+        "observed_median_speed_mps": 6.171248212012626,
+        "simulated_median_speed_mps": 7.039788447157498,
+        "median_delta_mps": 0.8685402351448719,
+        "ks_statistic": 0.4509655022781514,
+        "wasserstein_mps": 0.7378406978330588,
+        "normalized_wasserstein": 0.5206988025063772,
+        "objective": 1.0526486960087942,
+        "status": "OK"
+      },
+      {
+        "vehicle_class": 2,
+        "vehicle_class_name": "CAR",
+        "observed_n": 391,
+        "simulated_n": 396,
+        "observed_median_speed_mps": 6.139159185095748,
+        "simulated_median_speed_mps": 6.9586487656958145,
+        "median_delta_mps": 0.8194895806000666,
+        "ks_statistic": 0.43238652509752257,
+        "wasserstein_mps": 0.6668372023908622,
+        "normalized_wasserstein": 0.5417454820120022,
+        "objective": 1.090819675809239,
+        "status": "OK"
+      },
+      {
+        "vehicle_class": 6,
+        "vehicle_class_name": "AUTO_RICKSHAW",
+        "observed_n": 191,
+        "simulated_n": 192,
+        "observed_median_speed_mps": 5.203125120535687,
+        "simulated_median_speed_mps": 6.070513339864616,
+        "median_delta_mps": 0.8673882193289284,
+        "ks_statistic": 0.8272251308900525,
+        "wasserstein_mps": 1.051622141159661,
+        "normalized_wasserstein": 0.9102312083714666,
+        "objective": 1.6992275719059422,
+        "status": "OK"
+      }
+    ]
+  },
+  "config": {
+    "corridor_length_m": 245.0,
+    "feeder_length_m": 400.0,
+    "lanes": 3,
+    "lane_width_m": 3.5,
+    "edge_speed_mps": 16.7,
+    "lateral_resolution_m": 0.2,
+    "step_length_s": 0.5,
+    "warmup_s": 60.0,
+    "cooldown_s": 90.0,
+    "interior_buffer_m": 10.0,
+    "default_tau_s": 0.72,
+    "default_min_gap_m": 2.5,
+    "default_min_gap_lat_m": 0.6,
+    "default_lc_pushy": 0.0,
+    "default_lc_sublane": 1.0,
+    "max_depart_delay_s": 120.0,
+    "time_to_teleport_s": -1.0,
+    "min_departed_fraction_gate": 0.95,
+    "max_p95_depart_delay_gate_s": 5.0,
+    "max_teleports_gate": 0,
+    "coarse_multipliers": [
+      0.8,
+      0.9,
+      1.0,
+      1.1,
+      1.2
+    ],
+    "fine_offsets": [
+      -0.08,
+      -0.04,
+      0.0,
+      0.04,
+      0.08
+    ]
+  },
+  "next_gate": "If baseline infrastructure gate passes, run --mode calibrate. If calibration completes, inspect speed fit before unlocking Stage B."
+}

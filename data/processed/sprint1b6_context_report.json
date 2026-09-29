@@ -1,0 +1,337 @@
+{
+  "thresholds_derived_from": "CALIBRATION_ONLY",
+  "context_thresholds": {
+    "density_neighbor_count_20m": {
+      "q33": 4.0,
+      "q67": 7.0
+    },
+    "local_stream_speed_mps": {
+      "q33": 5.512676471707103,
+      "q67": 6.2126518694696
+    },
+    "front_gap_m": {
+      "q33": 9.805407136525758,
+      "q67": 19.182006072497376
+    }
+  },
+  "baseline_tables": {
+    "expected_positive_accel_mps2": {
+      "levels": [
+        [
+          "vehicle_class",
+          "density_regime",
+          "stream_speed_regime",
+          "leader_state",
+          "front_gap_regime"
+        ],
+        [
+          "vehicle_class",
+          "density_regime",
+          "stream_speed_regime",
+          "leader_state"
+        ],
+        [
+          "vehicle_class",
+          "density_regime",
+          "stream_speed_regime"
+        ],
+        [
+          "vehicle_class",
+          "density_regime"
+        ],
+        [
+          "vehicle_class"
+        ]
+      ],
+      "cells_per_level": [
+        226,
+        112,
+        42,
+        17,
+        6
+      ]
+    },
+    "expected_braking_mps2": {
+      "levels": [
+        [
+          "vehicle_class",
+          "density_regime",
+          "stream_speed_regime",
+          "leader_state",
+          "front_gap_regime"
+        ],
+        [
+          "vehicle_class",
+          "density_regime",
+          "stream_speed_regime",
+          "leader_state"
+        ],
+        [
+          "vehicle_class",
+          "density_regime",
+          "stream_speed_regime"
+        ],
+        [
+          "vehicle_class",
+          "density_regime"
+        ],
+        [
+          "vehicle_class"
+        ]
+      ],
+      "cells_per_level": [
+        232,
+        118,
+        44,
+        17,
+        6
+      ]
+    },
+    "expected_abs_lat_speed_mps": {
+      "levels": [
+        [
+          "vehicle_class",
+          "density_regime",
+          "stream_speed_regime",
+          "leader_state",
+          "front_gap_regime"
+        ],
+        [
+          "vehicle_class",
+          "density_regime",
+          "stream_speed_regime",
+          "leader_state"
+        ],
+        [
+          "vehicle_class",
+          "density_regime",
+          "stream_speed_regime"
+        ],
+        [
+          "vehicle_class",
+          "density_regime"
+        ],
+        [
+          "vehicle_class"
+        ]
+      ],
+      "cells_per_level": [
+        274,
+        141,
+        53,
+        18,
+        6
+      ]
+    },
+    "expected_headway_s": {
+      "levels": [
+        [
+          "vehicle_class",
+          "density_regime",
+          "stream_speed_regime",
+          "leader_state",
+          "front_gap_regime"
+        ],
+        [
+          "vehicle_class",
+          "density_regime",
+          "stream_speed_regime",
+          "leader_state"
+        ],
+        [
+          "vehicle_class",
+          "density_regime",
+          "stream_speed_regime"
+        ],
+        [
+          "vehicle_class",
+          "density_regime"
+        ],
+        [
+          "vehicle_class"
+        ]
+      ],
+      "cells_per_level": [
+        241,
+        108,
+        51,
+        18,
+        6
+      ]
+    },
+    "expected_front_gap_m": {
+      "levels": [
+        [
+          "vehicle_class",
+          "density_regime",
+          "stream_speed_regime",
+          "leader_state",
+          "front_gap_regime"
+        ],
+        [
+          "vehicle_class",
+          "density_regime",
+          "stream_speed_regime",
+          "leader_state"
+        ],
+        [
+          "vehicle_class",
+          "density_regime",
+          "stream_speed_regime"
+        ],
+        [
+          "vehicle_class",
+          "density_regime"
+        ],
+        [
+          "vehicle_class"
+        ]
+      ],
+      "cells_per_level": [
+        241,
+        108,
+        51,
+        18,
+        6
+      ]
+    },
+    "expected_side_ratio": {
+      "levels": [
+        [
+          "vehicle_class",
+          "density_regime",
+          "stream_speed_regime",
+          "leader_state",
+          "front_gap_regime"
+        ],
+        [
+          "vehicle_class",
+          "density_regime",
+          "stream_speed_regime",
+          "leader_state"
+        ],
+        [
+          "vehicle_class",
+          "density_regime",
+          "stream_speed_regime"
+        ],
+        [
+          "vehicle_class",
+          "density_regime"
+        ],
+        [
+          "vehicle_class"
+        ]
+      ],
+      "cells_per_level": [
+        235,
+        127,
+        46,
+        18,
+        6
+      ]
+    }
+  },
+  "frame_coverage": {
+    "calibration_rows": 55042,
+    "validation_rows": 53419,
+    "calibration_local_stream_available_fraction": 0.9892627448130519,
+    "validation_local_stream_available_fraction": 0.9933357045246074,
+    "calibration_side_overlap_excluded_fraction": 0.009538170851349878,
+    "validation_side_overlap_excluded_fraction": 0.0055972594020854
+  },
+  "behavior_vehicles": {
+    "calibration": 1514,
+    "validation": 1491
+  },
+  "drift_tests_with_enough_samples": 33,
+  "substantial_drift_tests": 6,
+  "substantial_drift_fraction": 0.18181818181818182,
+  "primary_classes_1_2_6_tests": 33,
+  "primary_classes_1_2_6_substantial_drift": 6,
+  "primary_classes_1_2_6_drift_fraction": 0.18181818181818182,
+  "top_substantial_drift": [
+    {
+      "vehicle_class": 2,
+      "metric": "median_braking_excess_mps2",
+      "calibration_n": 401,
+      "validation_n": 399,
+      "calibration_median": 0.0035710995362480125,
+      "validation_median": -0.1251689302175028,
+      "ks_statistic": 0.3946212163826024,
+      "robust_median_delta_iqr": 0.6831010468766942,
+      "enough_samples": true,
+      "substantial_drift": true
+    },
+    {
+      "vehicle_class": 6,
+      "metric": "median_accel_excess_mps2",
+      "calibration_n": 192,
+      "validation_n": 174,
+      "calibration_median": -0.015337383912644692,
+      "validation_median": -0.14061003504249905,
+      "ks_statistic": 0.3823635057471264,
+      "robust_median_delta_iqr": 0.6054183420947868,
+      "enough_samples": true,
+      "substantial_drift": true
+    },
+    {
+      "vehicle_class": 1,
+      "metric": "median_braking_excess_mps2",
+      "calibration_n": 852,
+      "validation_n": 843,
+      "calibration_median": 0.009540732608062569,
+      "validation_median": -0.1512180178480757,
+      "ks_statistic": 0.353336507777388,
+      "robust_median_delta_iqr": 0.6615770250068783,
+      "enough_samples": true,
+      "substantial_drift": true
+    },
+    {
+      "vehicle_class": 2,
+      "metric": "median_accel_excess_mps2",
+      "calibration_n": 401,
+      "validation_n": 397,
+      "calibration_median": -0.001108422819476762,
+      "validation_median": -0.12014900801184125,
+      "ks_statistic": 0.3342274037827346,
+      "robust_median_delta_iqr": 0.5218892670625156,
+      "enough_samples": true,
+      "substantial_drift": true
+    },
+    {
+      "vehicle_class": 6,
+      "metric": "median_braking_excess_mps2",
+      "calibration_n": 192,
+      "validation_n": 174,
+      "calibration_median": 0.0036317734867171714,
+      "validation_median": -0.09939619080751526,
+      "ks_statistic": 0.33045977011494254,
+      "robust_median_delta_iqr": 0.5804798260775625,
+      "enough_samples": true,
+      "substantial_drift": true
+    },
+    {
+      "vehicle_class": 1,
+      "metric": "median_accel_excess_mps2",
+      "calibration_n": 852,
+      "validation_n": 843,
+      "calibration_median": 0.0,
+      "validation_median": -0.14002721074352187,
+      "ks_statistic": 0.2944965164653401,
+      "robust_median_delta_iqr": 0.5158762617333146,
+      "enough_samples": true,
+      "substantial_drift": true
+    }
+  ],
+  "config": {
+    "local_speed_radius_m": 20.0,
+    "min_stream_speed_mps": 0.5,
+    "leader_relative_speed_threshold_mps": 0.5,
+    "min_context_cell_n": 30,
+    "severe_side_overlap_m": -0.25,
+    "min_class_n_for_drift": 100,
+    "ks_substantial": 0.2,
+    "robust_delta_substantial": 0.5
+  }
+}

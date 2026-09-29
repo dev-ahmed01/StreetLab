@@ -1,0 +1,4 @@
+vehicle_class,vehicle_class_name,n,p10_low_speed_front_gap_m,median_low_speed_front_gap_m,minGap_seed_m,status
+1,MOTORCYCLE,18,,,,INSUFFICIENT_LOW_SPEED_DATA_DO_NOT_MAP
+2,CAR,1,,,,INSUFFICIENT_LOW_SPEED_DATA_DO_NOT_MAP
+6,AUTO_RICKSHAW,8,,,,INSUFFICIENT_LOW_SPEED_DATA_DO_NOT_MAP

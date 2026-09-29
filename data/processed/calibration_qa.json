@@ -1,0 +1,33 @@
+{
+  "rows_raw": 57494,
+  "rows_clean": 55042,
+  "flagged_rows_removed": 2452,
+  "duplicate_vehicle_time_rows": 0,
+  "unique_vehicles": 1514,
+  "median_sample_seconds": 0.5,
+  "warnings": [],
+  "path": "data\\raw\\ChennaiTrajectoryData2.45-3.00PM.xlsx",
+  "role": "CALIBRATION",
+  "column_mapping": {
+    "timestamp": "Time (sec)",
+    "vehicle_id": "Vehicle Number",
+    "vehicle_class": "Vehicle Type",
+    "length": "Length (m)",
+    "width": "Width (m)",
+    "long_pos": "Long Distance (m)",
+    "long_speed": "Long Speed (m/sec)",
+    "long_accel": "Long Acc (m/sec2)",
+    "lat_pos": "Lat Distance (m)",
+    "lat_speed": "Lat Speed (m/sec)",
+    "lat_accel": "Lat Acc (m/sec2)",
+    "flag": "Flag"
+  },
+  "vehicle_class_counts": {
+    "1": 852,
+    "2": 401,
+    "3": 45,
+    "4": 7,
+    "5": 17,
+    "6": 192
+  }
+}

@@ -1,0 +1,186 @@
+{
+  "tau_s": 0.72,
+  "min_gap_m": 2.0,
+  "speed_multipliers": {
+    "1": 0.9,
+    "2": 0.9,
+    "6": 0.9
+  },
+  "capacity_gate_pass": false,
+  "simulation": {
+    "scheduled_vehicles": 1514,
+    "departed_vehicles": 1501,
+    "departed_fraction": 0.9914134742404227,
+    "mean_depart_delay_s": 5.824620696117122,
+    "median_depart_delay_s": 0.9976761437310415,
+    "p95_depart_delay_s": 29.594290647716775,
+    "max_depart_delay_s": 114.7933711907774,
+    "fraction_delay_le_1s": 0.5003331112591606,
+    "fraction_delay_le_5s": 0.7614923384410394,
+    "teleport_events": 0,
+    "collision_events": 0,
+    "speed_rows": 75474,
+    "spacing_rows": 63438
+  },
+  "speed_objective": 0.941775471102687,
+  "speed_fit": [
+    {
+      "vehicle_class": 1,
+      "vehicle_class_name": "MOTORCYCLE",
+      "observed_n": 852,
+      "simulated_n": 852,
+      "observed_median_speed_mps": 6.130985994695566,
+      "simulated_median_speed_mps": 6.815330902757113,
+      "median_delta_mps": 0.6843449080615471,
+      "ks_statistic": 0.40727699530516437,
+      "wasserstein_mps": 0.6241545077419455,
+      "normalized_wasserstein": 0.44133414680211536,
+      "objective": 0.886919768421145,
+      "status": "OK"
+    },
+    {
+      "vehicle_class": 2,
+      "vehicle_class_name": "CAR",
+      "observed_n": 401,
+      "simulated_n": 401,
+      "observed_median_speed_mps": 6.193388751047068,
+      "simulated_median_speed_mps": 6.528629710980813,
+      "median_delta_mps": 0.3352409599337456,
+      "ks_statistic": 0.32668329177057354,
+      "wasserstein_mps": 0.5457965513875863,
+      "normalized_wasserstein": 0.3951421357840906,
+      "objective": 0.679836535340827,
+      "status": "OK"
+    },
+    {
+      "vehicle_class": 6,
+      "vehicle_class_name": "AUTO_RICKSHAW",
+      "observed_n": 192,
+      "simulated_n": 192,
+      "observed_median_speed_mps": 5.225797082576298,
+      "simulated_median_speed_mps": 5.6891443760092155,
+      "median_delta_mps": 0.4633472934329177,
+      "ks_statistic": 0.71875,
+      "wasserstein_mps": 0.7423642248726786,
+      "normalized_wasserstein": 0.6853227168861655,
+      "objective": 1.258570109546089,
+      "status": "OK"
+    }
+  ],
+  "spacing_objective": 0.9287821699840576,
+  "spacing_fit": [
+    {
+      "vehicle_class": 1,
+      "vehicle_class_name": "MOTORCYCLE",
+      "front_gap": {
+        "status": "OK",
+        "observed_n": 17381,
+        "simulated_n": 34786,
+        "observed_p10": 3.8453193476246987,
+        "simulated_p10": 1.769136090690786,
+        "p10_delta": -2.0761832569339127,
+        "observed_median": 14.2365750780942,
+        "simulated_median": 4.989232480006322,
+        "median_delta": -9.247342598087878,
+        "ks_statistic": 0.47422735792206805,
+        "wasserstein": 9.74599657359829,
+        "normalized_wasserstein": 0.6020277418795802,
+        "score": 0.9428759580638228
+      },
+      "time_headway": {
+        "status": "OK",
+        "observed_n": 17381,
+        "simulated_n": 34786,
+        "observed_p10": 0.6696186347413021,
+        "simulated_p10": 0.25545994442000564,
+        "p10_delta": -0.4141586903212965,
+        "observed_median": 2.4043616265338277,
+        "simulated_median": 0.76411370329554,
+        "median_delta": -1.6402479232382876,
+        "ks_statistic": 0.5153547841927021,
+        "wasserstein": 1.807414768759409,
+        "normalized_wasserstein": 0.6965693888833554,
+        "score": 1.07488329252367
+      },
+      "class_spacing_score": 1.0088796252937464
+    },
+    {
+      "vehicle_class": 2,
+      "vehicle_class_name": "CAR",
+      "front_gap": {
+        "status": "OK",
+        "observed_n": 9110,
+        "simulated_n": 18747,
+        "observed_p10": 4.808244661747508,
+        "simulated_p10": 4.210336717238562,
+        "p10_delta": -0.5979079445089459,
+        "observed_median": 12.299988730474755,
+        "simulated_median": 4.952076456734304,
+        "median_delta": -7.347912273740452,
+        "ks_statistic": 0.51065838444872,
+        "wasserstein": 7.163386325047245,
+        "normalized_wasserstein": 0.624315461736453,
+        "score": 0.9761727595301635
+      },
+      "time_headway": {
+        "status": "OK",
+        "observed_n": 9110,
+        "simulated_n": 18747,
+        "observed_p10": 0.850772957097025,
+        "simulated_p10": 0.720690283809016,
+        "p10_delta": -0.13008267328800904,
+        "observed_median": 2.05724746635844,
+        "simulated_median": 0.7603875391968485,
+        "median_delta": -1.2968599271615915,
+        "ks_statistic": 0.5723973047542711,
+        "wasserstein": 1.2207985943237567,
+        "normalized_wasserstein": 0.689887127599636,
+        "score": 1.0918215449666469
+      },
+      "class_spacing_score": 1.0339971522484053
+    },
+    {
+      "vehicle_class": 6,
+      "vehicle_class_name": "AUTO_RICKSHAW",
+      "front_gap": {
+        "status": "OK",
+        "observed_n": 4927,
+        "simulated_n": 9905,
+        "observed_p10": 3.8952160361257246,
+        "simulated_p10": 4.225013990523555,
+        "p10_delta": 0.32979795439783066,
+        "observed_median": 14.230310283815907,
+        "simulated_median": 8.140788930040465,
+        "median_delta": -6.089521353775442,
+        "ks_statistic": 0.29070142403164956,
+        "wasserstein": 6.579609026047475,
+        "normalized_wasserstein": 0.44791438893502594,
+        "score": 0.6589105082384858
+      },
+      "time_headway": {
+        "status": "OK",
+        "observed_n": 4927,
+        "simulated_n": 9905,
+        "observed_p10": 0.7533274195042124,
+        "simulated_p10": 0.7381631525924637,
+        "p10_delta": -0.01516426691174877,
+        "observed_median": 2.7642654752161335,
+        "simulated_median": 1.3826250618220066,
+        "median_delta": -1.381640413394127,
+        "ks_statistic": 0.3558908883428495,
+        "wasserstein": 1.714354853332595,
+        "normalized_wasserstein": 0.5844243149418265,
+        "score": 0.8280289565815566
+      },
+      "class_spacing_score": 0.7434697324100212
+    }
+  ],
+  "joint_objective_if_capacity_pass": null,
+  "empirical_equilibrium_envelope": {
+    "rows": 31259,
+    "fraction_observed_below_equilibrium_envelope": 0.16974311398317285,
+    "median_inferred_speed_mps": 5.857885861595652,
+    "implied_net_time_headway_at_median_speed_s": 1.0614201039852988,
+    "note": "Diagnostic only: instantaneous car-following is dynamic; this uses the Krauss constant-speed relation to compare candidate restrictiveness."
+  }
+}
