@@ -1,0 +1,74 @@
+name: Phase 2 Decision Lab M1
+
+on:
+  push:
+    branches:
+      - "phase2/**"
+  pull_request:
+    paths:
+      - "streetlab_phase2/**"
+      - "scripts/phase2_decision_lab_demo.py"
+      - "tests/test_phase2_decision_lab.py"
+      - ".github/workflows/phase2-decision-lab.yml"
+
+jobs:
+  decision-lab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install SUMO
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sumo sumo-tools
+          echo "SUMO_HOME=/usr/share/sumo" >> "$GITHUB_ENV"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest
+
+      - name: Unit tests
+        run: |
+          export PYTHONPATH="$PWD"
+          pytest -q tests/test_phase2_decision_lab.py
+
+      - name: Run decision-in-the-loop integration demo
+        run: |
+          export PYTHONPATH="$PWD"
+          export PATH="/usr/bin:$PATH"
+          python scripts/phase2_decision_lab_demo.py \
+            --output artifacts/phase2_m1_decision_lab.json \
+            --workdir .streetlab-m1
+
+      - name: Validate integration artifact
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          p = Path("artifacts/phase2_m1_decision_lab.json")
+          assert p.exists(), "Decision Lab artifact was not produced"
+          r = json.loads(p.read_text())
+          assert r["branching"]["same_predecision_state_for_all_branches"] is True
+          assert len(r["branches"]) == 4
+          baseline = next(x for x in r["branches"] if x["name"] == "BASELINE")
+          blocked = [x for x in r["branches"] if x["name"] != "BASELINE"]
+          assert any(x["metrics"]["affected_upstream_northbound"] > 0 for x in blocked)
+          assert any(x["metrics"]["rerouted_vehicles"] > 0 for x in blocked)
+          print(json.dumps({
+              "baseline": baseline["metrics"],
+              "blocked": {x["name"]: x["metrics"] for x in blocked},
+          }, indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: phase2-m1-decision-lab
+          path: artifacts/phase2_m1_decision_lab.json
