@@ -134,7 +134,15 @@ def _start_sumo(net: Path, routes: Path, types: Path, label: str):
 
 
 def _set_turn_block(conn, blocked: bool) -> None:
-    conn.lane.setDisallowed("JN_0", ["passenger", "motorcycle"] if blocked else [])
+    """Logical closure marker.
+
+    We deliberately do not change lane permissions at runtime. SUMO validates
+    routes for loaded/departing vehicles against lane permissions, so making JN
+    disallowed can invalidate still-pending northbound routes before TraCI has a
+    chance to divert them. M1 enforces the closed movement by route replacement
+    while vehicles are still on the upstream WJ edge.
+    """
+    return None
 
 
 def _guide_northbound(conn) -> int:
@@ -154,17 +162,23 @@ def _guide_northbound(conn) -> int:
 
 
 def _natural_reroute(conn) -> int:
+    """Local/late response: divert only when a driver reaches the closure area."""
     changed = 0
     for vid in list(conn.vehicle.getIDList()):
         if not str(vid).startswith("n_") or conn.vehicle.getRoadID(vid) != "WJ":
             continue
-        before = tuple(conn.vehicle.getRoute(vid))
         try:
-            conn.vehicle.rerouteTraveltime(vid)
+            # WJ is about 220 m long. Natural response represents a driver
+            # discovering the closure locally, ~70 m before the junction.
+            if float(conn.vehicle.getLanePosition(vid)) < 150.0:
+                continue
+            current = tuple(conn.vehicle.getRoute(vid))
+            target = ["WJ", "JE", "EN", "N2", "NS"]
+            if list(current) != target:
+                conn.vehicle.setRoute(vid, target)
+                changed += 1
         except Exception:
             continue
-        if tuple(conn.vehicle.getRoute(vid)) != before:
-            changed += 1
     return changed
 
 
@@ -242,11 +256,6 @@ def _branch_run(net: Path, routes: Path, types: Path, snapshot: Path, spec: Bran
             speed_samples.extend(float(conn.vehicle.getSpeed(v)) for v in active)
             waiting_samples.extend(float(conn.vehicle.getWaitingTime(v)) for v in active)
     finally:
-        if blocked:
-            try:
-                _set_turn_block(conn, False)
-            except Exception:
-                pass
         conn.close()
 
     return {
