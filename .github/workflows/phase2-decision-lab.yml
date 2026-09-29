@@ -18,6 +18,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            streetlab_phase2
+            scripts/phase2_decision_lab_demo.py
+            tests/test_phase2_decision_lab.py
+            data/models/sumo_persona_priors.csv
+          sparse-checkout-cone-mode: false
 
       - uses: actions/setup-python@v5
         with:
@@ -58,13 +65,11 @@ jobs:
           r = json.loads(p.read_text())
           assert r["branching"]["same_predecision_state_for_all_branches"] is True
           assert len(r["branches"]) == 4
-          baseline = next(x for x in r["branches"] if x["name"] == "BASELINE")
           blocked = [x for x in r["branches"] if x["name"] != "BASELINE"]
           assert any(x["metrics"]["affected_upstream_northbound"] > 0 for x in blocked)
           assert any(x["metrics"]["rerouted_vehicles"] > 0 for x in blocked)
           print(json.dumps({
-              "baseline": baseline["metrics"],
-              "blocked": {x["name"]: x["metrics"] for x in blocked},
+              x["name"]: x["metrics"] for x in r["branches"]
           }, indent=2))
           PY
 
