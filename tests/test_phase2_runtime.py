@@ -210,3 +210,55 @@ def test_rejects_past_decision(tmp_path):
     with pytest.raises(ValueError, match="before current"):
         runtime.inject_decision(past)
     runtime.close()
+
+
+def test_m3_heterogeneous_response_contract_is_explicit_and_deterministic():
+    import importlib
+
+    assert ResponsePolicy.HETEROGENEOUS_RESPONSE.value == "HETEROGENEOUS_RESPONSE"
+
+    response = importlib.import_module("streetlab_phase2.response")
+    assumptions = response.ResponseAssumptions(
+        guided_share=0.50,
+        seed="m3-test",
+        local_trigger_position_m=150.0,
+    )
+    assert assumptions.provenance == "ASSUMED"
+
+    first = response.deterministic_response_mode(
+        "n_0042", "sl_car_p1", assumptions
+    )
+    second = response.deterministic_response_mode(
+        "n_0042", "sl_car_p1", assumptions
+    )
+    assert first == second
+    assert first in {
+        response.ResponseMode.GUIDED,
+        response.ResponseMode.LOCAL,
+    }
+
+    modes = {
+        response.deterministic_response_mode(
+            f"n_{i:04d}", f"sl_type_{i % 3}", assumptions
+        )
+        for i in range(100)
+    }
+    assert modes == {
+        response.ResponseMode.GUIDED,
+        response.ResponseMode.LOCAL,
+    }
+
+
+def test_m3_response_assumptions_reject_invalid_values():
+    import importlib
+
+    response = importlib.import_module("streetlab_phase2.response")
+
+    with pytest.raises(ValueError, match="guided_share"):
+        response.ResponseAssumptions(guided_share=-0.01)
+
+    with pytest.raises(ValueError, match="guided_share"):
+        response.ResponseAssumptions(guided_share=1.01)
+
+    with pytest.raises(ValueError, match="local_trigger_position_m"):
+        response.ResponseAssumptions(local_trigger_position_m=-1.0)
