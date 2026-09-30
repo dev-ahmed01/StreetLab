@@ -2,7 +2,13 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 
-from .models import ObservationPackage, build_summary
+from .adapters.fluid import FluidRouteAdapter, FluidSignalAdapter
+from .models import (
+    ObservationPackage,
+    build_quality,
+    build_route_summary,
+    build_summary,
+)
 from .providers import ProviderRegistry
 
 
@@ -16,10 +22,22 @@ class SiteCalibrator:
         self,
         *,
         track_rows: Sequence[Mapping[str, object]],
+        signal_rows: Sequence[Mapping[str, object]] | None = None,
+        route_rows: Sequence[Mapping[str, object]] | None = None,
     ) -> ObservationPackage:
         provider = self.registry.detect_track_provider(track_rows)
         points = provider.normalize_tracks(track_rows)
-        summary = build_summary(points)
+
+        signals = (
+            FluidSignalAdapter().normalize_signals(signal_rows)
+            if signal_rows
+            else []
+        )
+        routes = (
+            FluidRouteAdapter().normalize_routes(route_rows)
+            if route_rows
+            else []
+        )
 
         behavior_support: dict[str, str] = {}
         for p in points:
@@ -28,7 +46,11 @@ class SiteCalibrator:
         return ObservationPackage(
             source_provider=provider.name,
             tracks=tuple(points),
-            summary=summary,
+            signals=tuple(signals),
+            routes=tuple(routes),
+            summary=build_summary(points),
+            route_summary=build_route_summary(routes),
+            quality=build_quality(points),
             behavior_support=dict(sorted(behavior_support.items())),
             persona_calibration_modified=False,
             site_calibration_only=True,
