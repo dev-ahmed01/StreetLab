@@ -24,20 +24,23 @@ class SiteCalibrator:
         track_rows: Sequence[Mapping[str, object]],
         signal_rows: Sequence[Mapping[str, object]] | None = None,
         route_rows: Sequence[Mapping[str, object]] | None = None,
+        signal_adapter=None,
+        route_adapter=None,
     ) -> ObservationPackage:
         provider = self.registry.detect_track_provider(track_rows)
         points = provider.normalize_tracks(track_rows)
 
-        signals = (
-            FluidSignalAdapter().normalize_signals(signal_rows)
-            if signal_rows
-            else []
-        )
-        routes = (
-            FluidRouteAdapter().normalize_routes(route_rows)
-            if route_rows
-            else []
-        )
+        if signal_rows:
+            adapter = signal_adapter or FluidSignalAdapter()
+            signals = adapter.normalize_signals(signal_rows)
+        else:
+            signals = []
+
+        if route_rows:
+            adapter = route_adapter or FluidRouteAdapter()
+            routes = adapter.normalize_routes(route_rows)
+        else:
+            routes = []
 
         behavior_support: dict[str, str] = {}
         for p in points:
