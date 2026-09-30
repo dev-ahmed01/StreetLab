@@ -4,16 +4,20 @@ import argparse
 import json
 from pathlib import Path
 
-from streetlab_phase3.adapters.generic import GenericTrajectoryMapping
+from streetlab_phase3.adapters.generic import (
+    GenericRouteMapping,
+    GenericSignalMapping,
+    GenericTrajectoryMapping,
+)
 from streetlab_phase3.ingestion import CalibrationPipeline
 from streetlab_phase3.serialization import package_to_dict
 
 
-def _mapping(path: str | None):
+def _mapping(path: str | None, mapping_type):
     if path is None:
         return None
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
-    return GenericTrajectoryMapping(**payload)
+    return mapping_type(**payload)
 
 
 def main() -> None:
@@ -22,6 +26,8 @@ def main() -> None:
     ap.add_argument("--signals")
     ap.add_argument("--routes")
     ap.add_argument("--mapping")
+    ap.add_argument("--signal-mapping")
+    ap.add_argument("--route-mapping")
     ap.add_argument("--output", default="artifacts/phase3_observation_package.json")
     args = ap.parse_args()
 
@@ -29,7 +35,15 @@ def main() -> None:
         track_file=args.tracks,
         signal_file=args.signals,
         route_file=args.routes,
-        generic_mapping=_mapping(args.mapping),
+        generic_mapping=_mapping(args.mapping, GenericTrajectoryMapping),
+        generic_signal_mapping=_mapping(
+            args.signal_mapping,
+            GenericSignalMapping,
+        ),
+        generic_route_mapping=_mapping(
+            args.route_mapping,
+            GenericRouteMapping,
+        ),
     )
 
     output = Path(args.output)
@@ -44,6 +58,8 @@ def main() -> None:
     print(f"Classes: {package.summary.class_counts}")
     print(f"Movements: {package.summary.movement_counts}")
     print(f"Mean speed: {package.summary.mean_speed_mps}")
+    print(f"Signals: {len(package.signals)}")
+    print(f"Routes: {len(package.routes)}")
     print(f"Saved: {output}")
 
 
