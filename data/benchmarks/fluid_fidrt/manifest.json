@@ -1,0 +1,39 @@
+{
+  "phase": "P3B",
+  "purpose": "FLUID raw-video benchmark",
+  "studies": [
+    {
+      "study_id": "fluid_fidrt_20250120",
+      "role": "development_calibration",
+      "video": "20250120_video.mp4",
+      "tracks": "20250120_video_Traj.csv",
+      "signals": "20250120_video_signal.csv",
+      "routes": "20250120_video_Route.csv",
+      "telemetry": "FIDRT_20250120_video.csv",
+      "observed_track_end_s": 1270.9,
+      "signal_end_s": 1295.0
+    },
+    {
+      "study_id": "fluid_fidrt_20250526",
+      "role": "held_out_validation",
+      "video": "20250526_video.mp4",
+      "tracks": "20250526_video_Traj.csv",
+      "signals": "20250526_video_signal.csv",
+      "routes": "20250526_video_Route.csv",
+      "telemetry": "FIDRT_20250526_video.csv",
+      "observed_track_end_s": 1729.3,
+      "signal_end_s": 1735.0
+    },
+    {
+      "study_id": "fluid_fidrt_20250525",
+      "role": "regression_reference",
+      "video": "20250525_video.mp4",
+      "tracks": "20250525_video_Traj.csv",
+      "signals": "20250525_video_signal.csv",
+      "routes": "20250525_video_Route.csv",
+      "telemetry": "FIDRT_20250525_video.csv",
+      "observed_track_end_s": 407.4,
+      "signal_end_s": 410.0
+    }
+  ]
+}
