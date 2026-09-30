@@ -36,4 +36,4 @@ jobs:
       - name: Run M5 API/UI contract tests
         run: |
           export PYTHONPATH="$PWD"
-          pytest -q tests/test_phase2_api.py
+          pytest -q tests/test_phase2_api.py tests/test_phase2_web_service.py
