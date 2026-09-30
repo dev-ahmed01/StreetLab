@@ -1,0 +1,114 @@
+name: Phase 2 Decision Lab Web M5
+
+on:
+  push:
+    branches:
+      - "phase2/**"
+  pull_request:
+    paths:
+      - "streetlab_phase1/**"
+      - "streetlab_phase2/**"
+      - "scripts/phase2_m5_api_smoke.py"
+      - "tests/**"
+      - "requirements.txt"
+      - ".github/workflows/phase2-m5-web.yml"
+
+jobs:
+  decision-lab-web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            streetlab_phase1
+            streetlab_phase2
+            scripts/phase2_m5_api_smoke.py
+            tests
+            data/models/sumo_persona_priors.csv
+            requirements.txt
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Run full repository test suite
+        run: |
+          export PYTHONPATH="$PWD"
+          pytest -q
+
+      - name: Install SUMO
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sumo sumo-tools
+          echo "SUMO_HOME=/usr/share/sumo" >> "$GITHUB_ENV"
+
+      - name: Run M5 real API/UI integration
+        run: |
+          export PYTHONPATH="$PWD"
+          python scripts/phase2_m5_api_smoke.py             --members 3             --output artifacts/phase2_m5_web_smoke.json             --workdir .streetlab-m5
+
+      - name: Validate M5 artifact
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          p = Path("artifacts/phase2_m5_web_smoke.json")
+          assert p.exists(), "M5 web smoke artifact was not produced"
+          r = json.loads(p.read_text())
+
+          assert r["milestone"] == "PHASE2_M5_DECISION_LAB_WEB"
+          assert r["health"]["product_role"] == "decision_assurance"
+          assert r["decision"]["type"] == "BLOCK_TURN"
+          assert r["decision"]["from_edge"] == "WJ"
+          assert r["decision"]["blocked_edge"] == "JN"
+
+          g = r["guardrails"]
+          assert g["phase1_retuned"] is False
+          assert g["microscopic_parameters_varied"] is False
+          assert g["routing_behavior_empirically_learned"] is False
+          assert g["uncertainty_is_probability_forecast"] is False
+          assert g["authority_remains_final_decision_maker"] is True
+          assert g["live_runtime_mutated_by_evaluated_branch"] is False
+
+          ui = r["ui_checks"]
+          assert all(ui.values())
+
+          meta = r["ensemble"]["metadata"]
+          assert meta["members"] == 3
+          assert meta["provenance"] == "ASSUMED"
+          assert meta["same_snapshot_for_all_members"] is True
+
+          branches = r["ensemble"]["branch_summaries"]
+          assert set(branches) == {
+              "BASELINE",
+              "NATURAL_RESPONSE",
+              "GUIDED_DIVERSION",
+              "MIXED_RESPONSE",
+          }
+          mixed = branches["MIXED_RESPONSE"]["metrics"]
+          assert mixed["heterogeneous_guided_responders"]["min"] > 0
+          assert mixed["heterogeneous_local_responders"]["min"] > 0
+
+          print(json.dumps({
+              "decision": r["decision"],
+              "snapshot": r["snapshot"],
+              "ensemble": meta,
+              "mixed_queue": mixed["max_approach_queue_vehicles"],
+              "mixed_speed": mixed["mean_network_speed_mps"],
+              "guardrails": g,
+          }, indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: phase2-m5-decision-lab-web
+          path: artifacts/phase2_m5_web_smoke.json
