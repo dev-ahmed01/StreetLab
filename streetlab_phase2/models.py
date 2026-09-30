@@ -13,6 +13,7 @@ class ResponsePolicy(str, Enum):
     NONE = "NONE"
     NATURAL_REROUTE = "NATURAL_REROUTE"
     GUIDED_DETOUR = "GUIDED_DETOUR"
+    HETEROGENEOUS_RESPONSE = "HETEROGENEOUS_RESPONSE"
 
 
 @dataclass(frozen=True)

@@ -17,6 +17,7 @@ from .decision_lab import (
     _start_sumo,
 )
 from .models import BranchSpec, DecisionEvent, DecisionType, ResponsePolicy
+from .response import ResponseAssumptions, ResponseMode, apply_heterogeneous_response
 
 
 class SimulationStatus(str, Enum):
@@ -66,6 +67,7 @@ class RuntimeSimulation:
         self._branch_runner = branch_runner or _branch_run
         self._decisions: list[DecisionEvent] = []
         self._snapshots: dict[str, SnapshotRecord] = {}
+        self._response_assignments: dict[int, dict[str, ResponseMode]] = {}
 
     @property
     def connection(self):
@@ -267,7 +269,7 @@ class RuntimeSimulation:
         return float(self.connection.simulation.getTime())
 
     def _apply_decisions(self, now: float) -> None:
-        for decision in self._decisions:
+        for index, decision in enumerate(self._decisions):
             if not decision.active_at(now):
                 continue
             _set_turn_block(self.connection, True)
@@ -275,6 +277,12 @@ class RuntimeSimulation:
                 _guide_northbound(self.connection)
             elif decision.response_policy == ResponsePolicy.NATURAL_REROUTE:
                 _natural_reroute(self.connection)
+            elif decision.response_policy == ResponsePolicy.HETEROGENEOUS_RESPONSE:
+                assumptions = ResponseAssumptions.from_metadata(decision.metadata)
+                assignments = self._response_assignments.setdefault(index, {})
+                apply_heterogeneous_response(
+                    self.connection, assumptions, assignments
+                )
 
     def __enter__(self) -> "RuntimeSimulation":
         self.start()

@@ -1,0 +1,90 @@
+name: Phase 2 Heterogeneous Response M3
+
+on:
+  push:
+    branches:
+      - "phase2/**"
+  pull_request:
+    paths:
+      - "streetlab_phase2/**"
+      - "scripts/phase2_m3_heterogeneous_demo.py"
+      - "tests/test_phase2_runtime.py"
+      - ".github/workflows/phase2-m3-heterogeneous.yml"
+
+jobs:
+  heterogeneous-response:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            streetlab_phase2
+            scripts/phase2_m3_heterogeneous_demo.py
+            tests/test_phase2_runtime.py
+            tests/test_phase2_decision_lab.py
+            data/models/sumo_persona_priors.csv
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install SUMO
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sumo sumo-tools
+          echo "SUMO_HOME=/usr/share/sumo" >> "$GITHUB_ENV"
+
+      - name: Install test dependency
+        run: pip install pytest
+
+      - name: Run Phase 2 unit tests
+        run: |
+          export PYTHONPATH="$PWD"
+          pytest -q tests/test_phase2_decision_lab.py tests/test_phase2_runtime.py
+
+      - name: Run M3 heterogeneous response integration
+        run: |
+          export PYTHONPATH="$PWD"
+          export PATH="/usr/bin:$PATH"
+          python scripts/phase2_m3_heterogeneous_demo.py             --output artifacts/phase2_m3_heterogeneous_response.json             --workdir .streetlab-m3
+
+      - name: Validate M3 decision-assurance artifact
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          p = Path("artifacts/phase2_m3_heterogeneous_response.json")
+          assert p.exists()
+          r = json.loads(p.read_text())
+          assert r["milestone"] == "PHASE2_M3_HETEROGENEOUS_RESPONSE"
+          assert r["guardrails"]["phase1_retuned"] is False
+          assert r["guardrails"]["routing_behavior_empirically_learned"] is False
+          assert r["guardrails"]["response_assumptions_provenance"] == "ASSUMED"
+
+          comparison = r["comparison"]
+          assert comparison["same_snapshot_for_all_branches"] is True
+          assert len(comparison["branches"]) == 4
+          mixed = next(b for b in comparison["branches"] if b["name"] == "MIXED_RESPONSE")
+          assumptions = mixed["response_assumptions"]
+          assert assumptions["provenance"] == "ASSUMED"
+          assert 0.0 < assumptions["guided_share"] < 1.0
+
+          m = mixed["metrics"]
+          assert m["affected_upstream_northbound"] > 0
+          assert m["heterogeneous_guided_responders"] > 0
+          assert m["heterogeneous_local_responders"] > 0
+          assert m["rerouted_vehicles"] > 0
+
+          hashes = {b["provenance"]["snapshot_sha256"] for b in comparison["branches"]}
+          assert hashes == {r["snapshot"]["sha256"]}
+          print(json.dumps(mixed, indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: phase2-m3-heterogeneous-response
+          path: artifacts/phase2_m3_heterogeneous_response.json
