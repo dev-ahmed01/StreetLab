@@ -1,0 +1,127 @@
+name: Phase 2 Study Evidence M6
+
+on:
+  push:
+    branches:
+      - "phase2/**"
+  pull_request:
+    paths:
+      - "streetlab_phase1/**"
+      - "streetlab_phase2/**"
+      - "scripts/phase2_m6_study_demo.py"
+      - "tests/**"
+      - "requirements.txt"
+      - ".github/workflows/phase2-m6-study.yml"
+
+jobs:
+  study-m6:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            streetlab_phase1
+            streetlab_phase2
+            scripts/phase2_m6_study_demo.py
+            tests
+            data/models/sumo_persona_priors.csv
+            requirements.txt
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Run full repository test suite
+        run: |
+          export PYTHONPATH="$PWD"
+          pytest -q
+
+      - name: Install SUMO
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sumo sumo-tools
+          echo "SUMO_HOME=/usr/share/sumo" >> "$GITHUB_ENV"
+
+      - name: Run M6 evidence-gated APPLY_DETOUR integration
+        run: |
+          export PYTHONPATH="$PWD"
+          python scripts/phase2_m6_study_demo.py             --members 3             --output artifacts/phase2_m6_study.json             --workdir .streetlab-m6
+
+      - name: Validate M6 artifact
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          p = Path("artifacts/phase2_m6_study.json")
+          assert p.exists(), "M6 study artifact was not produced"
+          r = json.loads(p.read_text())
+
+          assert r["milestone"] == "PHASE2_M6_STUDY_EVIDENCE_DECISIONS"
+
+          incomplete = r["incomplete_study"]
+          assert incomplete["status"] == "NEEDS_DATA"
+          assert incomplete["can_simulate"] is False
+          assert incomplete["missing_evidence"] == ["alternate_route"]
+          assert "confidence" not in incomplete
+
+          refused = r["refused_evaluation"]
+          assert refused["study"]["status"] == "NEEDS_DATA"
+          assert refused["decision_evaluated"] is False
+          assert refused["snapshot"] is None
+          assert refused["ensemble"] is None
+
+          supported = r["supported_study"]
+          assert supported["status"] == "SUPPORTED"
+          assert supported["can_simulate"] is True
+          assert supported["evidence_provenance"]["alternate_route"] == "ASSUMED"
+          assert supported["evidence_provenance"]["speeds"] == "CALIBRATED"
+
+          assert r["decision"]["type"] == "APPLY_DETOUR"
+
+          meta = r["ensemble"]["metadata"]
+          assert meta["members"] == 3
+          assert meta["provenance"] == "ASSUMED"
+          assert meta["same_snapshot_for_all_members"] is True
+
+          branches = r["ensemble"]["branch_summaries"]
+          assert set(branches) == {
+              "BASELINE",
+              "DETOUR_GUIDED",
+              "DETOUR_MIXED",
+          }
+          mixed = branches["DETOUR_MIXED"]["metrics"]
+          assert mixed["rerouted_vehicles"]["min"] > 0
+          assert mixed["heterogeneous_guided_responders"]["min"] > 0
+          assert mixed["heterogeneous_local_responders"]["min"] > 0
+
+          g = r["guardrails"]
+          assert g["phase1_retuned"] is False
+          assert g["confidence_fabricated"] is False
+          assert g["uncertainty_is_probability_forecast"] is False
+          assert g["authority_remains_final_decision_maker"] is True
+          assert g["live_runtime_mutated_by_evaluated_branch"] is False
+
+          print(json.dumps({
+              "incomplete": incomplete,
+              "supported": supported,
+              "decision": r["decision"],
+              "ensemble": meta,
+              "detour_mixed_queue": mixed["max_approach_queue_vehicles"],
+              "detour_mixed_speed": mixed["mean_network_speed_mps"],
+              "guardrails": g,
+          }, indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: phase2-m6-study-evidence
+          path: artifacts/phase2_m6_study.json

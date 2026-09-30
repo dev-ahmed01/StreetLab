@@ -127,9 +127,12 @@ class RuntimeSimulation:
     def inject_decision(self, decision: DecisionEvent) -> dict:
         if self.status not in {SimulationStatus.RUNNING, SimulationStatus.PAUSED}:
             raise RuntimeError("Start the simulation before injecting a decision")
-        if decision.decision_type != DecisionType.BLOCK_TURN:
+        if decision.decision_type not in {
+            DecisionType.BLOCK_TURN,
+            DecisionType.APPLY_DETOUR,
+        }:
             raise NotImplementedError(
-                f"M2 currently supports only {DecisionType.BLOCK_TURN.value}"
+                "Runtime currently supports BLOCK_TURN and APPLY_DETOUR"
             )
         now = self._time_s()
         if decision.at_s + 1e-9 < now:

@@ -332,3 +332,26 @@ def test_m3_runtime_accepts_heterogeneous_response_policy(tmp_path):
         "WJ", "JE", "EN", "N2", "NS"
     ]
     runtime.close()
+
+
+def test_m6_runtime_accepts_apply_detour_as_structured_decision(tmp_path):
+    runtime = make_runtime(tmp_path)
+    runtime.start()
+    event = DecisionEvent(
+        DecisionType.APPLY_DETOUR,
+        at_s=0.0,
+        duration_s=30.0,
+        from_edge="WJ",
+        blocked_edge="JN",
+        response_policy=ResponsePolicy.GUIDED_DETOUR,
+        metadata={"provenance": "ASSUMED"},
+    )
+
+    receipt = runtime.inject_decision(event)
+    assert receipt["decision"]["decision_type"] == DecisionType.APPLY_DETOUR
+
+    runtime.step()
+    assert runtime.connection.vehicle.routes["n_0001"] == [
+        "WJ", "JE", "EN", "N2", "NS"
+    ]
+    runtime.close()
