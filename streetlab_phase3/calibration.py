@@ -36,9 +36,20 @@ class SiteCalibrator:
         else:
             signals = []
 
+        route_rows_total = 0
+        route_rows_complete = 0
+        route_rows_incomplete = 0
         if route_rows:
             adapter = route_adapter or FluidRouteAdapter()
             routes = adapter.normalize_routes(route_rows)
+            if isinstance(adapter, FluidRouteAdapter):
+                route_rows_total = adapter.last_total_rows
+                route_rows_complete = adapter.last_complete_rows
+                route_rows_incomplete = adapter.last_incomplete_rows
+            else:
+                route_rows_total = len(route_rows)
+                route_rows_complete = len(routes)
+                route_rows_incomplete = max(0, route_rows_total - route_rows_complete)
         else:
             routes = []
 
@@ -53,7 +64,12 @@ class SiteCalibrator:
             routes=tuple(routes),
             summary=build_summary(points),
             route_summary=build_route_summary(routes),
-            quality=build_quality(points),
+            quality=build_quality(
+                points,
+                route_rows_total=route_rows_total,
+                route_rows_complete=route_rows_complete,
+                route_rows_incomplete=route_rows_incomplete,
+            ),
             behavior_support=dict(sorted(behavior_support.items())),
             persona_calibration_modified=False,
             site_calibration_only=True,
