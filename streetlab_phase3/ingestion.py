@@ -4,9 +4,16 @@ import csv
 import json
 from pathlib import Path
 
-from .adapters.generic import GenericTrajectoryAdapter, GenericTrajectoryMapping
-from .calibration import SiteCalibrator
+from .adapters.generic import (
+    GenericRouteAdapter,
+    GenericRouteMapping,
+    GenericSignalAdapter,
+    GenericSignalMapping,
+    GenericTrajectoryAdapter,
+    GenericTrajectoryMapping,
+)
 from .adapters.simjam import SimJamBundleAdapter
+from .calibration import SiteCalibrator
 from .models import ObservationPackage, build_quality, build_route_summary, build_summary
 from .providers import ProviderRegistry
 
@@ -33,7 +40,9 @@ class CalibrationPipeline:
         signal_file: str | Path | None = None,
         route_file: str | Path | None = None,
         generic_mapping: GenericTrajectoryMapping | None = None,
-    ):
+        generic_signal_mapping: GenericSignalMapping | None = None,
+        generic_route_mapping: GenericRouteMapping | None = None,
+    ) -> ObservationPackage:
         rows = load_rows(track_file)
         registry = ProviderRegistry.default()
         if generic_mapping is not None:
@@ -44,12 +53,24 @@ class CalibrationPipeline:
         signal_rows = load_rows(signal_file) if signal_file else None
         route_rows = load_rows(route_file) if route_file else None
 
+        signal_adapter = (
+            GenericSignalAdapter(generic_signal_mapping)
+            if generic_signal_mapping is not None
+            else None
+        )
+        route_adapter = (
+            GenericRouteAdapter(generic_route_mapping)
+            if generic_route_mapping is not None
+            else None
+        )
+
         return SiteCalibrator(registry=registry).calibrate(
             track_rows=rows,
             signal_rows=signal_rows,
             route_rows=route_rows,
+            signal_adapter=signal_adapter,
+            route_adapter=route_adapter,
         )
-
 
     def calibrate_simjam_files(
         self,
