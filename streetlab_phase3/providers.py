@@ -15,6 +15,9 @@ class ProviderRegistry:
     def default(cls) -> "ProviderRegistry":
         return cls((FluidAdapter(), GeoTraxAdapter()))
 
+    def with_provider(self, provider: TrajectoryAdapter) -> "ProviderRegistry":
+        return ProviderRegistry((*self.providers, provider))
+
     def detect_track_provider(self, rows: Sequence[Row]) -> TrajectoryAdapter:
         matches = [provider for provider in self.providers if provider.can_handle(rows)]
         if not matches:
