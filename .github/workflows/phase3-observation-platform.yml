@@ -1,0 +1,37 @@
+name: Phase 3 Observation Platform P3A
+
+on:
+  push:
+    branches:
+      - "phase3/**"
+  pull_request:
+    paths:
+      - "streetlab_phase3/**"
+      - "tests/test_phase3_observation_platform.py"
+      - ".github/workflows/phase3-observation-platform.yml"
+
+jobs:
+  observation-platform:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            streetlab_phase2
+            streetlab_phase3
+            tests/test_phase3_observation_platform.py
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependency
+        run: pip install pytest
+
+      - name: Run P3A observation contract tests
+        run: |
+          export PYTHONPATH="$PWD"
+          pytest -q tests/test_phase3_observation_platform.py
