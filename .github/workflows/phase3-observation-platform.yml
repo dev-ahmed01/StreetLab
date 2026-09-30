@@ -1,0 +1,101 @@
+name: Phase 3 Observation Platform P3A
+
+on:
+  push:
+    branches:
+      - "phase3/**"
+  pull_request:
+    paths:
+      - "streetlab_phase1/**"
+      - "streetlab_phase2/**"
+      - "streetlab_phase3/**"
+      - "scripts/phase3_calibrate_observation.py"
+      - "scripts/phase3_video_plan.py"
+      - "tests/**"
+      - "requirements.txt"
+      - ".github/workflows/phase3-observation-platform.yml"
+
+jobs:
+  observation-platform:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            streetlab_phase1
+            streetlab_phase2
+            streetlab_phase3
+            scripts/phase3_calibrate_observation.py
+            scripts/phase3_video_plan.py
+            tests
+            data/models/sumo_persona_priors.csv
+            requirements.txt
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Run full repository test suite
+        run: |
+          export PYTHONPATH="$PWD"
+          pytest -q
+
+      - name: Smoke test observation calibration CLI
+        run: |
+          export PYTHONPATH="$PWD"
+          mkdir -p .p3a-smoke artifacts
+          cat > .p3a-smoke/tracks.csv <<'CSV'
+          id,type,cx_m,cy_m,time,speed,overall_direction
+          1,moped,0,0,0,5,N-E
+          1,moped,1,1,1,6,N-E
+          2,car,0,1,0,8,W-E
+          CSV
+          python scripts/phase3_calibrate_observation.py             --tracks .p3a-smoke/tracks.csv             --output artifacts/phase3_observation_package.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path("artifacts/phase3_observation_package.json")
+          assert p.exists()
+          r = json.loads(p.read_text())
+          assert r["source_provider"] == "fluid"
+          assert r["summary"]["unique_tracks"] == 2
+          assert r["summary"]["class_counts"] == {
+              "CAR": 1,
+              "MOTORCYCLE": 1,
+          }
+          assert r["behavior_support"]["CAR"] == "CALIBRATED"
+          assert r["behavior_support"]["MOTORCYCLE"] == "CALIBRATED"
+          assert r["persona_calibration_modified"] is False
+          assert r["site_calibration_only"] is True
+          print(json.dumps(r["summary"], indent=2))
+          PY
+
+      - name: Smoke test raw-video provider plan
+        run: |
+          export PYTHONPATH="$PWD"
+          python scripts/phase3_video_plan.py --video junction.mp4 > artifacts/phase3_video_plan.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r = json.loads(Path("artifacts/phase3_video_plan.json").read_text())
+          assert r["command"] == ["geotrax", "batch", "junction.mp4", "--no-geo"]
+          assert r["georeferenced"] is False
+          assert r["calibration_ready"] is False
+          assert r["license_boundary"] == "EXTERNAL_PROVIDER"
+          print(json.dumps(r, indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: phase3-p3a-observation-platform
+          path: |
+            artifacts/phase3_observation_package.json
+            artifacts/phase3_video_plan.json
