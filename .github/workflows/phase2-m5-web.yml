@@ -24,6 +24,7 @@ jobs:
           sparse-checkout: |
             streetlab_phase1
             streetlab_phase2
+            streetlab_phase3
             scripts/phase2_m5_api_smoke.py
             tests
             data/models/sumo_persona_priors.csv
