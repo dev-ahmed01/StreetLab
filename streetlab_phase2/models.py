@@ -7,6 +7,7 @@ from typing import Any
 
 class DecisionType(str, Enum):
     BLOCK_TURN = "BLOCK_TURN"
+    APPLY_DETOUR = "APPLY_DETOUR"
 
 
 class ResponsePolicy(str, Enum):
