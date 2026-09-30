@@ -1,0 +1,129 @@
+name: Phase 2 Runtime M2
+
+on:
+  push:
+    branches:
+      - "phase2/**"
+  pull_request:
+    paths:
+      - "streetlab_phase2/**"
+      - "scripts/phase2_runtime_demo.py"
+      - "scripts/phase2_decision_lab_demo.py"
+      - "tests/test_phase2_runtime.py"
+      - "tests/test_phase2_decision_lab.py"
+      - ".github/workflows/phase2-runtime-m2.yml"
+
+jobs:
+  runtime-m2:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            streetlab_phase2
+            scripts/phase2_runtime_demo.py
+            scripts/phase2_decision_lab_demo.py
+            tests/test_phase2_runtime.py
+            tests/test_phase2_decision_lab.py
+            data/models/sumo_persona_priors.csv
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install SUMO
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sumo sumo-tools
+          echo "SUMO_HOME=/usr/share/sumo" >> "$GITHUB_ENV"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest
+
+      - name: Run M1 and M2 unit tests
+        run: |
+          export PYTHONPATH="$PWD"
+          pytest -q tests/test_phase2_decision_lab.py tests/test_phase2_runtime.py
+
+      - name: Prove M1 remains executable
+        run: |
+          export PYTHONPATH="$PWD"
+          export PATH="/usr/bin:$PATH"
+          python scripts/phase2_decision_lab_demo.py \
+            --output artifacts/phase2_m1_decision_lab.json \
+            --workdir .streetlab-m1
+
+      - name: Run M2 runtime lifecycle integration
+        run: |
+          export PYTHONPATH="$PWD"
+          export PATH="/usr/bin:$PATH"
+          python scripts/phase2_runtime_demo.py \
+            --output artifacts/phase2_m2_runtime.json \
+            --workdir .streetlab-m2
+
+      - name: Validate M2 artifact
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          p = Path("artifacts/phase2_m2_runtime.json")
+          assert p.exists(), "M2 runtime artifact was not produced"
+          r = json.loads(p.read_text())
+
+          assert r["milestone"] == "PHASE2_M2_RUNTIME_STATE_MANAGER"
+          snapshot = r["snapshot"]
+          comparison = r["comparison"]
+
+          assert abs(snapshot["simulation_time_s"] - 60.0) <= 0.21
+          assert len(snapshot["sha256"]) == 64
+          assert comparison["same_snapshot_for_all_branches"] is True
+          assert len(comparison["branches"]) == 3
+
+          hashes = {
+              b["provenance"]["snapshot_sha256"]
+              for b in comparison["branches"]
+          }
+          assert hashes == {snapshot["sha256"]}
+
+          baseline = next(
+              b for b in comparison["branches"] if b["name"] == "BASELINE"
+          )
+          intervention = [
+              b for b in comparison["branches"] if b["name"] != "BASELINE"
+          ]
+          assert any(
+              b["metrics"]["affected_upstream_northbound"] > 0
+              for b in intervention
+          )
+          assert any(
+              b["metrics"]["rerouted_vehicles"] > 0
+              for b in intervention
+          )
+          assert all("vs_baseline" in b for b in comparison["branches"])
+          assert baseline["provenance"]["decision"] is None
+          assert all(
+              b["provenance"]["decision"] is not None
+              for b in intervention
+          )
+
+          print(json.dumps({
+              b["name"]: {
+                  "metrics": b["metrics"],
+                  "snapshot_sha256": b["provenance"]["snapshot_sha256"],
+              }
+              for b in comparison["branches"]
+          }, indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: phase2-m2-runtime
+          path: |
+            artifacts/phase2_m1_decision_lab.json
+            artifacts/phase2_m2_runtime.json
