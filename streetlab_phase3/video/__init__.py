@@ -1,1 +1,3 @@
-from .geotrax_provider import ExtractionPlan, GeoTraxVideoProvider\n\n__all__ = ["ExtractionPlan", "GeoTraxVideoProvider"]\n
+from .geotrax_provider import ExtractionPlan, GeoTraxVideoProvider
+
+__all__ = ["ExtractionPlan", "GeoTraxVideoProvider"]
