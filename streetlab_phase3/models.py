@@ -115,6 +115,9 @@ class QualityReport:
     negative_speed_points: int
     extreme_speed_points: int
     unknown_class_tracks: int
+    route_rows_total: int = 0
+    route_rows_complete: int = 0
+    route_rows_incomplete: int = 0
     persona_calibration_modified: bool = False
 
 
@@ -274,7 +277,13 @@ def build_route_summary(routes: Iterable[RouteRecord]) -> RouteSummary:
     )
 
 
-def build_quality(points: Iterable[TrackPoint]) -> QualityReport:
+def build_quality(
+    points: Iterable[TrackPoint],
+    *,
+    route_rows_total: int = 0,
+    route_rows_complete: int = 0,
+    route_rows_incomplete: int = 0,
+) -> QualityReport:
     pts = list(points)
     unknown_tracks = {
         p.source_track_id for p in pts if p.vehicle_class == VehicleClass.OTHER
@@ -290,5 +299,8 @@ def build_quality(points: Iterable[TrackPoint]) -> QualityReport:
             speed is not None and speed > 70.0 for speed in speeds
         ),
         unknown_class_tracks=len(unknown_tracks),
+        route_rows_total=route_rows_total,
+        route_rows_complete=route_rows_complete,
+        route_rows_incomplete=route_rows_incomplete,
         persona_calibration_modified=False,
     )
