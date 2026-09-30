@@ -421,3 +421,52 @@ def test_package_serialization_is_json_ready():
     assert payload["tracks"][0]["vehicle_class"] == "CAR"
     assert payload["tracks"][0]["provenance"] == "OBSERVED_AUTO"
     assert payload["quality"]["persona_calibration_modified"] is False
+
+
+def test_simjam_bundle_normalizes_fixed_camera_tracks():
+    from streetlab_phase3.adapters.simjam import SimJamBundleAdapter
+
+    track_rows = [
+        {"frame": 0, "time_s": 0.0, "vehicle_id": 11, "x_m": 1.0, "y_m": 2.0, "img_x": 100, "img_y": 200},
+        {"frame": 1, "time_s": 0.1, "vehicle_id": 11, "x_m": 1.5, "y_m": 2.0, "img_x": 102, "img_y": 200},
+    ]
+    summary_rows = [
+        {"vehicle_id": 11, "label": "car", "avg_speed_kmh": 18.0, "start_frame": 0, "end_frame": 1, "start_time_s": 0.0, "end_time_s": 0.1}
+    ]
+
+    points = SimJamBundleAdapter().normalize_bundle(track_rows, summary_rows)
+
+    assert len(points) == 2
+    assert points[0].source_provider == "simjam"
+    assert points[0].vehicle_class.value == "CAR"
+    assert points[0].speed_mps == pytest.approx(5.0)
+    assert points[0].metadata["speed_kind"] == "track_average"
+    assert points[0].metadata["img_x"] == 100.0
+
+
+def test_file_pipeline_calibrates_simjam_bundle(tmp_path):
+    from streetlab_phase3.ingestion import CalibrationPipeline
+
+    tracks = tmp_path / "vehicle_tracks_xy.csv"
+    tracks.write_text(
+        "frame,time_s,vehicle_id,x_m,y_m,img_x,img_y\n"
+        "0,0.0,11,1.0,2.0,100,200\n"
+        "1,0.1,11,1.5,2.0,102,200\n",
+        encoding="utf-8",
+    )
+    summary = tmp_path / "vehicle_summary.csv"
+    summary.write_text(
+        "vehicle_id,label,avg_speed_kmh,start_frame,end_frame,start_time_s,end_time_s\n"
+        "11,motorcycle,18.0,0,1,0.0,0.1\n",
+        encoding="utf-8",
+    )
+
+    package = CalibrationPipeline().calibrate_simjam_files(
+        track_file=tracks,
+        summary_file=summary,
+    )
+
+    assert package.source_provider == "simjam"
+    assert package.summary.unique_tracks == 1
+    assert package.summary.class_counts == {"MOTORCYCLE": 1}
+    assert package.behavior_support["MOTORCYCLE"] == "CALIBRATED"
