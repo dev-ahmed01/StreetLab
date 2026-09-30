@@ -633,3 +633,113 @@ def test_simjam_track_average_speed_is_not_weighted_by_track_length(tmp_path):
     )
 
     assert package.summary.mean_speed_mps == pytest.approx(7.5)
+
+
+def test_fluid_partial_direction_is_not_promoted_to_turn_movement():
+    from streetlab_phase3.adapters.fluid import FluidAdapter
+
+    points = FluidAdapter().normalize_tracks([
+        {
+            "frame": "4074",
+            "id": "938",
+            "type": "car",
+            "confidence": "0.89",
+            "cx_m": "8.8",
+            "cy_m": "-13.35",
+            "time": "407.4",
+            "speed": "14.89",
+            "speed_smooth": "14.83",
+            "ax": "-0.05",
+            "ay": "-1.10",
+            "entry_direction": "S",
+            "exit_direction": "Unknown",
+            "overall_direction": "S-Unknown",
+        }
+    ])
+
+    assert points[0].entry_direction == "S"
+    assert points[0].exit_direction is None
+    assert points[0].movement is None
+    assert points[0].metadata["raw_movement"] == "S-Unknown"
+
+
+def test_fluid_blank_numeric_fields_do_not_crash_real_schema():
+    from streetlab_phase3.adapters.fluid import FluidAdapter
+
+    points = FluidAdapter().normalize_tracks([
+        {
+            "frame": "1",
+            "id": "31",
+            "type": "moped",
+            "confidence": "",
+            "cx_m": "-1.54",
+            "cy_m": "9.58",
+            "time": "0.1",
+            "speed": "",
+            "speed_smooth": "",
+            "ax": "",
+            "ay": "",
+            "course": "",
+            "entry_direction": "N",
+            "exit_direction": "E",
+            "overall_direction": "N-E",
+        }
+    ])
+
+    p = points[0]
+    assert p.speed_mps is None
+    assert p.acceleration_mps2 is None
+    assert p.heading_rad is None
+    assert p.confidence is None
+
+
+def test_fluid_incomplete_route_rows_are_skipped_and_reported():
+    from streetlab_phase3.calibration import SiteCalibrator
+
+    tracks = [
+        {
+            "id": "1",
+            "type": "car",
+            "cx_m": "0",
+            "cy_m": "0",
+            "time": "0",
+            "speed": "5",
+            "entry_direction": "N",
+            "exit_direction": "S",
+            "overall_direction": "N-S",
+        }
+    ]
+    routes = [
+        {
+            "id": "1",
+            "in_time": "1.0",
+            "out_time": "7.0",
+            "type": "car",
+            "entry_direction": "N",
+            "exit_direction": "S",
+            "overall_direction": "N-S",
+            "turn": "s",
+            "in_state": "G",
+            "out_state": "G",
+        },
+        {
+            "id": "923",
+            "in_time": "",
+            "out_time": "",
+            "type": "car",
+            "entry_direction": "N",
+            "exit_direction": "Unknown",
+            "overall_direction": "N-Unknown",
+            "turn": "",
+            "in_state": "",
+            "out_state": "",
+        },
+    ]
+
+    package = SiteCalibrator().calibrate(track_rows=tracks, route_rows=routes)
+
+    assert len(package.routes) == 1
+    assert package.routes[0].source_track_id == "1"
+    assert package.quality.route_rows_total == 2
+    assert package.quality.route_rows_complete == 1
+    assert package.quality.route_rows_incomplete == 1
