@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -38,6 +39,14 @@ def _sumo_binary() -> str:
     raise FileNotFoundError("sumo binary not found on PATH")
 
 
+def _sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
 def default_branches(decision_at_s: float = 60.0) -> list[BranchSpec]:
     return [
         BranchSpec("BASELINE", None, "No turn restriction."),
@@ -51,7 +60,7 @@ def default_branches(decision_at_s: float = 60.0) -> list[BranchSpec]:
                 "JN",
                 ResponsePolicy.NATURAL_REROUTE,
             ),
-            "Block direct north for 120 s and let SUMO reroute dynamically.",
+            "Block direct north for 120 s and let drivers respond near the closure.",
         ),
         BranchSpec(
             "BLOCK_GUIDED_120",
@@ -80,7 +89,12 @@ def default_branches(decision_at_s: float = 60.0) -> list[BranchSpec]:
     ]
 
 
-def _write_routes(workdir: Path, grouped, duration_s: float = 300.0, headway_s: float = 1.5) -> Path:
+def _write_routes(
+    workdir: Path,
+    grouped,
+    duration_s: float = 300.0,
+    headway_s: float = 1.5,
+) -> Path:
     path = workdir / "decision_lab.rou.xml"
     lines = [
         '<?xml version="1.0" encoding="UTF-8"?>',
@@ -133,56 +147,51 @@ def _start_sumo(net: Path, routes: Path, types: Path, label: str):
     return traci.getConnection(label)
 
 
-def _set_turn_block(conn, blocked: bool) -> None:
-    """Logical closure marker.
-
-    We deliberately do not change lane permissions at runtime. SUMO validates
-    routes for loaded/departing vehicles against lane permissions, so making JN
-    disallowed can invalidate still-pending northbound routes before TraCI has a
-    chance to divert them. M1 enforces the closed movement by route replacement
-    while vehicles are still on the upstream WJ edge.
-    """
-    return None
-
-
-def _guide_northbound(conn) -> int:
-    changed = 0
+def _guide_northbound(conn) -> set[str]:
+    """Immediately divert all affected northbound vehicles still on WJ."""
+    changed: set[str] = set()
+    target = ["WJ", "JE", "EN", "N2", "NS"]
     for vid in list(conn.vehicle.getIDList()):
         if not str(vid).startswith("n_") or conn.vehicle.getRoadID(vid) != "WJ":
             continue
         try:
-            current = tuple(conn.vehicle.getRoute(vid))
-            target = ["WJ", "JE", "EN", "N2", "NS"]
-            if list(current) != target:
+            current = list(conn.vehicle.getRoute(vid))
+            if current != target:
                 conn.vehicle.setRoute(vid, target)
-                changed += 1
+                changed.add(str(vid))
         except Exception:
             continue
     return changed
 
 
-def _natural_reroute(conn) -> int:
-    """Local/late response: divert only when a driver reaches the closure area."""
-    changed = 0
+def _natural_reroute(conn) -> set[str]:
+    """Late/local response: divert a driver only near the blocked junction."""
+    changed: set[str] = set()
+    target = ["WJ", "JE", "EN", "N2", "NS"]
     for vid in list(conn.vehicle.getIDList()):
         if not str(vid).startswith("n_") or conn.vehicle.getRoadID(vid) != "WJ":
             continue
         try:
-            # WJ is about 220 m long. Natural response represents a driver
-            # discovering the closure locally, ~70 m before the junction.
+            # WJ is about 220 m. This represents learning about the closure
+            # locally, around 70 m before the junction.
             if float(conn.vehicle.getLanePosition(vid)) < 150.0:
                 continue
-            current = tuple(conn.vehicle.getRoute(vid))
-            target = ["WJ", "JE", "EN", "N2", "NS"]
-            if list(current) != target:
+            current = list(conn.vehicle.getRoute(vid))
+            if current != target:
                 conn.vehicle.setRoute(vid, target)
-                changed += 1
+                changed.add(str(vid))
         except Exception:
             continue
     return changed
 
 
-def _run_to_snapshot(net: Path, routes: Path, types: Path, workdir: Path, decision_at_s: float) -> Path:
+def _run_to_snapshot(
+    net: Path,
+    routes: Path,
+    types: Path,
+    workdir: Path,
+    decision_at_s: float,
+) -> Path:
     label = "streetlab_predecision"
     conn = _start_sumo(net, routes, types, label)
     snapshot = workdir / "decision_point_state.xml"
@@ -195,94 +204,167 @@ def _run_to_snapshot(net: Path, routes: Path, types: Path, workdir: Path, decisi
     return snapshot
 
 
-def _branch_run(net: Path, routes: Path, types: Path, snapshot: Path, spec: BranchSpec, horizon_s: float) -> dict:
+def _branch_run(
+    net: Path,
+    routes: Path,
+    types: Path,
+    snapshot: Path,
+    spec: BranchSpec,
+    horizon_s: float,
+) -> dict:
     label = f"branch_{spec.name.lower()}"
     conn = _start_sumo(net, routes, types, label)
     conn.simulation.loadState(str(snapshot))
 
-    decision_time = spec.decision.at_s if spec.decision is not None else float(conn.simulation.getTime())
+    decision_time = (
+        spec.decision.at_s
+        if spec.decision is not None
+        else float(conn.simulation.getTime())
+    )
     end_time = decision_time + horizon_s
 
-    blocked = False
     rerouted_ids: set[str] = set()
     affected_ids: set[str] = set()
     arrived_ids: set[str] = set()
+    blocked_movement_entry_ids: set[str] = set()
+    blocked_movement_entry_events: list[dict] = []
+
     speed_samples: list[float] = []
     occupancy_samples: list[int] = []
     queue_samples: list[int] = []
     waiting_samples: list[float] = []
 
+    previous_roads: dict[str, str] = {
+        str(v): str(conn.vehicle.getRoadID(v))
+        for v in conn.vehicle.getIDList()
+    }
+
     try:
         while conn.simulation.getTime() < end_time:
             now = float(conn.simulation.getTime())
             decision = spec.decision
-            should_block = bool(decision is not None and decision.active_at(now))
-            if should_block != blocked:
-                _set_turn_block(conn, should_block)
-                blocked = should_block
+            blocked = bool(decision is not None and decision.active_at(now))
 
             if blocked and decision is not None:
                 for vid in list(conn.vehicle.getIDList()):
-                    if str(vid).startswith("n_") and conn.vehicle.getRoadID(vid) == "WJ":
+                    if (
+                        str(vid).startswith("n_")
+                        and conn.vehicle.getRoadID(vid) == decision.from_edge
+                    ):
                         affected_ids.add(str(vid))
 
-                before = {
-                    str(v): tuple(conn.vehicle.getRoute(v))
-                    for v in conn.vehicle.getIDList()
-                    if str(v).startswith("n_")
-                }
                 if decision.response_policy == ResponsePolicy.GUIDED_DETOUR:
-                    _guide_northbound(conn)
+                    rerouted_ids.update(_guide_northbound(conn))
                 elif decision.response_policy == ResponsePolicy.NATURAL_REROUTE:
-                    _natural_reroute(conn)
-
-                active_after = set(str(v) for v in conn.vehicle.getIDList())
-                for vid, old in before.items():
-                    if vid in active_after and tuple(conn.vehicle.getRoute(vid)) != old:
-                        rerouted_ids.add(vid)
+                    rerouted_ids.update(_natural_reroute(conn))
 
             conn.simulationStep()
+            after_time = float(conn.simulation.getTime())
             arrived_ids.update(str(x) for x in conn.simulation.getArrivedIDList())
 
             active = list(conn.vehicle.getIDList())
+            current_roads = {
+                str(v): str(conn.vehicle.getRoadID(v))
+                for v in active
+            }
+
+            # Closure proof: for a BLOCK_TURN branch, no vehicle may newly enter
+            # the blocked edge while the decision window is active. Vehicles
+            # already on JN at the decision instant are allowed to clear.
+            if decision is not None and decision.active_at(after_time):
+                for vid, road in current_roads.items():
+                    if road != decision.blocked_edge:
+                        continue
+                    if previous_roads.get(vid) == decision.blocked_edge:
+                        continue
+                    blocked_movement_entry_ids.add(vid)
+                    blocked_movement_entry_events.append(
+                        {
+                            "vehicle_id": vid,
+                            "at_s": after_time,
+                            "from_edge": previous_roads.get(vid),
+                            "entered_edge": road,
+                        }
+                    )
+
+            previous_roads = current_roads
+
             occupancy_samples.append(len(active))
             queue_samples.append(
                 sum(
                     1
                     for vid in active
-                    if conn.vehicle.getRoadID(vid) == "WJ" and conn.vehicle.getSpeed(vid) < 0.5
+                    if conn.vehicle.getRoadID(vid) == "WJ"
+                    and conn.vehicle.getSpeed(vid) < 0.5
                 )
             )
             speed_samples.extend(float(conn.vehicle.getSpeed(v)) for v in active)
-            waiting_samples.extend(float(conn.vehicle.getWaitingTime(v)) for v in active)
+            waiting_samples.extend(
+                float(conn.vehicle.getWaitingTime(v)) for v in active
+            )
     finally:
         conn.close()
+
+    closure_enforced = (
+        spec.decision is None
+        or len(blocked_movement_entry_ids) == 0
+    )
 
     return {
         "name": spec.name,
         "description": spec.description,
         "decision": asdict(spec.decision) if spec.decision else None,
+        "closure_audit": {
+            "enforced": closure_enforced,
+            "blocked_movement_entries": len(blocked_movement_entry_ids),
+            "violating_vehicle_ids": sorted(blocked_movement_entry_ids),
+            "events": blocked_movement_entry_events[:20],
+            "note": (
+                "A vehicle already on the blocked edge at the snapshot may clear it. "
+                "The audit counts only new entries during the active decision window."
+            ),
+        },
         "metrics": {
             "arrivals_after_decision": len(arrived_ids),
             "affected_upstream_northbound": len(affected_ids),
             "rerouted_vehicles": len(rerouted_ids),
-            "mean_active_vehicles": mean(occupancy_samples) if occupancy_samples else 0.0,
+            "mean_active_vehicles": (
+                mean(occupancy_samples) if occupancy_samples else 0.0
+            ),
             "max_approach_queue_vehicles": max(queue_samples, default=0),
-            "mean_network_speed_mps": mean(speed_samples) if speed_samples else 0.0,
-            "mean_instant_waiting_time_s": mean(waiting_samples) if waiting_samples else 0.0,
+            "mean_network_speed_mps": (
+                mean(speed_samples) if speed_samples else 0.0
+            ),
+            "mean_instant_waiting_time_s": (
+                mean(waiting_samples) if waiting_samples else 0.0
+            ),
         },
     }
 
 
 def _add_deltas(branches: list[dict]) -> None:
-    baseline = next(x for x in branches if x["name"] == "BASELINE")["metrics"]
+    baseline = next(
+        x for x in branches if x["name"] == "BASELINE"
+    )["metrics"]
     for row in branches:
         m = row["metrics"]
         row["vs_baseline"] = {
-            "arrivals_delta": m["arrivals_after_decision"] - baseline["arrivals_after_decision"],
-            "max_queue_delta": m["max_approach_queue_vehicles"] - baseline["max_approach_queue_vehicles"],
-            "mean_speed_delta_mps": m["mean_network_speed_mps"] - baseline["mean_network_speed_mps"],
-            "mean_waiting_delta_s": m["mean_instant_waiting_time_s"] - baseline["mean_instant_waiting_time_s"],
+            "arrivals_delta": (
+                m["arrivals_after_decision"]
+                - baseline["arrivals_after_decision"]
+            ),
+            "max_queue_delta": (
+                m["max_approach_queue_vehicles"]
+                - baseline["max_approach_queue_vehicles"]
+            ),
+            "mean_speed_delta_mps": (
+                m["mean_network_speed_mps"]
+                - baseline["mean_network_speed_mps"]
+            ),
+            "mean_waiting_delta_s": (
+                m["mean_instant_waiting_time_s"]
+                - baseline["mean_instant_waiting_time_s"]
+            ),
         }
 
 
@@ -299,37 +381,65 @@ def run_decision_lab(
         workdir = project_root / workdir
     workdir.mkdir(parents=True, exist_ok=True)
 
-    profiles = load_phase1_personas(project_root / "data" / "models" / "sumo_persona_priors.csv")
+    profiles = load_phase1_personas(
+        project_root / "data" / "models" / "sumo_persona_priors.csv"
+    )
     grouped = profiles_by_class(profiles)
 
     net = write_demo_network(workdir)
     types = write_vtypes(workdir, profiles)
     routes = _write_routes(workdir, grouped)
-    snapshot = _run_to_snapshot(net, routes, types, workdir, decision_at_s)
+    snapshot = _run_to_snapshot(
+        net, routes, types, workdir, decision_at_s
+    )
+    snapshot_sha256 = _sha256(snapshot)
 
     branches = [
-        _branch_run(net, routes, types, snapshot, spec, horizon_s)
+        _branch_run(
+            net, routes, types, snapshot, spec, horizon_s
+        )
         for spec in default_branches(decision_at_s)
     ]
     _add_deltas(branches)
 
+    blocked = [x for x in branches if x["decision"] is not None]
+    closure_proof_pass = all(
+        x["closure_audit"]["enforced"] for x in blocked
+    )
+
     report = {
         "milestone": "PHASE2_M1_DECISION_IN_THE_LOOP",
-        "objective": "Fork one running SUMO state and compare multiple responses to a BLOCK_TURN decision.",
+        "objective": (
+            "Fork one running SUMO state and compare multiple responses "
+            "to a BLOCK_TURN decision."
+        ),
         "phase1_reuse": {
             "persona_priors": "data/models/sumo_persona_priors.csv",
             "longitudinal_tau": 0.50,
-            "vehicle_classes": ["MOTORCYCLE", "CAR", "AUTO_RICKSHAW"],
+            "vehicle_classes": [
+                "MOTORCYCLE",
+                "CAR",
+                "AUTO_RICKSHAW",
+            ],
             "note": (
                 "Persona speedFactor/minGapLat seeds provide prototype heterogeneity. "
-                "Routing-response behavior is an explicit scenario assumption, not a Phase-1 empirical claim."
+                "Routing-response behavior is an explicit scenario assumption, "
+                "not a Phase-1 empirical claim."
             ),
         },
         "branching": {
             "decision_time_s": decision_at_s,
             "horizon_s": horizon_s,
             "snapshot": str(snapshot),
+            "snapshot_sha256": snapshot_sha256,
             "same_predecision_state_for_all_branches": True,
+        },
+        "closure_proof": {
+            "pass": closure_proof_pass,
+            "rule": (
+                "No vehicle may newly enter the blocked JN movement while "
+                "BLOCK_TURN is active."
+            ),
         },
         "branches": branches,
     }
