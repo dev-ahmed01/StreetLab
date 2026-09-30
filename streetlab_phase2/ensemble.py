@@ -14,6 +14,10 @@ DEFAULT_METRICS = (
     "mean_network_speed_mps",
     "mean_instant_waiting_time_s",
     "rerouted_vehicles",
+    "heterogeneous_guided_responders",
+    "heterogeneous_local_responders",
+    "heterogeneous_guided_rerouted",
+    "heterogeneous_local_rerouted",
 )
 
 DEFAULT_DELTAS = (
