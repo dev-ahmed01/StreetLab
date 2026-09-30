@@ -6,6 +6,8 @@ from pathlib import Path
 
 from .adapters.generic import GenericTrajectoryAdapter, GenericTrajectoryMapping
 from .calibration import SiteCalibrator
+from .adapters.simjam import SimJamBundleAdapter
+from .models import ObservationPackage, build_quality, build_route_summary, build_summary
 from .providers import ProviderRegistry
 
 
@@ -46,4 +48,32 @@ class CalibrationPipeline:
             track_rows=rows,
             signal_rows=signal_rows,
             route_rows=route_rows,
+        )
+
+
+    def calibrate_simjam_files(
+        self,
+        *,
+        track_file: str | Path,
+        summary_file: str | Path,
+    ) -> ObservationPackage:
+        track_rows = load_rows(track_file)
+        summary_rows = load_rows(summary_file)
+        points = SimJamBundleAdapter().normalize_bundle(track_rows, summary_rows)
+
+        behavior_support: dict[str, str] = {}
+        for p in points:
+            behavior_support[p.vehicle_class.value] = p.behavior_support.value
+
+        return ObservationPackage(
+            source_provider="simjam",
+            tracks=tuple(points),
+            signals=tuple(),
+            routes=tuple(),
+            summary=build_summary(points),
+            route_summary=build_route_summary(()),
+            quality=build_quality(points),
+            behavior_support=dict(sorted(behavior_support.items())),
+            persona_calibration_modified=False,
+            site_calibration_only=True,
         )
