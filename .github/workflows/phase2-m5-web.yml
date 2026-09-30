@@ -1,0 +1,39 @@
+name: Phase 2 Decision Lab Web M5
+
+on:
+  push:
+    branches:
+      - "phase2/**"
+  pull_request:
+    paths:
+      - "streetlab_phase2/**"
+      - "scripts/phase2_m5_api_smoke.py"
+      - "tests/**"
+      - ".github/workflows/phase2-m5-web.yml"
+
+jobs:
+  decision-lab-web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            streetlab_phase1
+            streetlab_phase2
+            tests
+            data/models/sumo_persona_priors.csv
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install web test dependencies
+        run: pip install pytest pandas fastapi uvicorn httpx
+
+      - name: Run M5 API/UI contract tests
+        run: |
+          export PYTHONPATH="$PWD"
+          pytest -q tests/test_phase2_api.py
