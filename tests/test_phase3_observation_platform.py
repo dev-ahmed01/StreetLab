@@ -345,3 +345,79 @@ def test_generic_provider_is_the_fallback_for_new_raw_trajectory_formats():
     assert package.source_provider == "generic"
     assert package.summary.class_counts["AUTO_RICKSHAW"] == 1
     assert package.behavior_support["AUTO_RICKSHAW"] == "CALIBRATED"
+
+
+def test_file_pipeline_auto_detects_fluid_csv(tmp_path):
+    from streetlab_phase3.ingestion import CalibrationPipeline
+
+    path = tmp_path / "tracks.csv"
+    path.write_text(
+        "id,type,cx_m,cy_m,time,speed,overall_direction\n"
+        "1,moped,1.0,2.0,0.0,5.0,N-E\n"
+        "1,moped,2.0,3.0,1.0,6.0,N-E\n",
+        encoding="utf-8",
+    )
+
+    package = CalibrationPipeline().calibrate_files(track_file=path)
+
+    assert package.source_provider == "fluid"
+    assert package.summary.unique_tracks == 1
+    assert package.summary.class_counts == {"MOTORCYCLE": 1}
+
+
+def test_file_pipeline_accepts_unknown_csv_with_explicit_mapping(tmp_path):
+    from streetlab_phase3.adapters.generic import GenericTrajectoryMapping
+    from streetlab_phase3.ingestion import CalibrationPipeline
+
+    path = tmp_path / "india_tracks.csv"
+    path.write_text(
+        "veh,klass,t,x,y,speed,move\n"
+        "a1,auto-rickshaw,0,1,2,4,E-N\n",
+        encoding="utf-8",
+    )
+    mapping = GenericTrajectoryMapping(
+        track_id="veh",
+        vehicle_class="klass",
+        time_s="t",
+        x_m="x",
+        y_m="y",
+        speed_mps="speed",
+        movement="move",
+    )
+
+    package = CalibrationPipeline().calibrate_files(
+        track_file=path,
+        generic_mapping=mapping,
+    )
+
+    assert package.source_provider == "generic"
+    assert package.summary.class_counts == {"AUTO_RICKSHAW": 1}
+
+
+def test_file_pipeline_rejects_unknown_csv_without_mapping(tmp_path):
+    from streetlab_phase3.ingestion import CalibrationPipeline
+
+    path = tmp_path / "unknown.csv"
+    path.write_text("veh,x,y\na,1,2\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="Unsupported trajectory schema"):
+        CalibrationPipeline().calibrate_files(track_file=path)
+
+
+def test_package_serialization_is_json_ready():
+    import json
+
+    from streetlab_phase3.calibration import SiteCalibrator
+    from streetlab_phase3.serialization import package_to_dict
+
+    package = SiteCalibrator().calibrate(track_rows=[
+        {"id": 1, "type": "car", "cx_m": 0, "cy_m": 0, "time": 0, "speed": 5, "overall_direction": "N-E"}
+    ])
+
+    payload = package_to_dict(package)
+    encoded = json.dumps(payload)
+
+    assert '"source_provider": "fluid"' in encoded
+    assert payload["tracks"][0]["vehicle_class"] == "CAR"
+    assert payload["tracks"][0]["provenance"] == "OBSERVED_AUTO"
+    assert payload["quality"]["persona_calibration_modified"] is False
