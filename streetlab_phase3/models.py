@@ -137,39 +137,69 @@ class ObservationPackage:
             evidence.append(
                 EvidenceItem(
                     "trajectories",
-                    EvidenceProvenance.OBSERVED_AUTO,
+                    self.tracks[0].provenance,
                     f"Normalized from provider: {self.source_provider}",
                 )
             )
         if any(p.speed_mps is not None for p in self.tracks):
+            speed_provenances = {
+                p.provenance
+                for p in self.tracks
+                if p.speed_mps is not None
+            }
+            speed_provenance = (
+                next(iter(speed_provenances))
+                if len(speed_provenances) == 1
+                else EvidenceProvenance.INFERRED
+            )
             evidence.append(
                 EvidenceItem(
                     "speeds",
-                    EvidenceProvenance.OBSERVED_AUTO,
+                    speed_provenance,
                     f"Observed/extracted by provider: {self.source_provider}",
                 )
             )
         if any(p.movement for p in self.tracks):
+            movement_provenances = {
+                p.provenance
+                for p in self.tracks
+                if p.movement
+            }
+            movement_provenance = (
+                next(iter(movement_provenances))
+                if len(movement_provenances) == 1
+                else EvidenceProvenance.INFERRED
+            )
             evidence.append(
                 EvidenceItem(
                     "turn_movements",
-                    EvidenceProvenance.OBSERVED_AUTO,
+                    movement_provenance,
                     f"Observed/extracted by provider: {self.source_provider}",
                 )
             )
         if self.signals:
+            signal_provenances = {record.provenance for record in self.signals}
             evidence.append(
                 EvidenceItem(
                     "signals",
-                    EvidenceProvenance.OBSERVED_AUTO,
+                    (
+                        next(iter(signal_provenances))
+                        if len(signal_provenances) == 1
+                        else EvidenceProvenance.INFERRED
+                    ),
                     "Normalized traffic-signal timeline.",
                 )
             )
         if self.routes:
+            route_provenances = {record.provenance for record in self.routes}
             evidence.append(
                 EvidenceItem(
                     "routes",
-                    EvidenceProvenance.OBSERVED_AUTO,
+                    (
+                        next(iter(route_provenances))
+                        if len(route_provenances) == 1
+                        else EvidenceProvenance.INFERRED
+                    ),
                     "Normalized entry/exit route observations.",
                 )
             )
@@ -193,7 +223,24 @@ def build_summary(points: Iterable[TrackPoint]) -> ObservationSummary:
     for movement in track_movement.values():
         movement_counts[movement] = movement_counts.get(movement, 0) + 1
 
-    speeds = [float(p.speed_mps) for p in pts if p.speed_mps is not None]
+    point_speeds = [
+        float(p.speed_mps)
+        for p in pts
+        if p.speed_mps is not None
+        and p.metadata.get("speed_kind") != "track_average"
+    ]
+    track_average_speeds: dict[str, float] = {}
+    for p in pts:
+        if (
+            p.speed_mps is not None
+            and p.metadata.get("speed_kind") == "track_average"
+        ):
+            track_average_speeds.setdefault(
+                p.source_track_id,
+                float(p.speed_mps),
+            )
+    speeds = point_speeds + list(track_average_speeds.values())
+
     times = [float(p.time_s) for p in pts if p.time_s is not None]
     min_time = min(times) if times else None
     max_time = max(times) if times else None
