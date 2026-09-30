@@ -262,3 +262,73 @@ def test_m3_response_assumptions_reject_invalid_values():
 
     with pytest.raises(ValueError, match="local_trigger_position_m"):
         response.ResponseAssumptions(local_trigger_position_m=-1.0)
+
+
+def test_m3_heterogeneous_policy_mixes_guided_and_local_runtime_response(tmp_path):
+    from streetlab_phase2.response import ResponseAssumptions, ResponseMode, apply_heterogeneous_response
+
+    class MixedVehicle(FakeVehicle):
+        def __init__(self):
+            super().__init__()
+            self.ids = ["n_0001", "n_0002", "n_0003", "n_0004"]
+            self.routes = {
+                vid: ["WJ", "JN", "NS"] for vid in self.ids
+            }
+
+        def getTypeID(self, vid):
+            return "sl_car_p1" if vid in {"n_0001", "n_0002"} else "sl_motorcycle_p1"
+
+        def getLanePosition(self, vid):
+            return 100.0
+
+    conn = FakeConnection()
+    conn.vehicle = MixedVehicle()
+    assumptions = ResponseAssumptions(guided_share=0.50, seed="mixed-test")
+    assignments = {}
+
+    changed = apply_heterogeneous_response(conn, assumptions, assignments)
+
+    assert len(assignments) == 4
+    assert set(assignments.values()) == {ResponseMode.GUIDED, ResponseMode.LOCAL}
+    assert changed == {
+        vid for vid, mode in assignments.items() if mode == ResponseMode.GUIDED
+    }
+    for vid, mode in assignments.items():
+        if mode == ResponseMode.GUIDED:
+            assert conn.vehicle.routes[vid] == ["WJ", "JE", "EN", "N2", "NS"]
+        else:
+            assert conn.vehicle.routes[vid] == ["WJ", "JN", "NS"]
+
+
+def test_m3_runtime_accepts_heterogeneous_response_policy(tmp_path):
+    class TypedVehicle(FakeVehicle):
+        def getTypeID(self, vid):
+            return "sl_car_p1"
+
+    runtime = make_runtime(tmp_path)
+    runtime.start()
+    runtime.connection.vehicle = TypedVehicle()
+
+    event = DecisionEvent(
+        DecisionType.BLOCK_TURN,
+        at_s=0.0,
+        duration_s=30.0,
+        from_edge="WJ",
+        blocked_edge="JN",
+        response_policy=ResponsePolicy.HETEROGENEOUS_RESPONSE,
+        metadata={
+            "response_assumptions": {
+                "guided_share": 1.0,
+                "seed": "all-guided",
+                "local_trigger_position_m": 150.0,
+            }
+        },
+    )
+    receipt = runtime.inject_decision(event)
+    runtime.step()
+
+    assert receipt["provenance"]["response_behavior"] == "SCENARIO_ASSUMPTION"
+    assert runtime.connection.vehicle.routes["n_0001"] == [
+        "WJ", "JE", "EN", "N2", "NS"
+    ]
+    runtime.close()
