@@ -1,0 +1,42 @@
+name: Phase 2 Study Evidence M6
+
+on:
+  push:
+    branches:
+      - "phase2/**"
+  pull_request:
+    paths:
+      - "streetlab_phase2/**"
+      - "scripts/phase2_m6_study_demo.py"
+      - "tests/**"
+      - ".github/workflows/phase2-m6-study.yml"
+
+jobs:
+  study-m6:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            streetlab_phase1
+            streetlab_phase2
+            tests
+            requirements.txt
+            data/models/sumo_persona_priors.csv
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Run M6 Study Contract tests
+        run: |
+          export PYTHONPATH="$PWD"
+          pytest -q tests/test_phase2_study.py
