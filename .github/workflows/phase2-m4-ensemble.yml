@@ -26,14 +26,17 @@ jobs:
             scripts/phase2_m4_ensemble_demo.py
             tests
             data/models/sumo_persona_priors.csv
+            requirements.txt
           sparse-checkout-cone-mode: false
 
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Install Python test dependencies
-        run: pip install pytest pandas
+      - name: Install Python dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest
 
       - name: Run full repository test suite
         run: |
