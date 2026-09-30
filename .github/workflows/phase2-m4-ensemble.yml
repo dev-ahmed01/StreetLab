@@ -6,11 +6,10 @@ on:
       - "phase2/**"
   pull_request:
     paths:
+      - "streetlab_phase1/**"
       - "streetlab_phase2/**"
       - "scripts/phase2_m4_ensemble_demo.py"
-      - "tests/test_phase2_ensemble.py"
-      - "tests/test_phase2_runtime.py"
-      - "tests/test_phase2_decision_lab.py"
+      - "tests/**"
       - ".github/workflows/phase2-m4-ensemble.yml"
 
 jobs:
@@ -25,9 +24,7 @@ jobs:
             streetlab_phase1
             streetlab_phase2
             scripts/phase2_m4_ensemble_demo.py
-            tests/test_phase2_ensemble.py
-            tests/test_phase2_runtime.py
-            tests/test_phase2_decision_lab.py
+            tests
             data/models/sumo_persona_priors.csv
           sparse-checkout-cone-mode: false
 
@@ -38,10 +35,10 @@ jobs:
       - name: Install Python test dependencies
         run: pip install pytest pandas
 
-      - name: Run Phase 2 unit tests
+      - name: Run full repository test suite
         run: |
           export PYTHONPATH="$PWD"
-          pytest -q             tests/test_phase2_decision_lab.py             tests/test_phase2_runtime.py             tests/test_phase2_ensemble.py
+          pytest -q
 
       - name: Install SUMO
         run: |
@@ -53,7 +50,7 @@ jobs:
         run: |
           export PYTHONPATH="$PWD"
           export PATH="/usr/bin:$PATH"
-          python scripts/phase2_m4_ensemble_demo.py             --members 4             --output artifacts/phase2_m4_ensemble.json             --workdir .streetlab-m4
+          python scripts/phase2_m4_ensemble_demo.py --members 4 --output artifacts/phase2_m4_ensemble.json --workdir .streetlab-m4
 
       - name: Validate M4 decision-assurance artifact
         run: |
@@ -117,8 +114,6 @@ jobs:
           assert mixed["heterogeneous_guided_responders"]["min"] > 0
           assert mixed["heterogeneous_local_responders"]["min"] > 0
 
-          # M4 must report the distribution honestly. It does not require
-          # deterministic branches to show artificial spread.
           assert summaries["BASELINE"]["metrics"][
               "max_approach_queue_vehicles"
           ]["spread"] == 0
