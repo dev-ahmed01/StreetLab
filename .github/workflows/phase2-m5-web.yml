@@ -53,7 +53,6 @@ jobs:
       - name: Run M5 real API/UI integration
         run: |
           export PYTHONPATH="$PWD"
-          export PATH="/usr/bin:$PATH"
           python scripts/phase2_m5_api_smoke.py             --members 3             --output artifacts/phase2_m5_web_smoke.json             --workdir .streetlab-m5
 
       - name: Validate M5 artifact
