@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from math import hypot
 from typing import Iterable
 
 from streetlab_phase2.study import EvidenceItem, EvidenceProvenance
@@ -58,6 +57,40 @@ class TrackPoint:
 
 
 @dataclass(frozen=True)
+class SignalRecord:
+    provider: str
+    intersection_name: str | None
+    direction: str
+    turn: str
+    state: str
+    begin_time_s: float
+    end_time_s: float
+    duration_s: float
+    cycle_id: str | None
+    provenance: EvidenceProvenance = EvidenceProvenance.OBSERVED_AUTO
+
+
+@dataclass(frozen=True)
+class RouteRecord:
+    provider: str
+    source_track_id: str
+    source_class: str
+    vehicle_class: VehicleClass
+    behavior_support: BehaviorSupport
+    in_time_s: float
+    out_time_s: float
+    travel_time_s: float
+    entry_direction: str | None
+    exit_direction: str | None
+    movement: str | None
+    turn: str | None
+    in_state: str | None
+    out_state: str | None
+    provenance: EvidenceProvenance = EvidenceProvenance.OBSERVED_AUTO
+    metadata: dict = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
 class ObservationSummary:
     unique_tracks: int
     class_counts: dict[str, int]
@@ -69,10 +102,31 @@ class ObservationSummary:
 
 
 @dataclass(frozen=True)
+class RouteSummary:
+    unique_routes: int
+    movement_counts: dict[str, int]
+    mean_travel_time_s: float | None
+
+
+@dataclass(frozen=True)
+class QualityReport:
+    total_points: int
+    missing_speed_points: int
+    negative_speed_points: int
+    extreme_speed_points: int
+    unknown_class_tracks: int
+    persona_calibration_modified: bool = False
+
+
+@dataclass(frozen=True)
 class ObservationPackage:
     source_provider: str
     tracks: tuple[TrackPoint, ...]
+    signals: tuple[SignalRecord, ...]
+    routes: tuple[RouteRecord, ...]
     summary: ObservationSummary
+    route_summary: RouteSummary
+    quality: QualityReport
     behavior_support: dict[str, str]
     persona_calibration_modified: bool = False
     site_calibration_only: bool = True
@@ -87,7 +141,6 @@ class ObservationPackage:
                     f"Normalized from provider: {self.source_provider}",
                 )
             )
-
         if any(p.speed_mps is not None for p in self.tracks):
             evidence.append(
                 EvidenceItem(
@@ -96,7 +149,6 @@ class ObservationPackage:
                     f"Observed/extracted by provider: {self.source_provider}",
                 )
             )
-
         if any(p.movement for p in self.tracks):
             evidence.append(
                 EvidenceItem(
@@ -105,7 +157,22 @@ class ObservationPackage:
                     f"Observed/extracted by provider: {self.source_provider}",
                 )
             )
-
+        if self.signals:
+            evidence.append(
+                EvidenceItem(
+                    "signals",
+                    EvidenceProvenance.OBSERVED_AUTO,
+                    "Normalized traffic-signal timeline.",
+                )
+            )
+        if self.routes:
+            evidence.append(
+                EvidenceItem(
+                    "routes",
+                    EvidenceProvenance.OBSERVED_AUTO,
+                    "Normalized entry/exit route observations.",
+                )
+            )
         return tuple(evidence)
 
 
@@ -113,7 +180,6 @@ def build_summary(points: Iterable[TrackPoint]) -> ObservationSummary:
     pts = list(points)
     track_class: dict[str, VehicleClass] = {}
     track_movement: dict[str, str] = {}
-
     for p in pts:
         track_class.setdefault(p.source_track_id, p.vehicle_class)
         if p.movement:
@@ -139,5 +205,43 @@ def build_summary(points: Iterable[TrackPoint]) -> ObservationSummary:
         mean_speed_mps=(sum(speeds) / len(speeds)) if speeds else None,
         min_time_s=min_time,
         max_time_s=max_time,
-        duration_s=(max_time - min_time) if min_time is not None and max_time is not None else None,
+        duration_s=(max_time - min_time)
+        if min_time is not None and max_time is not None
+        else None,
+    )
+
+
+def build_route_summary(routes: Iterable[RouteRecord]) -> RouteSummary:
+    rows = list(routes)
+    movement_counts: dict[str, int] = {}
+    for route in rows:
+        if route.movement:
+            movement_counts[route.movement] = movement_counts.get(route.movement, 0) + 1
+    travel_times = [route.travel_time_s for route in rows]
+    return RouteSummary(
+        unique_routes=len(rows),
+        movement_counts=dict(sorted(movement_counts.items())),
+        mean_travel_time_s=(
+            sum(travel_times) / len(travel_times) if travel_times else None
+        ),
+    )
+
+
+def build_quality(points: Iterable[TrackPoint]) -> QualityReport:
+    pts = list(points)
+    unknown_tracks = {
+        p.source_track_id for p in pts if p.vehicle_class == VehicleClass.OTHER
+    }
+    speeds = [p.speed_mps for p in pts]
+    return QualityReport(
+        total_points=len(pts),
+        missing_speed_points=sum(speed is None for speed in speeds),
+        negative_speed_points=sum(
+            speed is not None and speed < 0 for speed in speeds
+        ),
+        extreme_speed_points=sum(
+            speed is not None and speed > 70.0 for speed in speeds
+        ),
+        unknown_class_tracks=len(unknown_tracks),
+        persona_calibration_modified=False,
     )
