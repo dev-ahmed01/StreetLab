@@ -11,6 +11,11 @@ from statistics import mean
 from .demo_network import write_demo_network, write_vtypes
 from .models import BranchSpec, DecisionEvent, DecisionType, ResponsePolicy
 from .personas import deterministic_persona, load_phase1_personas, profiles_by_class
+from .response import (
+    ResponseAssumptions,
+    ResponseMode,
+    apply_heterogeneous_response,
+)
 
 
 def _ensure_sumo_tools() -> None:
@@ -211,6 +216,12 @@ def _branch_run(net: Path, routes: Path, types: Path, snapshot: Path, spec: Bran
     occupancy_samples: list[int] = []
     queue_samples: list[int] = []
     waiting_samples: list[float] = []
+    response_assignments: dict[str, ResponseMode] = {}
+    heterogeneous_rerouted: dict[ResponseMode, set[str]] = {
+        ResponseMode.GUIDED: set(),
+        ResponseMode.LOCAL: set(),
+    }
+    response_assumptions: ResponseAssumptions | None = None
 
     try:
         while conn.simulation.getTime() < end_time:
@@ -235,6 +246,16 @@ def _branch_run(net: Path, routes: Path, types: Path, snapshot: Path, spec: Bran
                     _guide_northbound(conn)
                 elif decision.response_policy == ResponsePolicy.NATURAL_REROUTE:
                     _natural_reroute(conn)
+                elif decision.response_policy == ResponsePolicy.HETEROGENEOUS_RESPONSE:
+                    if response_assumptions is None:
+                        response_assumptions = ResponseAssumptions.from_metadata(
+                            decision.metadata
+                        )
+                    changed = apply_heterogeneous_response(
+                        conn, response_assumptions, response_assignments
+                    )
+                    for vid in changed:
+                        heterogeneous_rerouted[response_assignments[vid]].add(vid)
 
                 active_after = set(str(v) for v in conn.vehicle.getIDList())
                 for vid, old in before.items():
@@ -270,7 +291,26 @@ def _branch_run(net: Path, routes: Path, types: Path, snapshot: Path, spec: Bran
             "max_approach_queue_vehicles": max(queue_samples, default=0),
             "mean_network_speed_mps": mean(speed_samples) if speed_samples else 0.0,
             "mean_instant_waiting_time_s": mean(waiting_samples) if waiting_samples else 0.0,
+            "heterogeneous_guided_responders": sum(
+                1 for mode in response_assignments.values()
+                if mode == ResponseMode.GUIDED
+            ),
+            "heterogeneous_local_responders": sum(
+                1 for mode in response_assignments.values()
+                if mode == ResponseMode.LOCAL
+            ),
+            "heterogeneous_guided_rerouted": len(
+                heterogeneous_rerouted[ResponseMode.GUIDED]
+            ),
+            "heterogeneous_local_rerouted": len(
+                heterogeneous_rerouted[ResponseMode.LOCAL]
+            ),
         },
+        "response_assumptions": (
+            response_assumptions.as_provenance()
+            if response_assumptions is not None
+            else None
+        ),
     }
 
 
