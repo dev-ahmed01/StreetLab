@@ -743,3 +743,88 @@ def test_fluid_incomplete_route_rows_are_skipped_and_reported():
     assert package.quality.route_rows_total == 2
     assert package.quality.route_rows_complete == 1
     assert package.quality.route_rows_incomplete == 1
+
+
+def test_fluid_telemetry_normalizes_camera_state():
+    from streetlab_phase3.adapters.fluid_telemetry import FluidTelemetryAdapter
+
+    rows = [
+        {
+            "time(millisecond)": "265200",
+            "datetime": "2025-01-20 16:32:34",
+            "height_above_takeoff(feet)": "426.837284",
+            "speed(mph)": "0.0",
+            "compass_heading(degrees)": "0.1",
+            "pitch(degrees)": "-4.9",
+            "roll(degrees)": "3.3",
+            "isVideo": "1",
+            "gimbal_heading(degrees)": "3.5",
+            "gimbal_pitch(degrees)": "-89.9",
+            "gimbal_roll(degrees)": "0",
+            "battery_percent": "85",
+            "flycState": "Tripod",
+        }
+    ]
+
+    sample = FluidTelemetryAdapter().normalize(rows)[0]
+
+    assert sample.time_ms == 265200
+    assert sample.recording is True
+    assert sample.height_m == pytest.approx(130.10, abs=0.02)
+    assert sample.gimbal_pitch_deg == -89.9
+    assert sample.flight_state == "Tripod"
+
+
+def test_fluid_benchmark_report_combines_observation_and_telemetry():
+    from streetlab_phase3.benchmark import FluidBenchmark
+
+    tracks = [
+        {"id": "1", "type": "moped", "cx_m": "0", "cy_m": "0", "time": "0.1", "speed": "5", "entry_direction": "N", "exit_direction": "E", "overall_direction": "N-E"},
+        {"id": "1", "type": "moped", "cx_m": "1", "cy_m": "1", "time": "0.2", "speed": "6", "entry_direction": "N", "exit_direction": "E", "overall_direction": "N-E"},
+        {"id": "2", "type": "car", "cx_m": "0", "cy_m": "1", "time": "0.2", "speed": "7", "entry_direction": "W", "exit_direction": "Unknown", "overall_direction": "W-Unknown"},
+    ]
+    signals = [
+        {"name": "FIDRT", "direction": "N", "turn": "s", "begin_time": "0", "end_time": "20", "duration": "20", "state": "G", "cycle": "1"}
+    ]
+    routes = [
+        {"id": "1", "in_time": "0.1", "out_time": "3.0", "type": "moped", "entry_direction": "N", "exit_direction": "E", "overall_direction": "N-E", "turn": "r", "in_state": "G", "out_state": "G"},
+        {"id": "2", "in_time": "", "out_time": "", "type": "car", "entry_direction": "W", "exit_direction": "Unknown", "overall_direction": "W-Unknown"},
+    ]
+    telemetry = [
+        {"time(millisecond)": "1000", "datetime": "2025-01-01 10:00:00", "height_above_takeoff(feet)": "400", "speed(mph)": "0", "compass_heading(degrees)": "0", "pitch(degrees)": "0", "roll(degrees)": "0", "isVideo": "1", "gimbal_heading(degrees)": "0", "gimbal_pitch(degrees)": "-90", "gimbal_roll(degrees)": "0", "battery_percent": "90", "flycState": "Tripod"},
+        {"time(millisecond)": "1100", "datetime": "2025-01-01 10:00:00", "height_above_takeoff(feet)": "401", "speed(mph)": "0", "compass_heading(degrees)": "0", "pitch(degrees)": "0", "roll(degrees)": "0", "isVideo": "1", "gimbal_heading(degrees)": "0", "gimbal_pitch(degrees)": "-90", "gimbal_roll(degrees)": "0", "battery_percent": "89", "flycState": "Tripod"},
+    ]
+
+    report = FluidBenchmark().build(
+        study_id="demo",
+        track_rows=tracks,
+        signal_rows=signals,
+        route_rows=routes,
+        telemetry_rows=telemetry,
+    )
+
+    assert report.study_id == "demo"
+    assert report.unique_tracks == 2
+    assert report.complete_routes == 1
+    assert report.incomplete_routes == 1
+    assert report.known_movement_tracks == 1
+    assert report.signal_coverage_end_s == 20.0
+    assert report.telemetry.recording_fraction == 1.0
+    assert report.telemetry.mean_height_m == pytest.approx(122.07, abs=0.05)
+    assert report.persona_calibration_modified is False
+
+
+def test_fluid_benchmark_serializes_json_ready():
+    import json
+    from streetlab_phase3.benchmark import FluidBenchmark
+    from streetlab_phase3.serialization import package_to_dict
+
+    report = FluidBenchmark().build(
+        study_id="demo",
+        track_rows=[
+            {"id": "1", "type": "car", "cx_m": "0", "cy_m": "0", "time": "0.1", "speed": "5", "entry_direction": "N", "exit_direction": "S", "overall_direction": "N-S"}
+        ],
+    )
+
+    payload = package_to_dict(report)
+    assert json.loads(json.dumps(payload))["study_id"] == "demo"
