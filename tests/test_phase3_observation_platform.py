@@ -470,3 +470,112 @@ def test_file_pipeline_calibrates_simjam_bundle(tmp_path):
     assert package.summary.unique_tracks == 1
     assert package.summary.class_counts == {"MOTORCYCLE": 1}
     assert package.behavior_support["MOTORCYCLE"] == "CALIBRATED"
+
+
+def test_generic_signal_and_route_mappings_support_new_study_schemas():
+    from streetlab_phase3.adapters.generic import (
+        GenericRouteAdapter,
+        GenericRouteMapping,
+        GenericSignalAdapter,
+        GenericSignalMapping,
+    )
+
+    signal = GenericSignalAdapter(
+        GenericSignalMapping(
+            direction="approach",
+            turn="movement",
+            state="colour",
+            begin_time_s="from_s",
+            end_time_s="to_s",
+            cycle_id="cycle_no",
+        )
+    ).normalize_signals([
+        {"approach": "N", "movement": "straight", "colour": "green", "from_s": 0, "to_s": 20, "cycle_no": 1}
+    ])[0]
+
+    assert signal.direction == "N"
+    assert signal.turn == "STRAIGHT"
+    assert signal.state == "GREEN"
+    assert signal.duration_s == 20.0
+
+    route = GenericRouteAdapter(
+        GenericRouteMapping(
+            track_id="veh",
+            vehicle_class="klass",
+            in_time_s="tin",
+            out_time_s="tout",
+            movement="od",
+            turn="turn",
+        )
+    ).normalize_routes([
+        {"veh": "r1", "klass": "auto", "tin": 2, "tout": 9, "od": "W-N", "turn": "left"}
+    ])[0]
+
+    assert route.source_track_id == "r1"
+    assert route.vehicle_class.value == "AUTO_RICKSHAW"
+    assert route.travel_time_s == 7.0
+    assert route.movement == "W-N"
+    assert route.turn == "LEFT"
+
+
+def test_file_pipeline_uses_generic_mappings_for_tracks_signals_and_routes(tmp_path):
+    from streetlab_phase3.adapters.generic import (
+        GenericRouteMapping,
+        GenericSignalMapping,
+        GenericTrajectoryMapping,
+    )
+    from streetlab_phase3.ingestion import CalibrationPipeline
+
+    tracks = tmp_path / "tracks.csv"
+    tracks.write_text(
+        "veh,klass,t,x,y,v,move\n"
+        "1,car,0,0,0,5,N-E\n",
+        encoding="utf-8",
+    )
+    signals = tmp_path / "signals.csv"
+    signals.write_text(
+        "approach,movement,colour,from_s,to_s,cycle\n"
+        "N,straight,G,0,20,1\n",
+        encoding="utf-8",
+    )
+    routes = tmp_path / "routes.csv"
+    routes.write_text(
+        "veh,klass,tin,tout,od,turn\n"
+        "1,car,0,8,N-E,right\n",
+        encoding="utf-8",
+    )
+
+    package = CalibrationPipeline().calibrate_files(
+        track_file=tracks,
+        signal_file=signals,
+        route_file=routes,
+        generic_mapping=GenericTrajectoryMapping(
+            track_id="veh",
+            vehicle_class="klass",
+            time_s="t",
+            x_m="x",
+            y_m="y",
+            speed_mps="v",
+            movement="move",
+        ),
+        generic_signal_mapping=GenericSignalMapping(
+            direction="approach",
+            turn="movement",
+            state="colour",
+            begin_time_s="from_s",
+            end_time_s="to_s",
+            cycle_id="cycle",
+        ),
+        generic_route_mapping=GenericRouteMapping(
+            track_id="veh",
+            vehicle_class="klass",
+            in_time_s="tin",
+            out_time_s="tout",
+            movement="od",
+            turn="turn",
+        ),
+    )
+
+    assert len(package.signals) == 1
+    assert len(package.routes) == 1
+    assert package.route_summary.mean_travel_time_s == 8.0
