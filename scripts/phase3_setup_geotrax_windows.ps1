@@ -40,7 +40,7 @@ Write-Host "Updating pip..."
 & $PythonExe -m pip install --upgrade pip
 
 Write-Host "Installing pinned Geo-trax $GeoTraxVersion..."
-& $PythonExe -m pip install "geo-trax==$GeoTraxVersion"
+& $PythonExe -m pip install "geo-trax==1.5.1"
 
 $Installed = & $PythonExe -c "import geotrax; print(geotrax.__version__)"
 if ($Installed.Trim() -ne $GeoTraxVersion) {
