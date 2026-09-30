@@ -39,4 +39,4 @@ jobs:
       - name: Run M6 Study Contract tests
         run: |
           export PYTHONPATH="$PWD"
-          pytest -q tests/test_phase2_study.py
+          pytest -q tests/test_phase2_study.py tests/test_phase2_m6_service.py
