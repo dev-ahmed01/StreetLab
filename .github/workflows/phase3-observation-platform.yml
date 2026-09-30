@@ -30,6 +30,7 @@ jobs:
             scripts/phase3_calibrate_observation.py
             scripts/phase3_video_plan.py
             tests
+            data/models/sumo_persona_priors.csv
             requirements.txt
           sparse-checkout-cone-mode: false
 
