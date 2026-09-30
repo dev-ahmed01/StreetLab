@@ -9,6 +9,8 @@ on:
       - "streetlab_phase2/**"
       - "scripts/phase2_m4_ensemble_demo.py"
       - "tests/test_phase2_ensemble.py"
+      - "tests/test_phase2_runtime.py"
+      - "tests/test_phase2_decision_lab.py"
       - ".github/workflows/phase2-m4-ensemble.yml"
 
 jobs:
@@ -21,6 +23,7 @@ jobs:
         with:
           sparse-checkout: |
             streetlab_phase2
+            scripts/phase2_m4_ensemble_demo.py
             tests/test_phase2_ensemble.py
             tests/test_phase2_runtime.py
             tests/test_phase2_decision_lab.py
@@ -31,10 +34,104 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install test dependency
+      - name: Install Python test dependency
         run: pip install pytest
 
-      - name: Run M4 ensemble contract tests
+      - name: Run Phase 2 unit tests
         run: |
           export PYTHONPATH="$PWD"
-          pytest -q tests/test_phase2_ensemble.py
+          pytest -q             tests/test_phase2_decision_lab.py             tests/test_phase2_runtime.py             tests/test_phase2_ensemble.py
+
+      - name: Install SUMO
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sumo sumo-tools
+          echo "SUMO_HOME=/usr/share/sumo" >> "$GITHUB_ENV"
+
+      - name: Run M4 scenario ensemble integration
+        run: |
+          export PYTHONPATH="$PWD"
+          export PATH="/usr/bin:$PATH"
+          python scripts/phase2_m4_ensemble_demo.py             --members 4             --output artifacts/phase2_m4_ensemble.json             --workdir .streetlab-m4
+
+      - name: Validate M4 decision-assurance artifact
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          p = Path("artifacts/phase2_m4_ensemble.json")
+          assert p.exists(), "M4 ensemble artifact was not produced"
+          r = json.loads(p.read_text())
+
+          assert r["milestone"] == "PHASE2_M4_SCENARIO_ENSEMBLES"
+          g = r["guardrails"]
+          assert g["phase1_retuned"] is False
+          assert g["microscopic_parameters_varied"] is False
+          assert g["routing_behavior_empirically_learned"] is False
+          assert g["uncertainty_is_probability_forecast"] is False
+          assert g["authority_remains_final_decision_maker"] is True
+
+          ensemble = r["ensemble"]
+          meta = ensemble["ensemble"]
+          assert meta["members"] == 4
+          assert meta["uncertainty_source"] == "ASSUMPTION_ASSIGNMENT"
+          assert meta["provenance"] == "ASSUMED"
+          assert meta["same_snapshot_for_all_members"] is True
+          assert len(ensemble["member_runs"]) == 4
+
+          snapshot_hashes = {
+              member["snapshot"]["sha256"]
+              for member in ensemble["member_runs"]
+          }
+          assert snapshot_hashes == {r["snapshot"]["sha256"]}
+
+          member_seeds = [m["member_seed"] for m in ensemble["member_runs"]]
+          assert len(set(member_seeds)) == 4
+
+          summaries = ensemble["branch_summaries"]
+          assert set(summaries) == {
+              "BASELINE",
+              "NATURAL_RESPONSE",
+              "GUIDED_DIVERSION",
+              "MIXED_RESPONSE",
+          }
+          for branch in summaries.values():
+              for metric in (
+                  "arrivals_after_decision",
+                  "max_approach_queue_vehicles",
+                  "mean_network_speed_mps",
+                  "mean_instant_waiting_time_s",
+                  "rerouted_vehicles",
+              ):
+                  stats = branch["metrics"][metric]
+                  assert set(stats) == {
+                      "min", "mean", "median", "p10", "p90", "max", "spread"
+                  }
+                  assert stats["min"] <= stats["p10"] <= stats["median"]
+                  assert stats["median"] <= stats["p90"] <= stats["max"]
+                  assert stats["spread"] >= 0
+
+          mixed = summaries["MIXED_RESPONSE"]["metrics"]
+          assert mixed["heterogeneous_guided_responders"]["min"] > 0
+          assert mixed["heterogeneous_local_responders"]["min"] > 0
+
+          # M4 must report the distribution honestly. It does not require
+          # deterministic branches to show artificial spread.
+          assert summaries["BASELINE"]["metrics"][
+              "max_approach_queue_vehicles"
+          ]["spread"] == 0
+
+          print(json.dumps({
+              "ensemble": meta,
+              "mixed_queue": mixed["max_approach_queue_vehicles"],
+              "mixed_speed": mixed["mean_network_speed_mps"],
+              "mixed_guided": mixed["heterogeneous_guided_responders"],
+              "mixed_local": mixed["heterogeneous_local_responders"],
+          }, indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: phase2-m4-ensemble
+          path: artifacts/phase2_m4_ensemble.json
