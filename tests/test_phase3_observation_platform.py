@@ -198,3 +198,150 @@ def test_generic_adapter_requires_explicit_mapping_instead_of_guessing_columns()
     assert points[0].source_track_id == "a"
     assert points[0].vehicle_class.value == "MOTORCYCLE"
     assert points[0].speed_mps == 7.5
+
+
+def test_fluid_signal_and_route_records_normalize():
+    from streetlab_phase3.adapters.fluid import FluidSignalAdapter, FluidRouteAdapter
+
+    signals = FluidSignalAdapter().normalize_signals([
+        {
+            "name": "FI",
+            "direction": "N",
+            "turn": "s",
+            "state": "G",
+            "begin_time": 10.0,
+            "end_time": 25.0,
+            "duration": 15.0,
+            "cycle": 2,
+        }
+    ])
+    assert signals[0].provider == "fluid"
+    assert signals[0].direction == "N"
+    assert signals[0].turn == "STRAIGHT"
+    assert signals[0].state == "GREEN"
+    assert signals[0].begin_time_s == 10.0
+    assert signals[0].end_time_s == 25.0
+    assert signals[0].cycle_id == "2"
+
+    routes = FluidRouteAdapter().normalize_routes([
+        {
+            "id": 101,
+            "in_time": 3.0,
+            "out_time": 12.0,
+            "type": "car",
+            "entry_direction": "N",
+            "exit_direction": "E",
+            "overall_direction": "N-E",
+            "turn": "Right",
+            "in_state": "G",
+            "out_state": "G",
+        }
+    ])
+    assert routes[0].provider == "fluid"
+    assert routes[0].source_track_id == "101"
+    assert routes[0].movement == "N-E"
+    assert routes[0].turn == "RIGHT"
+    assert routes[0].travel_time_s == 9.0
+
+
+def test_site_calibration_can_include_signal_and_route_targets():
+    from streetlab_phase3.calibration import SiteCalibrator
+
+    tracks = [
+        {"id": 1, "type": "car", "cx_m": 0, "cy_m": 0, "time": 0, "speed": 5, "overall_direction": "N-E"},
+        {"id": 1, "type": "car", "cx_m": 1, "cy_m": 1, "time": 1, "speed": 6, "overall_direction": "N-E"},
+    ]
+    signals = [
+        {"name": "FI", "direction": "N", "turn": "s", "state": "G", "begin_time": 0, "end_time": 20, "duration": 20, "cycle": 1}
+    ]
+    routes = [
+        {"id": 1, "in_time": 0, "out_time": 8, "type": "car", "entry_direction": "N", "exit_direction": "E", "overall_direction": "N-E", "turn": "Right", "in_state": "G", "out_state": "G"}
+    ]
+
+    package = SiteCalibrator().calibrate(
+        track_rows=tracks,
+        signal_rows=signals,
+        route_rows=routes,
+    )
+
+    assert len(package.signals) == 1
+    assert len(package.routes) == 1
+    assert package.route_summary.mean_travel_time_s == 8.0
+    evidence = {item.name: item.provenance.value for item in package.to_phase2_evidence()}
+    assert evidence["signals"] == "OBSERVED_AUTO"
+    assert evidence["routes"] == "OBSERVED_AUTO"
+
+
+def test_quality_report_flags_impossible_values_without_retraining_personas():
+    from streetlab_phase3.calibration import SiteCalibrator
+
+    rows = [
+        {"id": 1, "type": "car", "cx_m": 0, "cy_m": 0, "time": 0, "speed": -4, "overall_direction": "N-E"},
+        {"id": 2, "type": "moped", "cx_m": 1, "cy_m": 1, "time": 0, "speed": 90, "overall_direction": "S-N"},
+        {"id": 3, "type": "mystery", "cx_m": 1, "cy_m": 1, "time": 0, "speed": 5, "overall_direction": "W-E"},
+    ]
+
+    package = SiteCalibrator().calibrate(track_rows=rows)
+
+    assert package.quality.total_points == 3
+    assert package.quality.negative_speed_points == 1
+    assert package.quality.extreme_speed_points == 1
+    assert package.quality.unknown_class_tracks == 1
+    assert package.quality.persona_calibration_modified is False
+
+
+def test_geotrax_video_provider_builds_external_extraction_plan_without_vendoring():
+    from streetlab_phase3.video.geotrax_provider import GeoTraxVideoProvider
+
+    provider = GeoTraxVideoProvider(executable="geotrax")
+
+    pixel = provider.plan(video="junction.mp4")
+    assert pixel.command == (
+        "geotrax", "batch", "junction.mp4", "--no-geo"
+    )
+    assert pixel.georeferenced is False
+    assert pixel.calibration_ready is False
+
+    full = provider.plan(
+        video="junction.mp4",
+        orthophotos="orthos",
+        segmentations="segments",
+        master_frames="masters",
+    )
+    assert full.command == (
+        "geotrax", "batch", "junction.mp4",
+        "-orf", "orthos",
+        "-osf", "segments",
+        "-mf", "masters",
+    )
+    assert full.georeferenced is True
+    assert full.calibration_ready is True
+    assert full.license_boundary == "EXTERNAL_PROVIDER"
+
+
+def test_generic_provider_is_the_fallback_for_new_raw_trajectory_formats():
+    from streetlab_phase3.adapters.generic import GenericTrajectoryAdapter, GenericTrajectoryMapping
+    from streetlab_phase3.calibration import SiteCalibrator
+    from streetlab_phase3.providers import ProviderRegistry
+
+    mapping = GenericTrajectoryMapping(
+        track_id="vid",
+        vehicle_class="kind",
+        time_s="seconds",
+        x_m="x_world",
+        y_m="y_world",
+        speed_mps="v",
+        movement="movement",
+    )
+    registry = ProviderRegistry.default().with_provider(
+        GenericTrajectoryAdapter(mapping=mapping)
+    )
+    calibrator = SiteCalibrator(registry=registry)
+
+    package = calibrator.calibrate(track_rows=[
+        {"vid": "a1", "kind": "auto-rickshaw", "seconds": 0, "x_world": 1, "y_world": 2, "v": 4, "movement": "E-N"}
+    ])
+
+    assert package.source_provider == "generic"
+    assert package.summary.class_counts["AUTO_RICKSHAW"] == 1
+    assert package.behavior_support["AUTO_RICKSHAW"] == "CALIBRATED"
