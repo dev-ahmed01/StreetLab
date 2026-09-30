@@ -8,3 +8,5 @@ __all__ = [
     "GenericTrajectoryMapping",
     "GeoTraxAdapter",
 ]
+
+from .simjam import SimJamBundleAdapter
