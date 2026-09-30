@@ -38,6 +38,23 @@ def _normalize_state(value: object) -> str:
     }.get(raw, raw.upper())
 
 
+def _provenance(value: str) -> EvidenceProvenance:
+    try:
+        return EvidenceProvenance(value)
+    except ValueError as exc:
+        raise ValueError(f"Unsupported evidence provenance: {value}") from exc
+
+
+def _speed_to_mps(value: object, unit: str) -> float:
+    speed = float(value)
+    normalized = unit.strip().lower()
+    if normalized in {"m/s", "mps", "meter/second", "meters/second"}:
+        return speed
+    if normalized in {"km/h", "kmh", "kph"}:
+        return speed / 3.6
+    raise ValueError(f"Unsupported speed unit: {unit}")
+
+
 @dataclass(frozen=True)
 class GenericTrajectoryMapping:
     track_id: str
@@ -46,12 +63,14 @@ class GenericTrajectoryMapping:
     x_m: str
     y_m: str
     speed_mps: str | None = None
+    speed_unit: str = "m/s"
     acceleration_mps2: str | None = None
     movement: str | None = None
     frame_number: str | None = None
     confidence: str | None = None
     lane_id: str | None = None
     road_section: str | None = None
+    provenance: str = "OBSERVED_AUTO"
 
 
 @dataclass(frozen=True)
@@ -63,6 +82,7 @@ class GenericSignalMapping:
     end_time_s: str
     cycle_id: str | None = None
     intersection_name: str | None = None
+    provenance: str = "OBSERVED_AUTO"
 
 
 @dataclass(frozen=True)
@@ -77,6 +97,7 @@ class GenericRouteMapping:
     turn: str | None = None
     in_state: str | None = None
     out_state: str | None = None
+    provenance: str = "OBSERVED_AUTO"
 
 
 class GenericTrajectoryAdapter(TrajectoryAdapter):
@@ -107,6 +128,7 @@ class GenericTrajectoryAdapter(TrajectoryAdapter):
             raise ValueError("Generic trajectory rows do not satisfy the mapping")
 
         m = self.mapping
+        provenance = _provenance(m.provenance)
         result: list[TrackPoint] = []
         for row in rows:
             mapping = map_vehicle_class(row[m.vehicle_class])
@@ -117,12 +139,12 @@ class GenericTrajectoryAdapter(TrajectoryAdapter):
                     source_class=str(row[m.vehicle_class]),
                     vehicle_class=mapping.canonical,
                     behavior_support=mapping.behavior_support,
-                    provenance=EvidenceProvenance.OBSERVED_AUTO,
+                    provenance=provenance,
                     time_s=float(row[m.time_s]),
                     x_m=float(row[m.x_m]),
                     y_m=float(row[m.y_m]),
                     speed_mps=(
-                        float(row[m.speed_mps])
+                        _speed_to_mps(row[m.speed_mps], m.speed_unit)
                         if m.speed_mps and row.get(m.speed_mps) not in (None, "")
                         else None
                     ),
@@ -176,6 +198,7 @@ class GenericSignalAdapter:
         if not required.issubset(rows[0].keys()):
             raise ValueError("Generic signal rows do not satisfy the mapping")
 
+        provenance = _provenance(m.provenance)
         result: list[SignalRecord] = []
         for row in rows:
             begin = float(row[m.begin_time_s])
@@ -200,6 +223,7 @@ class GenericSignalAdapter:
                         if m.cycle_id and row.get(m.cycle_id) not in (None, "")
                         else None
                     ),
+                    provenance=provenance,
                 )
             )
         return result
@@ -218,6 +242,7 @@ class GenericRouteAdapter:
         if not required.issubset(rows[0].keys()):
             raise ValueError("Generic route rows do not satisfy the mapping")
 
+        provenance = _provenance(m.provenance)
         result: list[RouteRecord] = []
         for row in rows:
             mapping = map_vehicle_class(row[m.vehicle_class])
@@ -265,6 +290,7 @@ class GenericRouteAdapter:
                         if m.out_state and row.get(m.out_state) not in (None, "")
                         else None
                     ),
+                    provenance=provenance,
                 )
             )
         return result
