@@ -579,3 +579,57 @@ def test_file_pipeline_uses_generic_mappings_for_tracks_signals_and_routes(tmp_p
     assert len(package.signals) == 1
     assert len(package.routes) == 1
     assert package.route_summary.mean_travel_time_s == 8.0
+
+
+def test_generic_mapping_converts_speed_units_and_preserves_declared_provenance():
+    from streetlab_phase3.adapters.generic import (
+        GenericTrajectoryAdapter,
+        GenericTrajectoryMapping,
+    )
+
+    adapter = GenericTrajectoryAdapter(
+        GenericTrajectoryMapping(
+            track_id="id",
+            vehicle_class="class",
+            time_s="t",
+            x_m="x",
+            y_m="y",
+            speed_mps="speed",
+            speed_unit="km/h",
+            provenance="OBSERVED_MANUAL",
+        )
+    )
+    point = adapter.normalize_tracks([
+        {"id": "v1", "class": "car", "t": 0, "x": 1, "y": 2, "speed": 36}
+    ])[0]
+
+    assert point.speed_mps == pytest.approx(10.0)
+    assert point.provenance.value == "OBSERVED_MANUAL"
+
+
+def test_simjam_track_average_speed_is_not_weighted_by_track_length(tmp_path):
+    from streetlab_phase3.ingestion import CalibrationPipeline
+
+    tracks = tmp_path / "tracks.csv"
+    tracks.write_text(
+        "frame,time_s,vehicle_id,x_m,y_m,img_x,img_y\n"
+        "0,0.0,1,0,0,0,0\n"
+        "1,0.1,1,1,0,1,0\n"
+        "2,0.2,1,2,0,2,0\n"
+        "0,0.0,2,0,1,0,1\n",
+        encoding="utf-8",
+    )
+    summary = tmp_path / "summary.csv"
+    summary.write_text(
+        "vehicle_id,label,avg_speed_kmh,start_frame,end_frame,start_time_s,end_time_s\n"
+        "1,car,18,0,2,0,0.2\n"
+        "2,car,36,0,0,0,0\n",
+        encoding="utf-8",
+    )
+
+    package = CalibrationPipeline().calibrate_simjam_files(
+        track_file=tracks,
+        summary_file=summary,
+    )
+
+    assert package.summary.mean_speed_mps == pytest.approx(7.5)
