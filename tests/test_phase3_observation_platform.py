@@ -633,3 +633,198 @@ def test_simjam_track_average_speed_is_not_weighted_by_track_length(tmp_path):
     )
 
     assert package.summary.mean_speed_mps == pytest.approx(7.5)
+
+
+def test_fluid_partial_direction_is_not_promoted_to_turn_movement():
+    from streetlab_phase3.adapters.fluid import FluidAdapter
+
+    points = FluidAdapter().normalize_tracks([
+        {
+            "frame": "4074",
+            "id": "938",
+            "type": "car",
+            "confidence": "0.89",
+            "cx_m": "8.8",
+            "cy_m": "-13.35",
+            "time": "407.4",
+            "speed": "14.89",
+            "speed_smooth": "14.83",
+            "ax": "-0.05",
+            "ay": "-1.10",
+            "entry_direction": "S",
+            "exit_direction": "Unknown",
+            "overall_direction": "S-Unknown",
+        }
+    ])
+
+    assert points[0].entry_direction == "S"
+    assert points[0].exit_direction is None
+    assert points[0].movement is None
+    assert points[0].metadata["raw_movement"] == "S-Unknown"
+
+
+def test_fluid_blank_numeric_fields_do_not_crash_real_schema():
+    from streetlab_phase3.adapters.fluid import FluidAdapter
+
+    points = FluidAdapter().normalize_tracks([
+        {
+            "frame": "1",
+            "id": "31",
+            "type": "moped",
+            "confidence": "",
+            "cx_m": "-1.54",
+            "cy_m": "9.58",
+            "time": "0.1",
+            "speed": "",
+            "speed_smooth": "",
+            "ax": "",
+            "ay": "",
+            "course": "",
+            "entry_direction": "N",
+            "exit_direction": "E",
+            "overall_direction": "N-E",
+        }
+    ])
+
+    p = points[0]
+    assert p.speed_mps is None
+    assert p.acceleration_mps2 is None
+    assert p.heading_rad is None
+    assert p.confidence is None
+
+
+def test_fluid_incomplete_route_rows_are_skipped_and_reported():
+    from streetlab_phase3.calibration import SiteCalibrator
+
+    tracks = [
+        {
+            "id": "1",
+            "type": "car",
+            "cx_m": "0",
+            "cy_m": "0",
+            "time": "0",
+            "speed": "5",
+            "entry_direction": "N",
+            "exit_direction": "S",
+            "overall_direction": "N-S",
+        }
+    ]
+    routes = [
+        {
+            "id": "1",
+            "in_time": "1.0",
+            "out_time": "7.0",
+            "type": "car",
+            "entry_direction": "N",
+            "exit_direction": "S",
+            "overall_direction": "N-S",
+            "turn": "s",
+            "in_state": "G",
+            "out_state": "G",
+        },
+        {
+            "id": "923",
+            "in_time": "",
+            "out_time": "",
+            "type": "car",
+            "entry_direction": "N",
+            "exit_direction": "Unknown",
+            "overall_direction": "N-Unknown",
+            "turn": "",
+            "in_state": "",
+            "out_state": "",
+        },
+    ]
+
+    package = SiteCalibrator().calibrate(track_rows=tracks, route_rows=routes)
+
+    assert len(package.routes) == 1
+    assert package.routes[0].source_track_id == "1"
+    assert package.quality.route_rows_total == 2
+    assert package.quality.route_rows_complete == 1
+    assert package.quality.route_rows_incomplete == 1
+
+
+def test_fluid_telemetry_normalizes_camera_state():
+    from streetlab_phase3.adapters.fluid_telemetry import FluidTelemetryAdapter
+
+    rows = [
+        {
+            "time(millisecond)": "265200",
+            "datetime": "2025-01-20 16:32:34",
+            "height_above_takeoff(feet)": "426.837284",
+            "speed(mph)": "0.0",
+            "compass_heading(degrees)": "0.1",
+            "pitch(degrees)": "-4.9",
+            "roll(degrees)": "3.3",
+            "isVideo": "1",
+            "gimbal_heading(degrees)": "3.5",
+            "gimbal_pitch(degrees)": "-89.9",
+            "gimbal_roll(degrees)": "0",
+            "battery_percent": "85",
+            "flycState": "Tripod",
+        }
+    ]
+
+    sample = FluidTelemetryAdapter().normalize(rows)[0]
+
+    assert sample.time_ms == 265200
+    assert sample.recording is True
+    assert sample.height_m == pytest.approx(130.10, abs=0.02)
+    assert sample.gimbal_pitch_deg == -89.9
+    assert sample.flight_state == "Tripod"
+
+
+def test_fluid_benchmark_report_combines_observation_and_telemetry():
+    from streetlab_phase3.benchmark import FluidBenchmark
+
+    tracks = [
+        {"id": "1", "type": "moped", "cx_m": "0", "cy_m": "0", "time": "0.1", "speed": "5", "entry_direction": "N", "exit_direction": "E", "overall_direction": "N-E"},
+        {"id": "1", "type": "moped", "cx_m": "1", "cy_m": "1", "time": "0.2", "speed": "6", "entry_direction": "N", "exit_direction": "E", "overall_direction": "N-E"},
+        {"id": "2", "type": "car", "cx_m": "0", "cy_m": "1", "time": "0.2", "speed": "7", "entry_direction": "W", "exit_direction": "Unknown", "overall_direction": "W-Unknown"},
+    ]
+    signals = [
+        {"name": "FIDRT", "direction": "N", "turn": "s", "begin_time": "0", "end_time": "20", "duration": "20", "state": "G", "cycle": "1"}
+    ]
+    routes = [
+        {"id": "1", "in_time": "0.1", "out_time": "3.0", "type": "moped", "entry_direction": "N", "exit_direction": "E", "overall_direction": "N-E", "turn": "r", "in_state": "G", "out_state": "G"},
+        {"id": "2", "in_time": "", "out_time": "", "type": "car", "entry_direction": "W", "exit_direction": "Unknown", "overall_direction": "W-Unknown"},
+    ]
+    telemetry = [
+        {"time(millisecond)": "1000", "datetime": "2025-01-01 10:00:00", "height_above_takeoff(feet)": "400", "speed(mph)": "0", "compass_heading(degrees)": "0", "pitch(degrees)": "0", "roll(degrees)": "0", "isVideo": "1", "gimbal_heading(degrees)": "0", "gimbal_pitch(degrees)": "-90", "gimbal_roll(degrees)": "0", "battery_percent": "90", "flycState": "Tripod"},
+        {"time(millisecond)": "1100", "datetime": "2025-01-01 10:00:00", "height_above_takeoff(feet)": "401", "speed(mph)": "0", "compass_heading(degrees)": "0", "pitch(degrees)": "0", "roll(degrees)": "0", "isVideo": "1", "gimbal_heading(degrees)": "0", "gimbal_pitch(degrees)": "-90", "gimbal_roll(degrees)": "0", "battery_percent": "89", "flycState": "Tripod"},
+    ]
+
+    report = FluidBenchmark().build(
+        study_id="demo",
+        track_rows=tracks,
+        signal_rows=signals,
+        route_rows=routes,
+        telemetry_rows=telemetry,
+    )
+
+    assert report.study_id == "demo"
+    assert report.unique_tracks == 2
+    assert report.complete_routes == 1
+    assert report.incomplete_routes == 1
+    assert report.known_movement_tracks == 1
+    assert report.signal_coverage_end_s == 20.0
+    assert report.telemetry.recording_fraction == 1.0
+    assert report.telemetry.mean_height_m == pytest.approx(122.07, abs=0.05)
+    assert report.persona_calibration_modified is False
+
+
+def test_fluid_benchmark_serializes_json_ready():
+    import json
+    from streetlab_phase3.benchmark import FluidBenchmark
+    from streetlab_phase3.serialization import package_to_dict
+
+    report = FluidBenchmark().build(
+        study_id="demo",
+        track_rows=[
+            {"id": "1", "type": "car", "cx_m": "0", "cy_m": "0", "time": "0.1", "speed": "5", "entry_direction": "N", "exit_direction": "S", "overall_direction": "N-S"}
+        ],
+    )
+
+    payload = package_to_dict(report)
+    assert json.loads(json.dumps(payload))["study_id"] == "demo"

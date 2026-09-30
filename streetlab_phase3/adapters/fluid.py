@@ -10,7 +10,37 @@ from ..models import RouteRecord, SignalRecord, TrackPoint
 from .base import Row, TrajectoryAdapter, require_rows
 
 
-def _turn(value: object) -> str:
+def _present(value: object) -> bool:
+    return value not in (None, "")
+
+
+def _float_or_none(value: object) -> float | None:
+    if not _present(value):
+        return None
+    return float(value)
+
+
+def _direction(value: object) -> str | None:
+    if not _present(value):
+        return None
+    raw = str(value).strip()
+    if not raw or raw.lower() == "unknown":
+        return None
+    return raw
+
+
+def _movement(value: object) -> str | None:
+    if not _present(value):
+        return None
+    raw = str(value).strip()
+    if not raw or "unknown" in raw.lower():
+        return None
+    return raw
+
+
+def _turn(value: object) -> str | None:
+    if not _present(value):
+        return None
     raw = str(value).strip().lower()
     return {
         "s": "STRAIGHT",
@@ -25,9 +55,18 @@ def _turn(value: object) -> str:
     }.get(raw, raw.upper())
 
 
-def _state(value: object) -> str:
+def _state(value: object) -> str | None:
+    if not _present(value):
+        return None
     raw = str(value).strip()
-    return {"G": "GREEN", "g": "GREEN", "r": "RED", "R": "RED", "y": "YELLOW", "Y": "YELLOW"}.get(raw, raw.upper())
+    return {
+        "G": "GREEN",
+        "g": "GREEN",
+        "r": "RED",
+        "R": "RED",
+        "y": "YELLOW",
+        "Y": "YELLOW",
+    }.get(raw, raw.upper())
 
 
 class FluidAdapter(TrajectoryAdapter):
@@ -41,18 +80,24 @@ class FluidAdapter(TrajectoryAdapter):
         require_rows(rows)
         if not self.can_handle(rows):
             raise ValueError("Rows do not match the FLUID trajectory schema")
+
         result: list[TrackPoint] = []
         for row in rows:
             mapping = map_vehicle_class(row.get("type", "unknown"))
             speed = row.get("speed_smooth")
-            if speed is None:
+            if not _present(speed):
                 speed = row.get("speed")
-            ax, ay = row.get("ax"), row.get("ay")
-            acceleration = (
-                hypot(float(ax), float(ay))
-                if ax is not None and ay is not None
+
+            ax = _float_or_none(row.get("ax"))
+            ay = _float_or_none(row.get("ay"))
+            acceleration = hypot(ax, ay) if ax is not None and ay is not None else None
+
+            raw_movement = (
+                str(row["overall_direction"])
+                if _present(row.get("overall_direction"))
                 else None
             )
+
             result.append(
                 TrackPoint(
                     source_provider=self.name,
@@ -64,15 +109,22 @@ class FluidAdapter(TrajectoryAdapter):
                     time_s=float(row["time"]),
                     x_m=float(row["cx_m"]),
                     y_m=float(row["cy_m"]),
-                    speed_mps=float(speed) if speed is not None else None,
+                    speed_mps=_float_or_none(speed),
                     acceleration_mps2=acceleration,
-                    heading_rad=float(row["course"]) if row.get("course") is not None else None,
-                    movement=str(row["overall_direction"]) if row.get("overall_direction") not in (None, "", "Unknown") else None,
-                    entry_direction=str(row["entry_direction"]) if row.get("entry_direction") not in (None, "", "Unknown") else None,
-                    exit_direction=str(row["exit_direction"]) if row.get("exit_direction") not in (None, "", "Unknown") else None,
-                    frame_number=int(row["frame"]) if row.get("frame") is not None else None,
-                    confidence=float(row["confidence"]) if row.get("confidence") is not None else None,
-                    metadata={"is_real_detection": row.get("isReal")},
+                    heading_rad=_float_or_none(row.get("course")),
+                    movement=_movement(row.get("overall_direction")),
+                    entry_direction=_direction(row.get("entry_direction")),
+                    exit_direction=_direction(row.get("exit_direction")),
+                    frame_number=(
+                        int(float(row["frame"]))
+                        if _present(row.get("frame"))
+                        else None
+                    ),
+                    confidence=_float_or_none(row.get("confidence")),
+                    metadata={
+                        "is_real_detection": row.get("isReal"),
+                        "raw_movement": raw_movement,
+                    },
                 )
             )
         return result
@@ -86,35 +138,74 @@ class FluidSignalAdapter:
         required = {"direction", "turn", "state", "begin_time", "end_time"}
         if not required.issubset(rows[0].keys()):
             raise ValueError("Rows do not match the FLUID signal schema")
-        return [
-            SignalRecord(
-                provider=self.name,
-                intersection_name=str(row["name"]) if row.get("name") is not None else None,
-                direction=str(row["direction"]),
-                turn=_turn(row["turn"]),
-                state=_state(row["state"]),
-                begin_time_s=float(row["begin_time"]),
-                end_time_s=float(row["end_time"]),
-                duration_s=float(row.get("duration", float(row["end_time"]) - float(row["begin_time"]))),
-                cycle_id=str(row["cycle"]) if row.get("cycle") is not None else None,
+
+        result: list[SignalRecord] = []
+        for row in rows:
+            begin = float(row["begin_time"])
+            end = float(row["end_time"])
+            duration = (
+                float(row["duration"])
+                if _present(row.get("duration"))
+                else end - begin
             )
-            for row in rows
-        ]
+            result.append(
+                SignalRecord(
+                    provider=self.name,
+                    intersection_name=(
+                        str(row["name"]) if _present(row.get("name")) else None
+                    ),
+                    direction=str(row["direction"]),
+                    turn=_turn(row["turn"]) or "UNKNOWN",
+                    state=_state(row["state"]) or "UNKNOWN",
+                    begin_time_s=begin,
+                    end_time_s=end,
+                    duration_s=duration,
+                    cycle_id=(
+                        str(row["cycle"]) if _present(row.get("cycle")) else None
+                    ),
+                )
+            )
+        return result
 
 
 class FluidRouteAdapter:
     name = "fluid"
+
+    def __init__(self) -> None:
+        self.last_total_rows = 0
+        self.last_complete_rows = 0
+        self.last_incomplete_rows = 0
 
     def normalize_routes(self, rows: Sequence[Row]) -> list[RouteRecord]:
         require_rows(rows)
         required = {"id", "in_time", "out_time", "type"}
         if not required.issubset(rows[0].keys()):
             raise ValueError("Rows do not match the FLUID route schema")
+
+        self.last_total_rows = len(rows)
+        self.last_complete_rows = 0
+        self.last_incomplete_rows = 0
+
         result: list[RouteRecord] = []
         for row in rows:
+            in_time = _float_or_none(row.get("in_time"))
+            out_time = _float_or_none(row.get("out_time"))
+            movement = _movement(row.get("overall_direction"))
+            entry = _direction(row.get("entry_direction"))
+            exit_direction = _direction(row.get("exit_direction"))
+
+            if (
+                in_time is None
+                or out_time is None
+                or movement is None
+                or entry is None
+                or exit_direction is None
+            ):
+                self.last_incomplete_rows += 1
+                continue
+
+            self.last_complete_rows += 1
             mapping = map_vehicle_class(row["type"])
-            in_time = float(row["in_time"])
-            out_time = float(row["out_time"])
             result.append(
                 RouteRecord(
                     provider=self.name,
@@ -125,13 +216,14 @@ class FluidRouteAdapter:
                     in_time_s=in_time,
                     out_time_s=out_time,
                     travel_time_s=out_time - in_time,
-                    entry_direction=str(row["entry_direction"]) if row.get("entry_direction") not in (None, "") else None,
-                    exit_direction=str(row["exit_direction"]) if row.get("exit_direction") not in (None, "") else None,
-                    movement=str(row["overall_direction"]) if row.get("overall_direction") not in (None, "") else None,
-                    turn=_turn(row["turn"]) if row.get("turn") is not None else None,
-                    in_state=_state(row["in_state"]) if row.get("in_state") is not None else None,
-                    out_state=_state(row["out_state"]) if row.get("out_state") is not None else None,
+                    entry_direction=entry,
+                    exit_direction=exit_direction,
+                    movement=movement,
+                    turn=_turn(row.get("turn")),
+                    in_state=_state(row.get("in_state")),
+                    out_state=_state(row.get("out_state")),
                     metadata={"geometry": row.get("geometry")},
                 )
             )
+
         return result
