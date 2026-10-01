@@ -26,6 +26,7 @@ param(
 $ErrorActionPreference = "Stop"
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 Set-Location $RepoRoot
+$env:PYTHONPATH = $RepoRoot
 
 $VideoFull = (Resolve-Path $VideoPath).Path
 $FluidFull = (Resolve-Path $FluidTracks).Path
@@ -80,22 +81,28 @@ Write-Host "Output: $OutputDir"
 if ($Mode -eq "Smoke") {
     Write-Host "Frame limit: $SmokeFrames"
 }
-Write-Host ""
-
-& $GeoTraxExe @GeoArgs
-if ($LASTEXITCODE -ne 0) {
-    throw "Geo-trax extraction failed with exit code $LASTEXITCODE"
+if ($CompareOnly) {
+    Write-Host "CompareOnly: reusing existing Geo-trax output"
 }
+Write-Host ""
 
 $Stem = [System.IO.Path]::GetFileNameWithoutExtension($VideoFull)
 $ExpectedTrack = Join-Path $OutputDir "$Stem.txt"
+
+if (-not $CompareOnly) {
+    & $GeoTraxExe @GeoArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "Geo-trax extraction failed with exit code $LASTEXITCODE"
+    }
+}
+
 if (Test-Path $ExpectedTrack) {
     $TrackFile = $ExpectedTrack
 }
 else {
     $Candidate = Get-ChildItem -Path $OutputDir -Recurse -Filter "$Stem.txt" | Select-Object -First 1
     if (-not $Candidate) {
-        throw "Geo-trax completed but no '$Stem.txt' track file was found under $OutputDir"
+        throw "No '$Stem.txt' track file was found under $OutputDir"
     }
     $TrackFile = $Candidate.FullName
 }
