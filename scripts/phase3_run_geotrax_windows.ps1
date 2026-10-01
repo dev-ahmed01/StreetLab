@@ -20,7 +20,9 @@ param(
 
     [string]$OutputRoot = "artifacts\phase3\geotrax",
 
-    [switch]$SkipSetup
+    [switch]$SkipSetup,
+
+    [switch]$CompareOnly
 )
 
 $ErrorActionPreference = "Stop"
