@@ -167,3 +167,18 @@ def test_windows_runner_script_exists_and_pins_geotrax():
     assert "--cut-frame-right" in runner
     assert "phase3_compare_geotrax_fluid.py" in runner
     assert "Smoke" in runner and "Full" in runner
+
+
+def test_compare_script_bootstraps_repo_root_for_direct_execution():
+    root = Path(__file__).resolve().parents[1]
+    script = (root / "scripts" / "phase3_compare_geotrax_fluid.py").read_text(encoding="utf-8")
+    assert "sys.path.insert" in script
+    assert "Path(__file__).resolve().parents[1]" in script
+
+
+def test_runner_sets_pythonpath_and_can_reuse_existing_tracks():
+    root = Path(__file__).resolve().parents[1]
+    runner = (root / "scripts" / "phase3_run_geotrax_windows.ps1").read_text(encoding="utf-8")
+    assert "$env:PYTHONPATH = $RepoRoot" in runner
+    assert "[switch]$CompareOnly" in runner
+    assert "CompareOnly" in runner
