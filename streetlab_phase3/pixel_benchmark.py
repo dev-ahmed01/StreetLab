@@ -34,12 +34,16 @@ class FluidPixelTruth:
 class PixelBenchmarkReport:
     frame_offset: int
     max_distance_px: float
+    dataset_truth_points: int
     truth_points: int
     predicted_points: int
     matched_points: int
+    dataset_truth_tracks: int
     truth_tracks: int
     predicted_tracks: int
     matched_truth_tracks: int
+    evaluation_frame_start: int | None
+    evaluation_frame_end: int | None
     point_recall: float | None
     point_precision: float | None
     track_coverage: float | None
@@ -106,22 +110,40 @@ class PixelBenchmark:
         class_matches = [m[0].vehicle_class == m[1].vehicle_class for m in best_matches]
         matched_truth_tracks = {m[1].track_id for m in best_matches}
 
-        truth_tracks = {p.track_id for p in truth}
+        dataset_truth_tracks = {p.track_id for p in truth}
         pred_tracks = {p.track_id for p in pred_supported}
 
-        truth_count = len(truth)
+        if pred_supported:
+            evaluation_frame_start = min(p.frame + best_offset for p in pred_supported)
+            evaluation_frame_end = max(p.frame + best_offset for p in pred_supported)
+            truth_window = [
+                p
+                for p in truth
+                if evaluation_frame_start <= p.frame <= evaluation_frame_end
+            ]
+        else:
+            evaluation_frame_start = None
+            evaluation_frame_end = None
+            truth_window = []
+
+        truth_tracks = {p.track_id for p in truth_window}
+        truth_count = len(truth_window)
         pred_count = len(pred_supported)
         matched_count = len(best_matches)
 
         return PixelBenchmarkReport(
             frame_offset=best_offset,
             max_distance_px=self.max_distance_px,
+            dataset_truth_points=len(truth),
             truth_points=truth_count,
             predicted_points=pred_count,
             matched_points=matched_count,
+            dataset_truth_tracks=len(dataset_truth_tracks),
             truth_tracks=len(truth_tracks),
             predicted_tracks=len(pred_tracks),
             matched_truth_tracks=len(matched_truth_tracks),
+            evaluation_frame_start=evaluation_frame_start,
+            evaluation_frame_end=evaluation_frame_end,
             point_recall=(matched_count / truth_count) if truth_count else None,
             point_precision=(matched_count / pred_count) if pred_count else None,
             track_coverage=(
