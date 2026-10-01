@@ -167,3 +167,46 @@ def test_windows_runner_script_exists_and_pins_geotrax():
     assert "--cut-frame-right" in runner
     assert "phase3_compare_geotrax_fluid.py" in runner
     assert "Smoke" in runner and "Full" in runner
+
+
+def test_compare_script_bootstraps_repo_root_for_direct_execution():
+    root = Path(__file__).resolve().parents[1]
+    script = (root / "scripts" / "phase3_compare_geotrax_fluid.py").read_text(encoding="utf-8")
+    assert "sys.path.insert" in script
+    assert "Path(__file__).resolve().parents[1]" in script
+
+
+def test_runner_sets_pythonpath_and_can_reuse_existing_tracks():
+    root = Path(__file__).resolve().parents[1]
+    runner = (root / "scripts" / "phase3_run_geotrax_windows.ps1").read_text(encoding="utf-8")
+    assert "$env:PYTHONPATH = $RepoRoot" in runner
+    assert "[switch]$CompareOnly" in runner
+    assert "CompareOnly" in runner
+
+
+def test_pixel_benchmark_limits_truth_denominator_to_overlapping_frames():
+    from streetlab_phase3.geotrax_pixel import GeoTraxPixelPoint
+    from streetlab_phase3.pixel_benchmark import FluidPixelTruth, PixelBenchmark
+
+    predicted = [
+        GeoTraxPixelPoint(0, "p1", 100, 100, 100, 100, "CAR", 0.9),
+        GeoTraxPixelPoint(1, "p1", 101, 100, 101, 100, "CAR", 0.9),
+    ]
+    truth = [
+        FluidPixelTruth(1, "g1", 100, 100, "CAR"),
+        FluidPixelTruth(2, "g1", 101, 100, "CAR"),
+        FluidPixelTruth(100, "g2", 400, 400, "CAR"),
+    ]
+
+    report = PixelBenchmark(max_distance_px=10).evaluate(predicted, truth)
+
+    assert report.frame_offset == 1
+    assert report.dataset_truth_points == 3
+    assert report.truth_points == 2
+    assert report.dataset_truth_tracks == 2
+    assert report.truth_tracks == 1
+    assert report.matched_points == 2
+    assert report.point_recall == pytest.approx(1.0)
+    assert report.track_coverage == pytest.approx(1.0)
+    assert report.evaluation_frame_start == 1
+    assert report.evaluation_frame_end == 2
