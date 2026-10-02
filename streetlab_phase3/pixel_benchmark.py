@@ -94,7 +94,14 @@ class PixelBenchmark:
         ]
 
         scored = [
-            (self._match(pred_supported, truth, offset), offset)
+            (
+                self.match_points(
+                    pred_supported,
+                    truth,
+                    frame_offset=offset,
+                ),
+                offset,
+            )
             for offset in frame_offsets
         ]
         best_matches, best_offset = max(
@@ -162,12 +169,16 @@ class PixelBenchmark:
             ),
         )
 
-    def _match(
+    def match_points(
         self,
         predicted: Sequence[GeoTraxPixelPoint],
         truth: Sequence[FluidPixelTruth],
+        *,
         frame_offset: int,
     ) -> list[tuple[GeoTraxPixelPoint, FluidPixelTruth, float]]:
+        predicted = [
+            p for p in predicted if p.vehicle_class in _SUPPORTED_GEOTRAX_CLASSES
+        ]
         pred_by_frame: dict[int, list[GeoTraxPixelPoint]] = defaultdict(list)
         truth_by_frame: dict[int, list[FluidPixelTruth]] = defaultdict(list)
 
