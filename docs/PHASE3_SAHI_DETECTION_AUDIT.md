@@ -95,6 +95,17 @@ If no motorcycles occur at the chosen 61 frames, rerun a different fixed
 sample set and record that selection before viewing its scores. Do not
 cherry-pick only frames where the candidate appears to help.
 
+## Data leakage and genuine held-out policy
+
+The existing `data/benchmarks/fluid_fidrt/manifest.json` originally labels
+**20250526 as held-out**, but the approved October 2 Stage-A tuning design
+uses May-26 W01–W07 for selecting Geo-trax parameters. Once May-26 has been
+used to choose parameters or engines, it can no longer function as an
+independent held-out evaluation for that choice. Retain May-26 as a
+**development/tuning benchmark for this sprint**, preserve the original
+manifest as historical provenance, and reserve a different, *never-used*
+recording for final validation. Do not report May-26 as held-out accuracy.
+
 ## Next gate
 
 1. Compare matching W01 control window to W04/W05 difficult windows using
