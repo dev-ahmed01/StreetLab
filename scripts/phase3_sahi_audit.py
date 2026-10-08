@@ -21,6 +21,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--video", required=True)
     parser.add_argument("--fluid-tracks", required=True)
     parser.add_argument("--weights", required=True)
+    parser.add_argument("--runtime-model", help="SHA-verified isolated OpenVINO export directory")
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--start-frame", required=True, type=int)
     parser.add_argument("--end-frame", required=True, type=int)
@@ -40,8 +41,11 @@ def main(argv: list[str] | None = None) -> int:
         sample_step=args.sample_step, confidence=args.confidence,
         image_size=args.image_size, device=args.device,
         class_map_file=args.class_map, slice_height=args.slice_height,
-        slice_width=args.slice_width, overlap=args.overlap))
+        slice_width=args.slice_width, overlap=args.overlap,
+        runtime_model_path=args.runtime_model))
     print(json.dumps({"output_dir": args.output_dir,
+                      "runtime_backend": report["runtime_backend"],
+                      "runtime_model_sha256": report["runtime_model_sha256"],
                       "standard": report["standard"],
                       "sliced": report["sliced"], "gate": report["gate"]}, indent=2))
     if not report["gate"]["eligible_for_tracking_trial"]:
