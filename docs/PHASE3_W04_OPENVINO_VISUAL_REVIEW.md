@@ -42,8 +42,7 @@ The gallery renders the **same original raw 3840×2160 frame crop** at left, and
 
 ## Next local check: exact original FLUID `type` near each reviewed vehicle
 
-The gallery suggests label gaps and type-ontology differences, but we have
-**not yet inspected the raw FLUID CSV for the 15 selected positions**.
+This local raw-type audit was **completed** after the visual review.
 Before declaring any bus missing from ground truth, inspect the nearest
 raw `type` string, its canonical mapping, and center distance. The
 new audit preserves *all* raw types, even classes omitted by the
@@ -69,3 +68,81 @@ the annotation describes the same physical vehicle. The original FLUID
 CSV remains byte-for-byte unchanged, and no score is rewritten. Preserve
 the JSON output and report any raw bus/heavy/light-commercial disparities
 rather than quietly relabeling the video.
+
+## Raw FLUID label audit — completed on 15 reviewed crops
+
+The user ran `phase3_raw_fluid_label_review.py` and reported the following
+nearest **original** FLUID label strings at the exact source frame+1.
+This confirms class **disagreements**, but a nearest-center lookup is
+not by itself an identity match or corrected annotation.
+
+| W04 frame | Detector class | Closest raw FLUID `type` | Class mapping | Distance |
+|---|---|---|---|---:|
+| 10750 | BUS | car (ID 2218) | CAR | 5.35px |
+| 10840 | BUS | car (ID 2260) | CAR | 1.31px |
+| 10960 | HEAVY_VEHICLE | car (ID 2395) | CAR | 6.83px |
+| 11260 | CAR | moped (ID 2450) | MOTORCYCLE | 2.51px |
+| 10780 | MOTORCYCLE | pedestrian (ID 2328) | PEDESTRIAN (not scored by 4-class benchmark) | 0.87px |
+| 11050 | CAR | car (ID 2407) | CAR | 16.03px |
+| 11200 | CAR | car (ID 2407) | CAR | 16.28px |
+| 10930 | MOTORCYCLE | moped (ID 2382) | MOTORCYCLE | 9.14px |
+| 10990 near duplicate | MOTORCYCLE | moped (ID 2410) | MOTORCYCLE | 8.49px |
+| 11200 near duplicate | MOTORCYCLE | moped (ID 2379) | MOTORCYCLE | 16.56px |
+| 11080 | MOTORCYCLE | moped (ID 2423) | MOTORCYCLE | 113.53px |
+| 10900 | HEAVY_VEHICLE | car (ID 2372) | CAR | 153.00px |
+
+Three exact FLUID observation discrepancy crops (10990/2390,
+11020/2418, 11230/2386) all contain original `moped` annotations
+at their review-target coordinates. This explains that those
+PyTorch-vs-OpenVINO discrepancies were NOT caused by FLUID type
+differences; they are differences in spatial match outcome.
+
+**Updated interpretation:** The two visually obvious white buses
+are categorized as `car` in FLUID nearest annotated centers,
+not simply *missing all annotation*. The 10960 truck-like vehicle
+is also located near a raw `car` annotation. The 10780 motorcycle
+detection is co-located with a raw `pedestrian` label, and
+therefore it was misleading to call it unannotated merely because
+the **MOTORCYCLE** benchmark label was distant. Frame 11260's
+green commercial-looking vehicle near `moped` deserves particular
+care: the dataset label or perceived vehicle category may be
+incorrect, or two objects may overlap. Frame 10900 HEAVY_VEHICLE
+has no FLUID center within 50px; missing coverage or localization
+error remains possible.
+
+**Do not rewrite labels:** Original 4-class detector precision stays
+670/857 = 78.18%; the 187 unmatched rows remain. This is a valid
+*class-aware precision versus the present FLUID labels*, not
+independently adjudicated physical false-positive rate. The repeated
+car ID 2407 at 11050/11200 represents two frame observations of the
+same FLUID ID, not two independent vehicle identities.
+
+### Next read-only diagnostic: lock official matches, then cross-class pair residuals
+
+To estimate how much of the precision gap is potentially associated
+with raw label-family disagreement, the **separate**
+`phase3_shadow_raw_fluid_ontology.py` locks each of the original
+670 class-aware matches and uses the same 50px gate to pair only
+still-unmatched detections with **unused raw FLUID annotations of
+another class**. The latter include PEDESTRIAN, LIGHT_COMMERCIAL
+and other classes outside the official four-class truth denominator.
+Each shadow pair records raw type, normalized type, original ID,
+frame, distance and confidence. Matched/unmatched tags and FLUID
+labels are *not changed*, and this is not a corrected precision.
+Conservatively locking baseline matches may leave other plausible
+cross-class assignments unpaired; that is deliberate.
+
+```powershell
+cd C:\Users\Admin\Desktop\StreetLab-engine-trial
+git pull --ff-only
+$python = ".\.venv-sahi-audit\Scripts\python.exe"
+& $python scripts/phase3_shadow_raw_fluid_ontology.py `
+  --audit-dir "artifacts/phase3/sahi_detector_trials/W04_openvino_spaced21_01" `
+  --output "artifacts/phase3/sahi_detector_trials/W04_shadow_raw_fluid_ontology21_01.json"
+```
+
+Send the reported original frozen score, `shadow_class_pair_counts`,
+and `remaining_without_unused_fluid_center_within_50px_by_class`.
+Treat shadow associations strictly as hypotheses to guide further
+manual verification. No inference, NMS, tracking, FLUID relabeling,
+or production promotion occurs.
