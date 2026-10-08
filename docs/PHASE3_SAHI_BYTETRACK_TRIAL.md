@@ -94,6 +94,43 @@ The same 90-frame warm-up rule applies. The first test can be smaller (e.g.
 40–100 evaluation frames) to check model compatibility and runtime cost, but
 small pilots **cannot** serve as the final comparison.
 
+## Diagnose motorcycle misses without rerunning video inference
+
+The class diagnostic reads an EXISTING Geo-trax-compatible track export and
+FLUID annotation CSV, applying the identical **fixed** +1 frame alignment
+and <=50 px spatial Hungarian matching used in `PixelBenchmark`.
+
+```powershell
+$python = ".\\.venv-sahi-audit\\Scripts\\python.exe"
+& $python scripts/phase3_class_diagnostics.py `
+  --tracks artifacts/phase3/sahi_tracker_trials/W04_standard_pilot01.txt `
+  --fluid-tracks "C:\\Users\\Admin\\Desktop\\StreetLabData\\Video_2\\20250526_video_Traj.csv" `
+  --start-frame 10750 --end-frame 10759 `
+  --output artifacts/phase3/sahi_tracker_trials/W04_standard_pilot01_classes.json
+```
+
+To compare against T000, pass its real original Geo-trax tracking file as
+`--tracks` with **the same frame bounds**, saving to a separate JSON path.
+This does not change or rerun either engine.
+
+The report distinguishes **spatial recall** (did any vehicle prediction
+occupy a truth location?) from **correct-class recall** (was it assigned the
+right class?). In a wrong-class spatial association, the truth contributes
+a class error, *not* a spatial false positive. This preserves the frozen
+benchmark's class-agnostic spatial association and avoids falsely claiming
+a motorcycle was detected correctly when it was labeled as a car.
+
+### CPU tiling safety
+
+For the 3840×2160 May-26 video, running every 640-pixel slice with
+`--image-size 1920` causes redundant resizing and excessive CPU work.
+Choose **`--image-size 640`** with 640×640 slices for the first SAHI pilot.
+The unsliced control may retain `--image-size 1920`; this explicitly
+tests two *inference configurations* with the same trained model weights,
+not identical image input sizes. Keep the manifest settings visible so
+accuracy and compute comparisons remain honest. Never use tiny warm-up or
+10-frame identity results as production quality evidence.
+
 ## Evidence produced
 
 - `*.txt`: Geo-trax 14-column track file with confirmed real IDs.
