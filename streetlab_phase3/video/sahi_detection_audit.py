@@ -24,6 +24,7 @@ from scipy.optimize import linear_sum_assignment
 
 from streetlab_phase3.pixel_benchmark import FluidPixelTruth, normalize_fluid_pixel_truth
 from streetlab_phase3.video.engine_shootout import load_class_map, sha256_file
+from streetlab_phase3.video.openvino_export import validate_export_source, hash_model_tree
 
 CLASSES = ("CAR", "BUS", "HEAVY_VEHICLE", "MOTORCYCLE")
 CANONICAL_IDS = {0: "CAR", 1: "BUS", 2: "HEAVY_VEHICLE", 3: "MOTORCYCLE"}
@@ -47,6 +48,7 @@ class DetectorAudit:
     slice_width: int = 640
     overlap: float = 0.20
     max_pixel_distance: float = 50.0
+    runtime_model_path: str | None = None
 
     def validate(self) -> None:
         if self.start_frame < 0 or self.end_frame < self.start_frame or self.sample_step < 1:
@@ -62,6 +64,9 @@ class DetectorAudit:
                 raise FileNotFoundError(f"Local input not found: {path}")
         if Path(self.output_dir).exists():
             raise FileExistsError(f"Audit directory already exists: {self.output_dir}")
+        if self.runtime_model_path is not None:
+            validate_export_source(Path(self.runtime_model_path),
+                                   Path(self.weights), self.image_size)
 
     @property
     def frames(self) -> tuple[int, ...]:
@@ -251,7 +256,8 @@ def run_detector_audit(
         cv2_module = cv2
     if timer is None:
         timer = time.perf_counter
-    model = model_loader(trial.weights, trial.confidence, trial.device, trial.image_size)
+    runtime_path = trial.runtime_model_path or trial.weights
+    model = model_loader(runtime_path, trial.confidence, trial.device, trial.image_size)
     standard_fn, sliced_fn = predictors
     cap = cv2_module.VideoCapture(trial.video)
     if not cap.isOpened():
@@ -315,6 +321,11 @@ def run_detector_audit(
         "ground_truth_sha256": sha256_file(trial.fluid_tracks),
         "versions": versions,
         "class_map": class_map,
+        "runtime_backend": "openvino" if trial.runtime_model_path else "pytorch",
+        "runtime_model_sha256": (
+            hash_model_tree(Path(trial.runtime_model_path))
+            if trial.runtime_model_path else sha256_file(trial.weights)
+        ),
         "standard": scored["standard"],
         "sliced": scored["sliced"],
         "gate": gate,
