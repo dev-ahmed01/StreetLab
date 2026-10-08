@@ -74,6 +74,11 @@ def test_same_frames_reports_real_motorcycle_gain_without_promotion(tmp_path):
     assert r["results"]["sliced"]["class_diagnostics"]["by_class"]["MOTORCYCLE"]["spatial_recall"] == 1.0
     assert r["results"]["standard"]["class_diagnostics"]["by_class"]["MOTORCYCLE"]["spatial_misses"] == 2
     assert r["deltas_sliced_minus_standard"]["motorcycle_spatial_misses_delta"] == -2
+    paired = r["paired_error_audit"]
+    assert paired["eligible_for_promotion"] is False
+    assert paired["by_truth_class"]["MOTORCYCLE"]["spatial"]["sliced_only"] == 2
+    assert paired["by_truth_class"]["MOTORCYCLE"]["spatial"]["standard_only"] == 0
+    assert paired["sliced_unmatched"]["MOTORCYCLE"]["unmatched_point_count"] == 1
     assert r["deltas_sliced_minus_standard"]["unmatched_predictions_delta"] == 1
     assert "different detector input resolutions" in r["confounders"]
     assert "different tracker warm-up lengths" in r["confounders"]
@@ -128,6 +133,8 @@ def test_cli_exports_full_report_and_summary_and_never_overwrites(tmp_path):
     assert summary["standard"]["motorcycle_spatial_recall"] == pytest.approx(1/3)
     assert summary["sliced"]["motorcycle_spatial_recall"] == 1
     assert summary["deltas_sliced_minus_standard"]["motorcycle_spatial_misses_delta"] == -2
+    assert summary["paired_motorcycle_outcomes"]["spatial"]["sliced_only"] == 2
+    assert summary["unmatched_predictions_forensics"]["sliced"]["MOTORCYCLE"]["unmatched_point_count"] == 1
     assert json.loads(output.read_text())["eligible_for_promotion"] is False
     again = subprocess.run(command, text=True, capture_output=True)
     assert again.returncode != 0
