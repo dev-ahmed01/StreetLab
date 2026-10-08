@@ -452,10 +452,10 @@ percentage scores directly with the 3-frame P3B numbers.
 ```powershell
 cd C:\Users\Admin\Desktop\StreetLab-engine-trial
 git pull --ff-only
-$python = ".\\.venv-sahi-audit\\Scripts\\python.exe"
+$python = ".\.venv-sahi-audit\Scripts\python.exe"
 $video = "C:\Users\Admin\Desktop\StreetLabData\Video_2\20250526_video.mp4"
 $truth = "C:\Users\Admin\Desktop\StreetLabData\Video_2\20250526_video_Traj.csv"
-$weights = "C:\Users\Admin\\.cache\\huggingface\\hub\\models--rfonod--geo-trax\\snapshots\\f512e0d1445e65fc2cf505d7474deccf33f11bf9\\geotrax_hbb_yolov8s_1920_v1.pt"
+$weights = "C:\Users\Admin\.cache\huggingface\hub\models--rfonod--geo-trax\snapshots\f512e0d1445e65fc2cf505d7474deccf33f11bf9\geotrax_hbb_yolov8s_1920_v1.pt"
 
 & $python scripts/phase3_sahi_audit.py `
   --video $video --fluid-tracks $truth --weights $weights `
