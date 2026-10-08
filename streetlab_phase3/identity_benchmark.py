@@ -127,22 +127,31 @@ class IdentityBenchmark:
         truth: Sequence[FluidPixelTruth],
         *,
         frame_offsets: Sequence[int] = (-2, -1, 0, 1, 2),
+        evaluation_frame_range: tuple[int, int] | None = None,
     ) -> IdentityBenchmarkResult:
         pixel_report = self.pixel_benchmark.evaluate(
             predicted,
             truth,
             frame_offsets=frame_offsets,
+            evaluation_frame_range=evaluation_frame_range,
         )
-        matches = self.pixel_benchmark.match_points(
-            predicted,
-            truth,
-            frame_offset=pixel_report.frame_offset,
+        scoring_truth = (
+            truth if evaluation_frame_range is None
+            else [point for point in truth
+                  if evaluation_frame_range[0] <= point.frame <= evaluation_frame_range[1]]
         )
         predicted_supported = [
             point
             for point in predicted
             if point.vehicle_class in _SUPPORTED_GEOTRAX_CLASSES
+            and (evaluation_frame_range is None or
+                 evaluation_frame_range[0] <= point.frame + pixel_report.frame_offset <= evaluation_frame_range[1])
         ]
+        matches = self.pixel_benchmark.match_points(
+            predicted_supported,
+            scoring_truth,
+            frame_offset=pixel_report.frame_offset,
+        )
 
         if (
             pixel_report.evaluation_frame_start is None
