@@ -32,6 +32,9 @@ def main(argv: list[str] | None = None) -> int:
         "status": result["status"],
         "samples": result["sample_frames"],
         "same_motorcycle_truth_points": result["same_motorcycle_truth_points"],
+        "reference_runtime_backend": result["reference_runtime_backend"],
+        "candidate_runtime_backend": result["candidate_runtime_backend"],
+        "runtime_conversion_changes_numerics": result["runtime_conversion_changes_numerics"],
         "configurations": {
             "cached_sliced": result["reference_slice_config"],
             "candidate_sliced": result["candidate_slice_config"],
