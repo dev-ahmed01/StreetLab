@@ -615,7 +615,7 @@ to upstream documentation; this project's version-specific compatibility
 and any gains must be established by a real local parity test.
 
 Export requires optional OpenVINO packages. Install them into only the
-experiment venv, not the project production environment. The exporter
+experiment venv, not the project production environment. Pin the existing\nUltralytics version (8.4.174) to minimize software-version confounding.\nCheck the installed SAHI and Ultralytics versions in the new run manifest. The exporter
 copies the original checkpoint into an isolated temporary folder,
 converts once, records model bytes and checkpoint hashes and atomically
 publishes a new immutable export. It never edits the original checkpoint.
@@ -629,7 +629,7 @@ $truth = "C:\Users\Admin\Desktop\StreetLabData\Video_2\20250526_video_Traj.csv"
 $weights = "C:\Users\Admin\.cache\huggingface\hub\models--rfonod--geo-trax\snapshots\f512e0d1445e65fc2cf505d7474deccf33f11bf9\geotrax_hbb_yolov8s_1920_v1.pt"
 
 # Optional CPU backend, kept in the isolated test virtual environment:
-& $python -m pip install "ultralytics[export-openvino]"
+& $python -m pip install "ultralytics[export-openvino]==8.4.174"
 
 # Convert original .pt to a separate non-quantized candidate model:
 & $python scripts/phase3_export_openvino.py `
