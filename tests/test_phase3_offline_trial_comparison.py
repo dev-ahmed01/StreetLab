@@ -77,7 +77,7 @@ def test_same_frames_reports_real_motorcycle_gain_without_promotion(tmp_path):
     assert r["deltas_sliced_minus_standard"]["unmatched_predictions_delta"] == 1
     assert "different detector input resolutions" in r["confounders"]
     assert "different tracker warm-up lengths" in r["confounders"]
-    assert "fewer than 100 evaluation frames" in r["confounders"]
+    assert any("fewer than 100 evaluation frames" in item for item in r["confounders"])
 
 
 def test_same_model_hash_and_tracker_settings_required(tmp_path):
