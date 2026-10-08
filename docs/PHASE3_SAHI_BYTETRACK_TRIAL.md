@@ -827,6 +827,79 @@ OpenVINO's five-frame quality and runtime behavior persist in the
 21-frame tuned cohort. Detector trial gate, tracking and true
 held-out validation remain separate.
 
+## W04 21-frame OpenVINO parity — completed; precision review next
+
+The user executed the OpenVINO non-INT8 backend on the exact **21 May-26
+W04 sampled frames** (10750 to 11350, every 30) previously evaluated
+with PyTorch. All runs used the frozen original detector weights and
+640×640 tiles (20% overlap); evaluation is **class-aware detector-only
+50px**, **not the frozen class-agnostic P3B tracking score**.
+
+| Same 21-frame detection-only sample | PyTorch SAHI | OpenVINO SAHI |
+|---|---:|---:|
+| Annotated observations | 739 | 739 |
+| Overall matches | 671 | 670 |
+| Overall recall | 90.80% | 90.66% |
+| Overall precision | 78.02% | 78.18% |
+| MOTORCYCLE matched / 380 | 321 | 320 |
+| MOTORCYCLE recall | 84.47% | 84.21% |
+| Unmatched predictions | 189 | 187 |
+| CPU sliced inference median | 12.055s | 1.710s |
+
+OpenVINO's *observed* median CPU inference is ~7.05x faster on the
+identical frame positions, but these were separately timed sessions,
+not interleaved, repeated random-order paired measurements.
+**The strict detector gate still fails** because of sliced precision
+relative to full-frame 640 and excessive sliced/full-frame latency.
+OpenVINO remains **experimental and not eligible for production**.
+
+Exact **FLUID observation ID** parity:
+**MOTORCYCLE** = 319 matched by both, **2 PyTorch-only**,
+**1 OpenVINO-only**, **58 neither** (380 annotated frame observations).
+CAR = 345 matched by both (9 neither); HEAVY_VEHICLE = 5 both.
+Thus three annotated motorcycle *observations* disagree.
+No claimed ByteTrack identity consistency, no claim of three unique
+motorcycles. Matching may differ due to converted detector numerics.
+
+OpenVINO's 187 detector-unmatched predictions break down as
+**89 MOTORCYCLE, 66 CAR, 20 HEAVY_VEHICLE and 12 BUS**.
+FLUID includes **zero BUS annotations** in these 21 samples, so
+BUS predictions are unmatched, not automatically physically absent.
+The test cannot by itself distinguish detector false alarms,
+incomplete FLUID annotation, class confusion, or clustered
+real vehicles.
+
+### Next: cache-only precision audit, no further inference
+
+The script `phase3_sahi_unmatched_detection_review.py` reads the
+immutable 21-frame OpenVINO CSV and report, recomputes all class-aware
+50px matches using the established evaluator, rejects score drift
+and mismatched checkpoints/exports, then reports class-specific
+confidence bands and *nearest-center* indicators for the
+187 unmatched observations. It also prioritizes the three
+PyTorch/OpenVINO motorcycle observation disagreements for human
+image review. Proximity to another prediction is **not proof of
+duplicated box IoU**; no suppression is executed or proposed by
+the code.
+
+```powershell
+cd C:\Users\Admin\Desktop\StreetLab-engine-trial
+git pull --ff-only
+$python = ".\.venv-sahi-audit\Scripts\python.exe"
+& $python scripts/phase3_sahi_unmatched_detection_review.py `
+  --audit-dir "artifacts/phase3/sahi_detector_trials/W04_openvino_spaced21_01" `
+  --parity "artifacts/phase3/sahi_detector_trials/W04_torch_ov_truth_parity21_01.json" `
+  --output "artifacts/phase3/sahi_detector_trials/W04_openvino_unmatched_review21_01.json"
+```
+
+Before any precision optimization, visually adjudicate a few
+real motorcycles and unmatched high-confidence cars/large vehicles
+using the original raw video/FLUID frames. Do not use evaluator
+unmatched flags as a deployment-time filter; labels may be incomplete.
+No model threshold fitting or tracker promotion is allowed on
+this tuned W04 source. A separate held-out recording is still
+mandatory.
+
 ## Evidence produced
 
 - `*.txt`: Geo-trax 14-column track file with confirmed real IDs.
