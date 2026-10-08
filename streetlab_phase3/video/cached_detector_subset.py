@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from streetlab_phase3.pixel_benchmark import normalize_fluid_pixel_truth
+from streetlab_phase3.video.openvino_export import validate_export_source, hash_model_tree
 from streetlab_phase3.video.sahi_detection_audit import (
     CLASSES, Detection, score_detections,
 )
@@ -47,6 +48,22 @@ def _read_audit(directory: Path) -> dict[str, Any]:
         raise ValueError("Checkpoint bytes differ from source manifest")
     if _sha(Path(trial["fluid_tracks"])) != data["ground_truth_sha256"]:
         raise ValueError("Truth annotations differ from source manifest")
+    backend = data.get("runtime_backend", "pytorch")
+    if backend == "openvino":
+        candidate_path = trial.get("runtime_model_path")
+        if not candidate_path:
+            raise ValueError("OpenVINO runtime is missing exported model path")
+        validate_export_source(Path(candidate_path), Path(trial["weights"]),
+                               trial["image_size"])
+        if data.get("runtime_model_sha256") != hash_model_tree(Path(candidate_path)):
+            raise ValueError("OpenVINO detector runtime hash mismatch")
+    elif backend == "pytorch":
+        if trial.get("runtime_model_path") is not None:
+            raise ValueError("PyTorch declaration cannot include alternative model")
+        if data.get("runtime_model_sha256", data["model_sha256"]) != data["model_sha256"]:
+            raise ValueError("PyTorch runtime hash mismatch")
+    else:
+        raise ValueError(f"Unsupported detection backend {backend}")
     return data
 
 
@@ -116,6 +133,8 @@ def compare_cached_detector_subsets(
             "source": str(directory / f"{mode}_detections.csv"),
             "sha256": _sha(directory / f"{mode}_detections.csv"),
             "original_evaluation_frame_count": len(audit_frames),
+            "runtime_backend": data.get("runtime_backend", "pytorch"),
+            "runtime_model_sha256": data.get("runtime_model_sha256", data["model_sha256"]),
             "timing_median_across_original_sample_s": stored["latency_median_s"],
         }
     expected_truth = {scores[k]["truth_points"] for k in scores}
@@ -142,6 +161,12 @@ def compare_cached_detector_subsets(
             k: candidate["trial"][k] for k in ("image_size", "slice_height",
                                                "slice_width", "overlap")
         },
+        "reference_runtime_backend": ref.get("runtime_backend", "pytorch"),
+        "candidate_runtime_backend": candidate.get("runtime_backend", "pytorch"),
+        "runtime_conversion_changes_numerics": (
+            ref.get("runtime_backend", "pytorch")
+            != candidate.get("runtime_backend", "pytorch")
+        ),
         "scores": scores,
         "sliced_candidate_minus_reference": {
             "motorcycle_recall_percentage_points": (
