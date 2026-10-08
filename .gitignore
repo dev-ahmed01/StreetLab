@@ -1,2 +1,5 @@
 .venv-geotrax/
 artifacts/phase3/geotrax/
+.venv-engine-trial/
+artifacts/phase3/engine_shootout/
+artifacts/phase3/engine_shootout_dependencies.txt
