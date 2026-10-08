@@ -14,7 +14,8 @@ if str(ROOT) not in sys.path:
 from streetlab_phase3.video.engine_shootout import Trial, promotion_gate, run_trial
 
 
-def score_trial(*, tracks: Path, fluid_tracks: Path, max_distance_px: float) -> tuple[dict, dict]:
+def score_trial(*, tracks: Path, fluid_tracks: Path, max_distance_px: float,
+                start_frame: int, end_frame: int) -> tuple[dict, dict]:
     from streetlab_phase3.geotrax_pixel import load_geotrax_pixel_tracks
     from streetlab_phase3.identity_benchmark import IdentityBenchmark
     from streetlab_phase3.pixel_benchmark import PixelBenchmark, normalize_fluid_pixel_truth
@@ -23,11 +24,15 @@ def score_trial(*, tracks: Path, fluid_tracks: Path, max_distance_px: float) -> 
     with fluid_tracks.open("r", encoding="utf-8-sig", newline="") as fh:
         truth = normalize_fluid_pixel_truth(csv.DictReader(fh))
     predicted = load_geotrax_pixel_tracks(tracks)
-    # Stage-A contract requires the known +1 frame alignment: do not re-optimize.
+    # Stage-A contract: FLUID frame = zero-based video frame + 1.
+    # Freeze the entire evaluation interval even if predictions omit edge frames.
+    fixed_truth_window = (start_frame + 1, end_frame + 1)
     pixel = package_to_dict(PixelBenchmark(max_distance_px).evaluate(
-        predicted, truth, frame_offsets=(1,)))
+        predicted, truth, frame_offsets=(1,),
+        evaluation_frame_range=fixed_truth_window))
     identity = IdentityBenchmark(max_distance_px).evaluate(
-        predicted, truth, frame_offsets=(1,)).scorecard_dict()
+        predicted, truth, frame_offsets=(1,),
+        evaluation_frame_range=fixed_truth_window).scorecard_dict()
     return pixel, identity
 
 
@@ -68,7 +73,8 @@ def main(argv: list[str] | None = None) -> int:
     output = Path(args.output)
     pixel, identity = score_trial(
         tracks=output, fluid_tracks=Path(args.fluid_tracks),
-        max_distance_px=args.max_pixel_distance)
+        max_distance_px=args.max_pixel_distance,
+        start_frame=args.start_frame, end_frame=args.end_frame)
     output.with_suffix(".pixel.json").write_text(
         json.dumps(pixel, indent=2), encoding="utf-8")
     output.with_suffix(".identity.json").write_text(
