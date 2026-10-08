@@ -264,7 +264,18 @@ def test_local_visual_gallery_refuses_tampered_review_source(tmp_path):
     summary["prediction_source"] = str(tmp_path / "different.csv")
     review = tmp_path / "review.json"
     review.write_text(json.dumps(summary))
+    import shutil
+    ref = tmp_path / "pytorch"
+    ref.mkdir()
+    source = json.loads((audit / "report.json").read_text())
+    source["runtime_backend"] = "pytorch"
+    source["runtime_model_sha256"] = source["model_sha256"]
+    source["trial"]["runtime_model_path"] = None
+    (ref / "report.json").write_text(json.dumps(source))
+    for mode in ("sliced", "standard"):
+        shutil.copyfile(audit / f"{mode}_detections.csv",
+                        ref / f"{mode}_detections.csv")
     with pytest.raises(ValueError, match="Review is not"):
         render_detector_review(
-            review_json=review, reference_dir=audit,
+            review_json=review, reference_dir=ref,
             openvino_dir=audit, output_dir=tmp_path / "wrong")
