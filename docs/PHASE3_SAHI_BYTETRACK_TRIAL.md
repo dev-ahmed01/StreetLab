@@ -748,6 +748,85 @@ benchmark, inspection of prediction-level precision errors, and
 independent unseen footage remain prerequisites for tracker promotion.
 All outputs remain separate, immutable and non-production.
 
+## OpenVINO paired five-frame observation parity and latency — completed
+
+On October 8 the user executed the exact cached FLUID truth-observation parity
+audit for 10750, 10900, 11050, 11200 and 11350, plus a fresh PyTorch
+five-frame detector-only timing trial with the same image size and tile
+geometry as the existing OpenVINO pilot. Source video and FLUID ground
+truth remain local; original Geo-trax and T000 remain unchanged.
+
+- **MOTORCYCLE FLUID observations:** 80 matched by both, zero matched
+  only by PyTorch, zero matched only by OpenVINO, 13 matched by neither
+  (93 truth observations). These are annotated *frame observations*, not
+  ByteTrack or independent physical vehicle IDs.
+- **CAR:** 81 matched by both, 0 backend-only, 3 by neither (84 annotated
+  observations); **HEAVY_VEHICLE:** one matched by both. No BUS annotations
+  were present. No class-level truth-observation disagreement was found.
+- PyTorch sliced inference median **7.6989638 seconds/frame** across
+  the same five sample locations; OpenVINO sliced median **1.6108624
+  seconds/frame**. This is an observed **~4.78× median-time ratio**.
+  Inference runs were conducted in separate sessions, without
+  interleaved randomized repeat timings, so it is not a guaranteed
+  benchmark speedup.
+- **Same five-frame class-aware detector recall:** 162/178=91.01%
+  overall and 80/93=86.02% MOTORCYCLE for both backends. Unmatched
+  detector predictions were **57 PyTorch** versus **55 OpenVINO**;
+  overall precision **73.97%** versus **74.65%**. Equal recovered
+  annotated observations do not imply identical box confidence, geometry
+  or false-positive behavior.
+- The frozen detector-trial gate **still fails**: sliced precision is
+  below allowed regression versus standard full-frame-640 and sliced
+  CPU time exceeds the allowed relative latency limit. Do not promote
+  any engine or IoU suppression threshold.
+
+### Next: 21-frame OpenVINO parity across the same spaced W04 cohort
+
+Rather than jump to a continuous SAHI ByteTrack run, reuse exactly
+the original 21 predeclared source frames, 10750–11350 inclusive with
+step 30. This is **still the May-26 tuning recording**, a wider
+detector-only replication, not a holdout or an identity test.
+
+```powershell
+cd C:\Users\Admin\Desktop\StreetLab-engine-trial
+git pull --ff-only
+$python = ".\.venv-sahi-audit\Scripts\python.exe"
+$video = "C:\Users\Admin\Desktop\StreetLabData\Video_2\20250526_video.mp4"
+$truth = "C:\Users\Admin\Desktop\StreetLabData\Video_2\20250526_video_Traj.csv"
+$weights = "C:\Users\Admin\.cache\huggingface\hub\models--rfonod--geo-trax\snapshots\f512e0d1445e65fc2cf505d7474deccf33f11bf9\geotrax_hbb_yolov8s_1920_v1.pt"
+$model = "artifacts/phase3/sahi_detector_trials/W04_openvino_export640_01/checkpoint_openvino_model"
+
+# Run OpenVINO on the identical 21 cached PyTorch reference frames.
+& $python scripts/phase3_sahi_audit.py `
+  --video $video --fluid-tracks $truth --weights $weights `
+  --runtime-model $model `
+  --output-dir "artifacts/phase3/sahi_detector_trials/W04_openvino_spaced21_01" `
+  --start-frame 10750 --end-frame 11350 --sample-step 30 `
+  --confidence 0.15 --image-size 640 `
+  --slice-height 640 --slice-width 640 --overlap 0.20 --device cpu
+
+# The strict gate is expected to return code 2 while saving report.json.
+# The comparator scores both modes on the EXACT same 21 samples.
+& $python scripts/phase3_compare_cached_detector_subsets.py `
+  --reference-dir "artifacts/phase3/sahi_detector_trials/W04_spaced21_control640_01" `
+  --candidate-dir "artifacts/phase3/sahi_detector_trials/W04_openvino_spaced21_01" `
+  --output "artifacts/phase3/sahi_detector_trials/W04_torch_ov_same21_01.json"
+
+# Verify the *same annotated observations* were recovered.
+& $python scripts/phase3_paired_detector_truth_parity.py `
+  --reference-dir "artifacts/phase3/sahi_detector_trials/W04_spaced21_control640_01" `
+  --candidate-dir "artifacts/phase3/sahi_detector_trials/W04_openvino_spaced21_01" `
+  --output "artifacts/phase3/sahi_detector_trials/W04_torch_ov_truth_parity21_01.json"
+```
+
+Files are new/immutable: if the exact output path already exists,
+inspect its `report.json` rather than repeating into that directory.
+All three existing scripts have already been unit-tested for strict
+provenance and fixed-frame denominators. Results will determine whether
+OpenVINO's five-frame quality and runtime behavior persist in the
+21-frame tuned cohort. Detector trial gate, tracking and true
+held-out validation remain separate.
+
 ## Evidence produced
 
 - `*.txt`: Geo-trax 14-column track file with confirmed real IDs.
