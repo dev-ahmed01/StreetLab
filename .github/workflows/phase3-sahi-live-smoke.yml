@@ -17,6 +17,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           sparse-checkout: |
+            streetlab_phase1
+            streetlab_phase2
             streetlab_phase3
             scripts/phase3_sahi_live_smoke.py
             requirements.txt
