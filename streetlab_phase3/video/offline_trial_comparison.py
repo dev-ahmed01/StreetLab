@@ -18,6 +18,7 @@ from streetlab_phase3.pixel_benchmark import PixelBenchmark, normalize_fluid_pix
 from streetlab_phase3.serialization import package_to_dict
 from streetlab_phase3.video.class_diagnostics import class_diagnostics
 from streetlab_phase3.video.paired_error_audit import paired_error_audit
+from streetlab_phase3.video.precision_sensitivity import confidence_sensitivity, unmatched_proximity_audit
 
 
 def _manifest(path: Path) -> dict[str, Any]:
@@ -164,6 +165,13 @@ def compare_existing_runs(
         "deltas_sliced_minus_standard": changes,
         "paired_error_audit": paired_error_audit(
             prediction_sets["standard"], prediction_sets["sliced"], truth,
+            start_frame=start_frame, end_frame=end_frame),
+        "post_track_confidence_sensitivity": confidence_sensitivity(
+            prediction_sets["sliced"], truth,
+            start_frame=start_frame, end_frame=end_frame,
+            standard=prediction_sets["standard"]),
+        "sliced_unmatched_proximity": unmatched_proximity_audit(
+            prediction_sets["sliced"], truth,
             start_frame=start_frame, end_frame=end_frame),
         "results": results,
     }
