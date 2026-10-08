@@ -5,3 +5,4 @@ artifacts/phase3/engine_shootout/
 artifacts/phase3/engine_shootout_dependencies.txt
 .venv-sahi-audit/
 artifacts/phase3/sahi_audit/
+artifacts/phase3/sahi_tracker_trials/
