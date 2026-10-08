@@ -211,6 +211,62 @@ size, confidence, source window and 90-frame tracker warm-up.
 searched `C:\Users\Admin\Desktop\StreetLab\artifacts` directory. Do
 not invent its score or use a different-window summary as a replacement.
 
+## Precision sensitivity and unmatched proximity (zero inference)
+
+The paired May-26 audit found 19 motorcycle truth observations recovered by
+SAHI and one lost, from the SAME 10750–10752 evaluation frames. The recovered
+observations include repeated detections of the same five vehicle track IDs.
+Do **not** count these as 19 unique motorcycles. Sliced produced 29 unmatched
+predictions: 12 motorcycle (11 with confidence <0.50), 12 car (7 with confidence
+>=0.50), 4 bus, 1 heavy vehicle. Some unmatched observations may represent
+annotation gaps, class mismatches, or center-association errors rather than
+real-world false alarms.
+
+A new **post-track** sensitivity audit compares preset cutoffs
+`0.15,0.25,0.35,0.45,0.50,0.60,0.75` for:
+- removing predictions of **all classes** below the cutoff; versus
+- removing **only MOTORCYCLE** predictions below the cutoff.
+
+The same `--start-frame`/`--end-frame` and FLUID labels are applied at
+every cutoff. The first `0.15` global row reproduces the unfiltered
+SAHI output. This is a counterfactual *filter on confirmed track export*;
+it cannot simulate how changing YOLO/SAHI confidence changes NMS, ByteTrack
+activation, or identity association. Cutoffs are preset, not fitted to labels.
+
+The report also examines **unmatched** outputs (not verified physical false
+positives). It flags prediction centers within 25 pixels of a *separately
+matched* prediction, and centers within 50 pixels of any FLUID truth point,
+including class differences. These are **proximity heuristics**, not IoU
+measurements or proof that two boxes belong to one vehicle. Separate summary
+counts for high-confidence unmatched CAR predictions help decide whether
+duplicate suppression or an annotation/association review is justified.
+
+Use the same prior inputs but a **new** output name:
+
+```powershell
+cd C:\Users\Admin\Desktop\StreetLab-engine-trial
+git pull --ff-only
+$python = ".\\.venv-sahi-audit\\Scripts\\python.exe"
+$truth = "C:\Users\Admin\Desktop\StreetLabData\Video_2\20250526_video_Traj.csv"
+& $python scripts/phase3_compare_existing_trials.py `
+  --standard-tracks "artifacts/phase3/sahi_tracker_trials/W04_standard_pilot01.txt" `
+  --sliced-tracks "artifacts/phase3/sahi_tracker_trials/W04_sliced_smoke01.txt" `
+  --fluid-tracks $truth --start-frame 10750 --end-frame 10752 `
+  --output "artifacts/phase3/sahi_tracker_trials/W04_precision_sensitivity01.json"
+```
+
+Full outputs now include `post_track_confidence_sensitivity` with 14
+rows, and `sliced_unmatched_proximity` with class summaries plus
+individual unmatched track IDs and center distances. This diagnostic is
+run exclusively on a **three-frame tuning interval**, and all decisions
+continue to say `eligible_for_promotion=false`.
+
+**Recommended follow-up:** inspect high-confidence unmatched cars that
+are *not* near an existing match or FLUID truth point and verify them
+visually. Then choose a truly controlled longer A/B at equal detector
+input size, 90-frame warm-up, threshold and checkpoint; avoid costly
+blind parameter grids on the CPU-only 3840x2160 recording.
+
 ## Evidence produced
 
 - `*.txt`: Geo-trax 14-column track file with confirmed real IDs.
