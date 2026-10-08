@@ -147,4 +147,4 @@ def test_detector_audit_passes_openvino_path_and_records_true_runtime_sha(tmp_pa
     assert out["runtime_model_sha256"] == exported["export_sha256"]
     assert out["model_sha256"] == exported["source_sha256"]
     assert out["sliced"]["per_class"]["MOTORCYCLE"]["matched"] == 1
-    assert out["eligible_for_promotion"] if "eligible_for_promotion" in out else True
+    assert out["gate"]["eligible_for_production"] is False
