@@ -15,6 +15,7 @@ on:
       - "scripts/phase3_engine_shootout.py"
       - "scripts/phase3_sahi_audit.py"
       - "scripts/phase3_sahi_track.py"
+      - "scripts/phase3_class_diagnostics.py"
       - "scripts/phase3_identity_benchmark.py"
       - "scripts/phase3_recall_loss_diagnosis.py"
       - "scripts/phase3_setup_geotrax_windows.ps1"
@@ -44,6 +45,7 @@ jobs:
             scripts/phase3_engine_shootout.py
             scripts/phase3_sahi_audit.py
             scripts/phase3_sahi_track.py
+            scripts/phase3_class_diagnostics.py
             scripts/phase3_setup_geotrax_windows.ps1
             scripts/phase3_run_geotrax_windows.ps1
             tests
