@@ -95,6 +95,25 @@ If no motorcycles occur at the chosen 61 frames, rerun a different fixed
 sample set and record that selection before viewing its scores. Do not
 cherry-pick only frames where the candidate appears to help.
 
+## One-command W01/W04/W05 controlled sweep
+
+The PowerShell wrapper runs the same 640-pixel sliced experiment on a
+control window (W01) and two difficult windows (W04/W05). It treats exit
+code 2 as a **scientifically rejected candidate**, not a pipeline crash.
+It refuses to overwrite existing evidence.
+
+```powershell
+.\scripts\phase3_run_sahi_windows.ps1 `
+  -VideoPath "C:\Users\Admin\Desktop\StreetLabData\Video_2\20250526_video.mp4" `
+  -FluidTracks "C:\Users\Admin\Desktop\StreetLabData\Video_2\20250526_video_Traj.csv" `
+  -WeightsPath "C:\path\to\geotrax_hbb_yolov8s_1920_v1.pt" `
+  -Windows W01,W04,W05 -SampleStep 10 -SliceSize 640
+```
+
+Pass `-GeoTraxNumericClasses` only if the official four-class checkpoint
+shows generic numeric names (e.g. an ONNX export). Do **not** use this switch
+for a COCO checkpoint, which assigns index 0 to person rather than car.
+
 ## Data leakage and genuine held-out policy
 
 The existing `data/benchmarks/fluid_fidrt/manifest.json` originally labels
