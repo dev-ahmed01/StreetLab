@@ -94,6 +94,21 @@ def main(argv: list[str] | None = None) -> int:
         "by_class": proximity["by_class"],
         "note": proximity["note"],
     }
+    shadow = result["shadow_matching_audit"]
+    summary["shadow_matching"] = {
+        "status": shadow["status"],
+        "important": shadow["important"],
+        mode: {
+            "frozen_matches": shadow[mode]["frozen_p3b_hungarian_matches"],
+            "shadow_matches": shadow[mode]["shadow_max_cardinality_matches"],
+            "extra_valid_matches": shadow[mode]["additional_in_gate_matches"],
+            "unmatched_after_shadow": shadow[mode]["shadow_unmatched_predictions"],
+            "previously_unmatched_high_confidence_cars_newly_assigned":
+                shadow[mode]["previously_unmatched_high_confidence_car_predictions_now_assigned"],
+            "new_truth_matches_by_class": shadow[mode]["newly_matched_truth_by_class"],
+        }
+        for mode in ("standard", "sliced")
+    }
     print(json.dumps(summary, indent=2))
     print(f"Full diagnostic written to: {args.output}")
     return 0
