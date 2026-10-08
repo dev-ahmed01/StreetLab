@@ -34,6 +34,7 @@ jobs:
             scripts/phase3_engine_shootout.py
             scripts/phase3_class_diagnostics.py
             scripts/phase3_compare_existing_trials.py
+            scripts/phase3_visual_error_review.py
             scripts/phase2_m6_study_demo.py
             tests
             data/models/sumo_persona_priors.csv
