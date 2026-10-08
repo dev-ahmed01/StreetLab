@@ -38,6 +38,7 @@ jobs:
             scripts/phase3_box_forensics.py
             scripts/phase3_offline_geometry_suppression.py
             scripts/phase3_compare_cached_detector_subsets.py
+            scripts/phase3_export_openvino.py
             scripts/phase2_m6_study_demo.py
             tests
             data/models/sumo_persona_priors.csv
