@@ -403,6 +403,91 @@ when the BUS class itself is uncertain. After this diagnostic, choose
 a narrower one-factor-at-a-time experiment and validate against
 a longer, fixed-cohort recording before discussing promotion.
 
+## W04 controlled scale check (completed locally, May-26 tuning only)
+
+An additional **two warm-up frame, three evaluation frame** controlled
+run on the user's original May-26 3840x2160 / 10 fps CCTV now holds
+the weights (SHA-256
+`7d462ae523b15f3679a83f74ab08aa79d2978f319ca2f0cf2892fbbb60df79da`),
+FLUID offset (+1), 50px scoring radius, confidence 0.15, class mapping,
+Roboflow ByteTrack settings, warm-up (frames 10748–10749), and scored
+frames (10750–10752) constant. The recorded runs are:
+
+| Candidate | Inference configuration | Matched / 113 | Recall | Precision | MOTORCYCLE correct-class recall | 5-frame end-to-end elapsed |
+|---|---|---:|---:|---:|---:|---:|
+| Standard | Full-frame resized to 640 | 55 | 48.67% | 94.83% | 0/56 = 0% | 23.53s |
+| Standard | Full-frame resized to 1920 | 81 | 71.68% | 93.10% | 25/56 = 44.64% | 19.74s |
+| Sliced SAHI | 640-pixel tiles; 640 model input | 98 | 86.73% | 77.17% | 44/56 = 78.57% | 65.89s |
+
+The elapsed times are only 5-frame end-to-end pilot timings including
+initialization, not stable detector throughput measurements. Full-frame
+640 and 1920 both use the same detector weights; the whole-frame
+downsampling erases many motorcycles at 640. Compared with the
+1920 full-frame run with matched warm-up, the sliced run recovered
+**19 additional matched MOTORCYCLE truth observations**, with zero
+standard-only motorcycle observations in this 3-frame cohort. Those
+19 are repeat observations of a smaller set of vehicles, not 19
+unique motorcycles. Precision fell by **15.94 percentage points**.
+This is strong evidence for a scale-related issue on W04 but NOT proof
+that tiling alone, independent of effective image scale, is responsible.
+The sample is only 0.3 seconds; neither tracker fragmentation nor
+long-run runtime are established. Standard Geo-trax T000 was never
+loaded into this comparison, so none of these numbers supersede it.
+
+### Next, bounded detector-only spatial coverage experiment
+
+Before paying for a full continuous 90-frame ByteTrack warm-up and
+hundreds of 4K SAHI frames, predeclare a wider **21-frame stratified
+detector-only** sample spread across the existing W04 tuning window
+10750–11350 inclusive at step 30 (source 10 fps: 60 seconds of coverage).
+Reuse the existing `phase3_sahi_audit.py` public script. Each
+sampled frame is sent through standard full-frame **640** and sliced
+**640** with the same checkpoint, confidence 0.15, original resolution
+and class mapping. This test does **not** run ByteTrack or estimate
+identity stability; it uses a class-aware, maximum-cardinality
+50px detector matching method, which is intentionally different from
+the class-agnostic frozen P3B tracking matcher. Do not compare its
+percentage scores directly with the 3-frame P3B numbers.
+
+```powershell
+cd C:\Users\Admin\Desktop\StreetLab-engine-trial
+git pull --ff-only
+$python = ".\\.venv-sahi-audit\\Scripts\\python.exe"
+$video = "C:\Users\Admin\Desktop\StreetLabData\Video_2\20250526_video.mp4"
+$truth = "C:\Users\Admin\Desktop\StreetLabData\Video_2\20250526_video_Traj.csv"
+$weights = "C:\Users\Admin\\.cache\\huggingface\\hub\\models--rfonod--geo-trax\\snapshots\\f512e0d1445e65fc2cf505d7474deccf33f11bf9\\geotrax_hbb_yolov8s_1920_v1.pt"
+
+& $python scripts/phase3_sahi_audit.py `
+  --video $video --fluid-tracks $truth --weights $weights `
+  --output-dir "artifacts/phase3/sahi_detector_trials/W04_spaced21_control640_01" `
+  --start-frame 10750 --end-frame 11350 --sample-step 30 `
+  --confidence 0.15 --image-size 640 --slice-height 640 `
+  --slice-width 640 --overlap 0.20 --device cpu
+
+# Exit code 2 means the predefined detector gate was NOT met,
+# not that the report failed to save:
+$report = Get-Content "artifacts/phase3/sahi_detector_trials/W04_spaced21_control640_01/report.json" -Raw | ConvertFrom-Json
+$report.standard.per_class.MOTORCYCLE
+$report.sliced.per_class.MOTORCYCLE
+$report.standard.precision
+$report.sliced.precision
+$report.gate
+```
+
+It saves the original fixed sample positions, both complete per-class
+detection scorecards, actual detections and per-mode latency; image
+and video bytes are NOT uploaded. The `detector_gate` has deliberately
+strict precision and latency limits; it may return exit code 2 even
+when the run and output files are correct. Do NOT weaken those
+limits or retrospectively relabel this as a generalization holdout.
+
+After this step, choose a single **continuous** paired experiment
+with equal 90-frame warm-up and a genuinely longer contiguous
+evaluation window, budgeting potentially tens of minutes to more
+than an hour on the user's CPU, before any claims about ID continuity.
+The next truly independent evaluation must be on unseen data.
+No automatic SAHI or IoU=0.30 suppression promotion.
+
 ## Evidence produced
 
 - `*.txt`: Geo-trax 14-column track file with confirmed real IDs.
