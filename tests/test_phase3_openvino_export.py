@@ -87,3 +87,64 @@ def test_detector_audit_uses_optional_runtime_dir_without_altering_checkpoint(tm
     with pytest.raises(ValueError, match="does not match"):
         different.validate()
     # Metadata-only checks cannot establish prediction parity; real CPU run must.
+
+def test_detector_audit_passes_openvino_path_and_records_true_runtime_sha(tmp_path):
+    import numpy as np
+    from types import SimpleNamespace
+    from streetlab_phase3.video.sahi_detection_audit import run_detector_audit
+
+    source = tmp_path / "checkpoint.pt"
+    source.write_bytes(b"frozen model weights")
+    exported = export_isolated_openvino(
+        weights=source, output_dir=tmp_path / "ov",
+        exporter=fake_exporter)
+    video = tmp_path / "video.mp4"
+    video.write_bytes(b"video")
+    truth = tmp_path / "truth.csv"
+    truth.write_text("frame,id,cx,cy,type\n1,m,10,10,moped\n")
+    audit = DetectorAudit(
+        video=str(video), fluid_tracks=str(truth),
+        weights=str(source), output_dir=str(tmp_path / "audit"),
+        start_frame=0, end_frame=0, image_size=640,
+        runtime_model_path=exported["model_path"])
+    received = []
+    def loader(path, confidence, device, image_size):
+        received.append((path, confidence, device, image_size))
+        return object()
+
+    class FakeCapture:
+        def __init__(self, path):
+            self.pos = 0
+        def isOpened(self): return True
+        def set(self, _prop, frame): self.pos = int(frame); return True
+        def read(self):
+            self.pos += 1
+            return True, np.zeros((32, 32, 3), dtype=np.uint8)
+        def get(self, _prop): return float(self.pos)
+        def release(self): pass
+
+    class FakeCV:
+        CAP_PROP_POS_FRAMES = 1
+        COLOR_BGR2RGB = 2
+        VideoCapture = FakeCapture
+        @staticmethod
+        def cvtColor(arr, _code): return arr
+
+    def motor():
+        return SimpleNamespace(
+            category=SimpleNamespace(name="motorcycle", id=3),
+            bbox=SimpleNamespace(to_xyxy=lambda: (5., 5., 15., 15.)),
+            score=SimpleNamespace(value=.8))
+
+    def predict(_im, _model, **kw):
+        return SimpleNamespace(object_prediction_list=[motor()])
+
+    out = run_detector_audit(
+        audit, model_loader=loader, predictors=(predict, predict),
+        cv2_module=FakeCV)
+    assert received == [(exported["model_path"], .15, "cpu", 640)]
+    assert out["runtime_backend"] == "openvino"
+    assert out["runtime_model_sha256"] == exported["export_sha256"]
+    assert out["model_sha256"] == exported["source_sha256"]
+    assert out["sliced"]["per_class"]["MOTORCYCLE"]["matched"] == 1
+    assert out["eligible_for_promotion"] if "eligible_for_promotion" in out else True
