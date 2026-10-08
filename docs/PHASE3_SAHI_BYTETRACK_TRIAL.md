@@ -488,6 +488,102 @@ than an hour on the user's CPU, before any claims about ID continuity.
 The next truly independent evaluation must be on unseen data.
 No automatic SAHI or IoU=0.30 suppression promotion.
 
+## W04 spaced 21-frame detector-only sample — completed locally
+
+The user executed the planned sample of source frames 10750, 10780, ...,
+11350 (step 30, 10fps, 60 seconds between first and last), in the
+original 3840x2160 May-26 *tuning* footage. Both use checkpoint SHA-256
+`7d462ae523b15f3679a83f74ab08aa79d2978f319ca2f0cf2892fbbb60df79da`,
+model image input 640, detector confidence 0.15, and same class-aware
+maximum-cardinality matching gate at 50px. **No tracking is run.**
+
+| Detection-only metric (21 sampled frames) | Standard full-640 | SAHI 640 tiles, overlap 0.20 |
+|---|---:|---:|
+| Total FLUID truth observations | 739 | 739 |
+| Predicted observations | 377 | 860 |
+| Matched truth observations | 355 | 671 |
+| Overall recall | 48.04% | 90.80% |
+| Overall precision | 94.16% | 78.02% |
+| MOTORCYCLE correct-class matches / 380 | 12 | 321 |
+| MOTORCYCLE recall | 3.16% | 84.47% |
+| MOTORCYCLE precision | 100% (12/12) | 78.29% (321/410) |
+| CAR recall | 96.05% | 97.46% |
+| Median detector time per frame (CPU) | 0.379s | 12.055s |
+
+Slicing improved motorcycle recall by **81.32 percentage points** over
+the whole-frame-640 detection baseline, but overall precision lost
+**16.14 percentage points**, and median inference latency increased
+**31.8x**, far beyond the existing **5x** detector-trial budget.
+Thus the frozen detector gate is **NOT PASSED** with exactly these
+reasons: precision regression and latency budget exceeded.
+The report was still successfully written; the CLI exited 2 by design.
+No permission to promote the model, its overlap policy, or tracking.
+
+There were **zero annotated BUS observations** in the 21 sampled FLUID
+frames, but 9 standard and 13 sliced bus detections. Under this
+class-aware matcher those detections are counted as unmatched,
+not confirmed physically absent buses. Heavy vehicles had 5 annotated
+observations; the class is also too sparse for robust conclusions.
+The predictions tagged 'false_positives' in the detector-only score
+represent **unmatched predictions**, not independently adjudicated
+scene-level false alarms.
+
+At 12 seconds per frame, a long continuous SAHI tracker trial would
+be an expensive CPU investment. **Do not run a 90-frame-warmup,
+multi-hundred-frame tracking trial yet.** Use a bounded inference-only
+speed/recall trade-off probe on the **same five predeclared frames**.
+
+### Next one-factor CPU probe: 1280px tiles (5 frames only)
+
+Test wider, less-overlapping *input tiles* while retaining the
+same model size=640, checkpoint, confidence=0.15, and fixed source frames:
+10750, 10900, 11050, 11200, 11350. Wider tiles require fewer inference
+calls, but the larger area is rescaled to 640 and may erase motorcycles.
+This is a **candidate with unknown outcomes**, not a promised fix.
+
+```powershell
+cd C:\Users\Admin\Desktop\StreetLab-engine-trial
+git pull --ff-only
+$python = ".\.venv-sahi-audit\Scripts\python.exe"
+$video = "C:\Users\Admin\Desktop\StreetLabData\Video_2\20250526_video.mp4"
+$truth = "C:\Users\Admin\Desktop\StreetLabData\Video_2\20250526_video_Traj.csv"
+$weights = "C:\Users\Admin\.cache\huggingface\hub\models--rfonod--geo-trax\snapshots\f512e0d1445e65fc2cf505d7474deccf33f11bf9\geotrax_hbb_yolov8s_1920_v1.pt"
+
+& $python scripts/phase3_sahi_audit.py `
+  --video $video --fluid-tracks $truth --weights $weights `
+  --output-dir "artifacts/phase3/sahi_detector_trials/W04_cpu_probe1280_5frames01" `
+  --start-frame 10750 --end-frame 11350 --sample-step 150 `
+  --confidence 0.15 --image-size 640 --slice-height 1280 `
+  --slice-width 1280 --overlap 0.10 --device cpu
+
+# The strict detector gate may return exit code 2 even when report.json
+# was written correctly. Do not rerun into the same output directory.
+
+& $python scripts/phase3_compare_cached_detector_subsets.py `
+  --reference-dir "artifacts/phase3/sahi_detector_trials/W04_spaced21_control640_01" `
+  --candidate-dir "artifacts/phase3/sahi_detector_trials/W04_cpu_probe1280_5frames01" `
+  --output "artifacts/phase3/sahi_detector_trials/W04_cached640_vs_probe1280_5frames01.json"
+```
+
+The comparator rescales the **previously cached 21-frame reference
+detections** to the **same five scored frames** as the candidate,
+verifies checkpoint and ground-truth hashes and exact image size,
+and reports all four same-frame scores (reference/candidate
+standard and sliced). No re-inference for the 640-tile baseline.
+Original reference 21-frame median and new 5-frame median come
+from different sample counts, so do NOT claim their ratio is
+a rigorous paired runtime benchmark; use as rough engineering
+cost evidence only.
+
+If candidate MOTORCYCLE recall falls dramatically on these same
+five frames or latency remains prohibitive, do not tune blindly.
+The optimization candidates then include accelerated CPU runtimes,
+reduced spatial coverage via **independently specified** region
+masks, or deployment on faster hardware, each requiring validation
+that it does not exclude real motorcycles. Do not select masks
+using the FLUID labels and claim held-out performance.
+This May-26 footage remains tuned, not a true generalization test.
+
 ## Evidence produced
 
 - `*.txt`: Geo-trax 14-column track file with confirmed real IDs.
