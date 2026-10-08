@@ -32,6 +32,7 @@ jobs:
             scripts/phase3_motorcycle_visual_audit.py
             scripts/phase3_engine_shootout.py
             scripts/phase3_class_diagnostics.py
+            scripts/phase3_compare_existing_trials.py
             scripts/phase2_m4_ensemble_demo.py
             tests
             data/models/sumo_persona_priors.csv
