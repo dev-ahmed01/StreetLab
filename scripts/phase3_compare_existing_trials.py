@@ -70,6 +70,30 @@ def main(argv: list[str] | None = None) -> int:
         }
         for engine in ("standard", "sliced")
     }
+    sensitivity = result["post_track_confidence_sensitivity"]
+    summary["confidence_sensitivity"] = {
+        "status": sensitivity["status"],
+        "note": sensitivity["note"],
+        "rows": [
+            {
+                "policy": r["policy"],
+                "cutoff": r["confidence_cutoff_inclusive"],
+                "kept": r["predictions_kept"],
+                "unmatched": r["unmatched_predictions"],
+                "point_recall": r["overall_point_recall"],
+                "point_precision": r["overall_point_precision"],
+                "motorcycle_correct_class_recall": r["motorcycle_correct_class_recall"],
+            }
+            for r in sensitivity["results"]
+        ],
+    }
+    proximity = result["sliced_unmatched_proximity"]
+    summary["unmatched_proximity"] = {
+        "status": proximity["status"],
+        "unmatched_total": proximity["unmatched_total"],
+        "by_class": proximity["by_class"],
+        "note": proximity["note"],
+    }
     print(json.dumps(summary, indent=2))
     print(f"Full diagnostic written to: {args.output}")
     return 0
