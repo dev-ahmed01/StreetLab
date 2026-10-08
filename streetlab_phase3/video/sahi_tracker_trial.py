@@ -189,6 +189,11 @@ def run_sahi_tracking(
                 ok, image = cap.read()
                 if not ok:
                     raise RuntimeError(f"Unexpected video EOF at absolute frame {frame}")
+                decoded_position = float(cap.get(cv2_module.CAP_PROP_POS_FRAMES))
+                if not math.isfinite(decoded_position) or abs(decoded_position - (frame + 1)) > 0.51:
+                    raise RuntimeError(
+                        f"Video decode/frame alignment failure at {frame}: "
+                        f"next position was {decoded_position}")
                 frame_rgb = cv2_module.cvtColor(image, cv2_module.COLOR_BGR2RGB)
                 if trial.mode == "sliced":
                     result = predictors[1](
