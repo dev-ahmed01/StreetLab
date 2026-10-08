@@ -267,6 +267,47 @@ visually. Then choose a truly controlled longer A/B at equal detector
 input size, 90-frame warm-up, threshold and checkpoint; avoid costly
 blind parameter grids on the CPU-only 3840x2160 recording.
 
+## W04 matched-pair and visual error review
+
+The three-frame W04 study shows why a confidence cutoff is not a
+validated solution: filtering existing SAHI tracks at >=0.50 raises
+point precision from 77.17% to 91.67% but reduces motorcycle recall
+from 78.57% to 55.36%. This post-track score cannot predict what
+ByteTrack would do with a changed detector confidence.
+
+The new `shadow_matching_audit` quantifies how many matches a
+cardinality-first 50px assignment would gain over the original
+Hungarian-then-gate matcher. It does not change the frozen evaluation.
+
+Run these commands in the existing experimental clone:
+
+```powershell
+git pull --ff-only
+$python = ".\\.venv-sahi-audit\\Scripts\\python.exe"
+$truth = "C:\\Users\\Admin\\Desktop\\StreetLabData\\Video_2\\20250526_video_Traj.csv"
+$video = "C:\\Users\\Admin\\Desktop\\StreetLabData\\Video_2\\20250526_video.mp4"
+$std = "artifacts/phase3/sahi_tracker_trials/W04_standard_pilot01.txt"
+$sliced = "artifacts/phase3/sahi_tracker_trials/W04_sliced_smoke01.txt"
+$comparison = "artifacts/phase3/sahi_tracker_trials/W04_shadow_check01.json"
+& $python scripts/phase3_compare_existing_trials.py `
+  --standard-tracks $std --sliced-tracks $sliced `
+  --fluid-tracks $truth --start-frame 10750 --end-frame 10752 `
+  --output $comparison
+
+& $python scripts/phase3_visual_error_review.py `
+  --comparison $comparison --video $video --fluid-tracks $truth `
+  --standard-tracks $std --sliced-tracks $sliced `
+  --output-dir "artifacts/phase3/sahi_tracker_trials/W04_visual_review01"
+```
+
+The review output is a local-only collection of raw versus annotated
+crops, with an index JSON. It prioritizes higher-confidence unmatched
+CAR points, MOTORCYCLE points near matches, and representative
+rescued/lost truth vehicles. Proximity does not prove duplicate
+detections; a shadow association is not an official benchmark score.
+No model inference is rerun and none of the original evidence is
+overwritten. The output is exploratory, never eligible for promotion.
+
 ## Evidence produced
 
 - `*.txt`: Geo-trax 14-column track file with confirmed real IDs.
