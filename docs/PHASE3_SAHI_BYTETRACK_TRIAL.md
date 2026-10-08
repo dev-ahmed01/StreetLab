@@ -169,7 +169,38 @@ $truth = "C:\Users\Admin\Desktop\StreetLabData\Video_2\20250526_video_Traj.csv"
 ```
 
 It reports both per-class and identity summaries in a new JSON, plus the
-sliced-minus-standard differences. It deliberately records **unequal
+sliced-minus-standard differences.
+
+### Paired rescue/loss and unmatched-confidence forensic report
+
+After the first W04 comparison, an additional offline-only analysis is
+available using the exact same inputs. Because results are immutable, give
+the `--output` a NEW filename:
+
+```powershell
+& $python scripts/phase3_compare_existing_trials.py `
+  --standard-tracks "artifacts/phase3/sahi_tracker_trials/W04_standard_pilot01.txt" `
+  --sliced-tracks "artifacts/phase3/sahi_tracker_trials/W04_sliced_smoke01.txt" `
+  --fluid-tracks $truth --start-frame 10750 --end-frame 10752 `
+  --output "artifacts/phase3/sahi_tracker_trials/W04_paired_forensics01.json"
+```
+
+This reports **paired** truth-observation outcomes for each class: matched
+by both, standard only, SAHI only, or neither; the same accounting with
+correct class required; and concrete FLUID motorcycle track IDs/video frames
+rescued or lost. It separately groups unmatched prediction observations by
+category, confidence ([0,.25), [.25,.5), [.5,1]) and track ID appearing on
+one versus multiple frames **within this 3-frame evaluation cohort**.
+An ID's short presence inside the restricted cohort is NOT proof it is an
+ephemeral false positive on a longer video.
+
+Do not treat confidence groupings as calibrated probabilities or derive a
+production threshold from these three tuned frames. The purpose is to
+identify whether the additional 23 unmatched SAHI predictions look like
+low-confidence motorcycles, wrong-class vehicles or high-confidence false
+alarms before spending CPU on a controlled, longer experiment. Raw FLUID
+files and private video stay on the local machine.
+ It deliberately records **unequal
 warm-up (5 versus 2)** and **image-size (1920 versus 640)** as confounders;
 thus even the same-three-frame comparison is exploratory, not a controlled
 component-level ablation or evidence for production promotion. To isolate
