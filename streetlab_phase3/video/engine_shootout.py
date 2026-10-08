@@ -75,8 +75,16 @@ def load_class_map(path: str | None) -> dict[str, int]:
 
 def model_class_ids(model_names: Mapping[int, str] | list[str], class_map: Mapping[str, int]) -> dict[int, int]:
     names = model_names.items() if isinstance(model_names, Mapping) else enumerate(model_names)
-    mapping = {int(i): class_map[str(name).strip().lower()] for i, name in names
-               if str(name).strip().lower() in class_map}
+    mapping: dict[int, int] = {}
+    for i, name in names:
+        # Explicit index keys support exported ONNX checkpoints missing label names.
+        # Never infer COCO indices: index mapping is opt-in via --class-map.
+        label_key = str(name).strip().lower()
+        index_key = str(int(i))
+        if label_key in class_map:
+            mapping[int(i)] = class_map[label_key]
+        elif index_key in class_map:
+            mapping[int(i)] = class_map[index_key]
     if not mapping:
         raise ValueError("No model classes map to StreetLab vehicle classes; provide --class-map")
     return mapping
