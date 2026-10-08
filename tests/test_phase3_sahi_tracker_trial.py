@@ -63,6 +63,9 @@ class FakeCapture:
         self.current += 1
         return True, now
 
+    def get(self, prop):
+        return self.current
+
     def release(self):
         self.released = True
 
@@ -155,6 +158,24 @@ def test_pipeline_emits_absolute_frames_90_warmup_contract_and_real_ids(tmp_path
     assert output.with_suffix(".manifest.json").is_file()
     with pytest.raises(FileExistsError):
         run_mock(trial)
+
+
+def test_decode_shift_causes_explicit_trial_failure(tmp_path):
+    class MisalignedCapture(FakeCapture):
+        def get(self, prop):
+            return self.current + 1
+
+    class MisalignedCV(FakeCV):
+        VideoCapture = MisalignedCapture
+
+    trial, output = inputs(tmp_path)
+    with pytest.raises(RuntimeError, match="decode/frame alignment"):
+        run_sahi_tracking(
+            trial, model_loader=lambda *args: object(),
+            predictors=(predict, predict), tracker_factory=FakeTracker,
+            detection_class=FakeDetections, cv2_module=MisalignedCV)
+    assert not output.exists()
+    assert not output.with_suffix(".manifest.json").exists()
 
 
 def test_interrupted_trial_leaves_no_truncated_artifact(tmp_path):
