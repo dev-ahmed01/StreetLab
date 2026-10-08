@@ -55,6 +55,21 @@ def main(argv: list[str] | None = None) -> int:
             "fraction_truth_tracks_fragmented": item["identity"]["fraction_truth_tracks_fragmented"],
             "matched_truth_tracks": item["identity"]["matched_truth_tracks"],
         }
+    audit = result["paired_error_audit"]
+    motorcycles = audit["by_truth_class"]["MOTORCYCLE"]
+    summary["paired_motorcycle_outcomes"] = {
+        "spatial": motorcycles["spatial"],
+        "correct_class": motorcycles["correct_class"],
+        "spatial_rescue_examples": motorcycles["spatially_rescued_by_sliced"],
+        "spatial_loss_examples": motorcycles["spatially_lost_by_sliced"],
+    }
+    summary["unmatched_predictions_forensics"] = {
+        engine: {
+            kind: audit[f"{engine}_unmatched"][kind]
+            for kind in ("MOTORCYCLE", "CAR", "BUS", "HEAVY_VEHICLE")
+        }
+        for engine in ("standard", "sliced")
+    }
     print(json.dumps(summary, indent=2))
     print(f"Full diagnostic written to: {args.output}")
     return 0
