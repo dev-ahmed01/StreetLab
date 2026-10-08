@@ -54,10 +54,10 @@ cd C:\Users\Admin\Desktop\StreetLab-engine-trial
 git pull --ff-only
 $python = ".\.venv-sahi-audit\Scripts\python.exe"
 $truth = "C:\Users\Admin\Desktop\StreetLabData\Video_2\20250526_video_Traj.csv"
-& $python scripts/phase3_raw_fluid_label_review.py \`
-  --index "artifacts/phase3/sahi_detector_trials/W04_openvino_visual_review21_01/index.json" \`
-  --precision-review "artifacts/phase3/sahi_detector_trials/W04_openvino_unmatched_review21_01.json" \`
-  --fluid-tracks $truth \`
+& $python scripts/phase3_raw_fluid_label_review.py `
+  --index "artifacts/phase3/sahi_detector_trials/W04_openvino_visual_review21_01/index.json" `
+  --precision-review "artifacts/phase3/sahi_detector_trials/W04_openvino_unmatched_review21_01.json" `
+  --fluid-tracks $truth `
   --output "artifacts/phase3/sahi_detector_trials/W04_raw_fluid_label_nearest15_01.json"
 ```
 
