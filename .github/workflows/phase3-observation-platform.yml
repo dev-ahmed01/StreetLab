@@ -22,6 +22,7 @@ on:
       - "scripts/phase3_offline_geometry_suppression.py"
       - "scripts/phase3_compare_cached_detector_subsets.py"
       - "scripts/phase3_export_openvino.py"
+      - "scripts/phase3_paired_detector_truth_parity.py"
       - "scripts/phase3_identity_benchmark.py"
       - "scripts/phase3_recall_loss_diagnosis.py"
       - "scripts/phase3_setup_geotrax_windows.ps1"
@@ -58,6 +59,7 @@ jobs:
             scripts/phase3_offline_geometry_suppression.py
             scripts/phase3_compare_cached_detector_subsets.py
             scripts/phase3_export_openvino.py
+            scripts/phase3_paired_detector_truth_parity.py
             scripts/phase3_setup_geotrax_windows.ps1
             scripts/phase3_run_geotrax_windows.ps1
             tests
