@@ -900,6 +900,84 @@ No model threshold fitting or tracker promotion is allowed on
 this tuned W04 source. A separate held-out recording is still
 mandatory.
 
+## W04 21-frame OpenVINO precision review — completed locally
+
+The cached 21-frame OpenVINO precision report was generated locally
+using the existing frozen class-aware detector-only +1 frame/50px
+matching rule. Its **187 evaluator-unmatched detection observations**
+break down as follows:
+
+| Class | Unmatched | Confidence >= 0.50 | Within 25px of matched same-class prediction | Within 50px of same-class FLUID truth | Within 50px of other-class truth |
+|---|---:|---:|---:|---:|---:|
+| MOTORCYCLE | 89 | 22 | 47 | 52 | 0 |
+| CAR | 66 | 48 | 13 | 39 | 13 |
+| HEAVY_VEHICLE | 20 | 18 | 0 | 0 | 10 |
+| BUS | 12 | 8 | 0 | 0 | 11 |
+
+**None** is automatically declared a real physical false positive,
+tile duplicate, or misclassification; close centers and ground-truth
+label disagreements are prompts for inspection, NOT evidence of
+raw SAHI bounding box IoU or vehicle identity. The BUS truth
+denominator is 0 in this sample and may be incomplete.
+
+The three PyTorch/OpenVINO motorcycle truth-observation disagreements
+are review priority:
+
+- Source frame **10990**, FLUID ID **2390** at (2493.92, 1700.37):
+  OpenVINO-only match.
+- Source frame **11020**, FLUID ID **2418** at (2317.02, 1523.68):
+  PyTorch-only match.
+- Source frame **11230**, FLUID ID **2386** at (1443.65, 874.61):
+  PyTorch-only match.
+
+Other instructive cases: OpenVINO CAR frame 11260 at
+(2879.0, 594.5), confidence 0.891, is only 2.51px
+from a **different-class** FLUID annotation; HEAVY_VEHICLE
+frame 10960 at (1641.06, 1607.81), confidence 0.904,
+is 6.83px from different-class truth. MOTORCYCLE frame 10780
+at (3098.23, 1464.5), confidence 0.695, is 665px from
+nearest same-class FLUID annotation. These cases require human
+viewing of the scene before attributing cause.
+
+### Next: generate local side-by-side precision-gallery images
+
+New `scripts/phase3_sahi_detector_visual_review.py` reads the
+already saved precision-report `review_queue` and unmatched
+rows, SHA-validates PyTorch and OpenVINO audit source provenance,
+and seeks only the source frames needed for selected crops.
+It draws **FLUID truth points (gold), PyTorch detection centers
+(blue), OpenVINO centers (green), selected target (magenta)**.
+The unannotated source crop appears alongside the annotated copy.
+Images and the index remain on the local Windows computer,
+with no detector inference, tracking or model changes.
+
+```powershell
+cd C:\Users\Admin\Desktop\StreetLab-engine-trial
+git pull --ff-only
+$python = ".\.venv-sahi-audit\Scripts\python.exe"
+
+& $python scripts/phase3_sahi_detector_visual_review.py `
+  --review "artifacts/phase3/sahi_detector_trials/W04_openvino_unmatched_review21_01.json" `
+  --reference-dir "artifacts/phase3/sahi_detector_trials/W04_spaced21_control640_01" `
+  --openvino-dir "artifacts/phase3/sahi_detector_trials/W04_openvino_spaced21_01" `
+  --output-dir "artifacts/phase3/sahi_detector_trials/W04_openvino_visual_review21_01" `
+  --max-items 16 --crop-size 384
+
+# Optional: bundle the images plus manifest for review in ChatGPT.
+Compress-Archive `
+  -Path "artifacts/phase3/sahi_detector_trials/W04_openvino_visual_review21_01/*" `
+  -DestinationPath "artifacts/phase3/sahi_detector_trials/W04_openvino_visual_review21_01.zip"
+```
+
+The gallery includes the three exact FLUID-parity disagreement
+locations, high-confidence unmatched motorcycles/cars, and ensures
+large-vehicle (including BUS) examples are present among the default
+review images even if the earlier 12-case summary was truncated.
+The JPEGs preserve only center markers, **not the detector's original
+bounding boxes**. Do not use visual closeness alone to automatically
+suppress vehicles or adjust production thresholds. Continue on
+genuinely held-out footage after understanding representative errors.
+
 ## Evidence produced
 
 - `*.txt`: Geo-trax 14-column track file with confirmed real IDs.
