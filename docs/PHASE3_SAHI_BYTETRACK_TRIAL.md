@@ -665,6 +665,89 @@ motorcycle parity is a required check. Do not equate original 21-frame
 latency median to the new 5-frame median as a strictly paired benchmark.
 Do not relax the detector gate and do not promote to production.
 
+## May-26 W04 OpenVINO CPU five-frame experiment — completed locally
+
+The user exported the frozen detector SHA-256
+`7d462ae523b15f3679a83f74ab08aa79d2978f319ca2f0cf2892fbbb60df79da`
+to an isolated, **non-quantized OpenVINO** 640-input model.
+The successfully verified exported directory SHA-256 is
+`feff81d24b5f7790d8b5ca34ec9d4641b3513ba87962ced52c7060491b0212ea`.
+OpenVINO version **2026.4.1**, Ultralytics version **8.4.174**.
+On Intel 12th Gen Core i5-1235U CPU, 640x640 slices with overlap
+0.20 were evaluated on exactly video frames
+10750, 10900, 11050, 11200, 11350. This **detector-only** test
+used the unchanged checkpoint, 50px class-aware detector matching
+and FLUID offset +1; no ByteTrack IDs.
+
+| SAME five frames, sliced detector | PyTorch 640 | OpenVINO 640 |
+|---|---:|---:|
+| MOTORCYCLE correct-class matches | 80/93 | 80/93 |
+| MOTORCYCLE recall | 86.02% | 86.02% |
+| MOTORCYCLE precision | 75.47% | 76.19% |
+| Overall recall | 162/178 = 91.01% | 162/178 = 91.01% |
+| Overall precision | 162/219 = 73.97% | 162/217 = 74.65% |
+| Unmatched predictions | 57 | 55 |
+| Observed sliced median CPU time | 12.055s (21 different frames) | 1.611s (5 frames) |
+
+The indicative `~7.5x` median ratio is NOT strictly paired in
+timing cohort: a future same-five-frame PyTorch timing pass is needed
+before asserting measured acceleration. The OpenVINO five-frame
+detector gate still **failed both precision regression and max 5x
+latency relative to its OWN OpenVINO full-frame-640 baseline**
+(0.143s full-frame vs 1.611s sliced median). Do NOT change the
+frozen detector gate or claim production readiness.
+
+Although the same number of motorcycle truth observations was
+matched, the model conversion may recover *different annotated vehicles*.
+The new exact-FLUID-observation parity audit therefore compares
+individual `(video_frame, FLUID track ID)` outcomes with the same
+class-aware 50px detection-only association, using existing cached
+prediction CSVs, and makes no ByteTrack identity claims.
+
+### Next steps: zero-inference observation parity, then same-frame timing
+
+```powershell
+cd C:\Users\Admin\Desktop\StreetLab-engine-trial
+git pull --ff-only
+$python = ".\.venv-sahi-audit\Scripts\python.exe"
+$ref = "artifacts/phase3/sahi_detector_trials/W04_spaced21_control640_01"
+$ov = "artifacts/phase3/sahi_detector_trials/W04_openvino640_probe5_01"
+
+# STEP A: exact paired motorcycle observation identity, no model execution.
+& $python scripts/phase3_paired_detector_truth_parity.py `
+  --reference-dir $ref --candidate-dir $ov `
+  --output "artifacts/phase3/sahi_detector_trials/W04_openvino_truth_parity5_01.json"
+
+# STEP B: fresh PyTorch 640x640 tile timing on SAME 5 source frames.
+# This reruns ONLY 5 images, not the video or tracker continuously.
+$video = "C:\Users\Admin\Desktop\StreetLabData\Video_2\20250526_video.mp4"
+$truth = "C:\Users\Admin\Desktop\StreetLabData\Video_2\20250526_video_Traj.csv"
+$weights = "C:\Users\Admin\.cache\huggingface\hub\models--rfonod--geo-trax\snapshots\f512e0d1445e65fc2cf505d7474deccf33f11bf9\geotrax_hbb_yolov8s_1920_v1.pt"
+& $python scripts/phase3_sahi_audit.py `
+  --video $video --fluid-tracks $truth --weights $weights `
+  --output-dir "artifacts/phase3/sahi_detector_trials/W04_torch640_timing5_01" `
+  --start-frame 10750 --end-frame 11350 --sample-step 150 `
+  --confidence 0.15 --image-size 640 --slice-height 640 `
+  --slice-width 640 --overlap 0.20 --device cpu
+
+# Exit code 2 may mean detector gate rejected; report.json still saved.
+$torch = Get-Content "artifacts/phase3/sahi_detector_trials/W04_torch640_timing5_01/report.json" -Raw | ConvertFrom-Json
+$openvino = Get-Content "$ov/report.json" -Raw | ConvertFrom-Json
+[pscustomobject]@{
+  Torch5MedianS = $torch.sliced.latency_median_s
+  OpenVINO5MedianS = $openvino.sliced.latency_median_s
+  Torch5MotorcycleRecall = $torch.sliced.per_class.MOTORCYCLE.recall
+  OpenVINO5MotorcycleRecall = $openvino.sliced.per_class.MOTORCYCLE.recall
+} | Format-List
+```
+
+The timing probe compares the same five source-frame positions but
+is still sequential session-level timing without repeated randomized
+run order or warm-start controls. A longer paired throughput/quality
+benchmark, inspection of prediction-level precision errors, and
+independent unseen footage remain prerequisites for tracker promotion.
+All outputs remain separate, immutable and non-production.
+
 ## Evidence produced
 
 - `*.txt`: Geo-trax 14-column track file with confirmed real IDs.
