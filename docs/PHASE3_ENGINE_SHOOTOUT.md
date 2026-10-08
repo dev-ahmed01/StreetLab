@@ -34,6 +34,7 @@ the aerial detector next. Trackers cannot recover objects never detected.
   adapter with no mandatory torch/OpenCV dependency on importing StreetLab.
 - `scripts/phase3_engine_shootout.py`: video/window CLI and fixed-offset FLUID
   pixel + identity scoring.
+- `config/phase3/geotrax_class_ids.json`: explicit checkpoint-specific IDs for ONNX models without class labels.
 - `config/phase3/bytetrack_recall.yaml` and `botsort_recall.yaml`: explicit
   **untested** candidate presets; neither is a production default.
 - `tests/test_phase3_engine_shootout.py`: mock-engine contract regression suite.
@@ -80,6 +81,20 @@ Get-ChildItem "$env:USERPROFILE\.cache\huggingface" -Filter "geotrax_hbb_yolov8s
 .\.venv-engine-trial\Scripts\python.exe -m pytest tests/test_phase3_engine_shootout.py -q
 .\.venv-engine-trial\Scripts\python.exe -m pip freeze > artifacts\phase3\engine_shootout_dependencies.txt
 ```
+
+The official aerial detector also has an [ONNX export](https://huggingface.co/rfonod/geo-trax/blob/main/geotrax_hbb_yolov8s_1920_v1.onnx).
+If the older `.pt` checkpoint is incompatible with a newer Ultralytics/Torch
+runtime, use this official `.onnx` checkpoint instead and install `onnxruntime`:
+
+```powershell
+.\\.venv-engine-trial\\Scripts\\python.exe -m pip install onnxruntime
+# Set $weights to the downloaded official .onnx file.
+# For this Geo-trax checkpoint ONLY, add --class-map config/phase3/geotrax_class_ids.json
+```
+
+Never apply the numeric Geo-trax mapping to a generic COCO model, where class
+0 is PERSON and would otherwise be mislabeled as CAR. Model class mapping is
+audited in the trial manifest.
 
 Substitute the real `$weights` path found above and the existing FLUID CSV
 path. **Do not use the original Stage-A aggregate scorecard as the
