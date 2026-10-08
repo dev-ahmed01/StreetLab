@@ -19,6 +19,7 @@ from streetlab_phase3.serialization import package_to_dict
 from streetlab_phase3.video.class_diagnostics import class_diagnostics
 from streetlab_phase3.video.paired_error_audit import paired_error_audit
 from streetlab_phase3.video.precision_sensitivity import confidence_sensitivity, unmatched_proximity_audit
+from streetlab_phase3.video.shadow_matching_audit import shadow_matching_audit
 
 
 def _manifest(path: Path) -> dict[str, Any]:
@@ -172,6 +173,9 @@ def compare_existing_runs(
             standard=prediction_sets["standard"]),
         "sliced_unmatched_proximity": unmatched_proximity_audit(
             prediction_sets["sliced"], truth,
+            start_frame=start_frame, end_frame=end_frame),
+        "shadow_matching_audit": shadow_matching_audit(
+            prediction_sets["standard"], prediction_sets["sliced"], truth,
             start_frame=start_frame, end_frame=end_frame),
         "results": results,
     }
