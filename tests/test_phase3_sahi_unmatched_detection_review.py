@@ -171,3 +171,100 @@ def test_cli_output_is_immutable(tmp_path):
     duplicate = subprocess.run(args, capture_output=True, text=True)
     assert duplicate.returncode != 0
     assert "FileExistsError" in duplicate.stderr
+
+def test_local_visual_gallery_uses_cached_centers_and_preserves_sources(tmp_path):
+    import shutil
+    import numpy as np
+    from streetlab_phase3.video.sahi_detector_visual_review import (
+        render_detector_review, select_visual_targets,
+    )
+    audit, parity = make_audit(tmp_path)
+    summary = audit_unmatched_detections(audit, parity_file=parity)
+    visual = tmp_path / "review.json"
+    visual.write_text(json.dumps(summary), encoding="utf-8")
+    ref = tmp_path / "pytorch"
+    ref.mkdir()
+    source = json.loads((audit / "report.json").read_text())
+    source["runtime_backend"] = "pytorch"
+    source["runtime_model_sha256"] = source["model_sha256"]
+    source["trial"]["runtime_model_path"] = None
+    (ref / "report.json").write_text(json.dumps(source))
+    for mode in ("sliced", "standard"):
+        shutil.copyfile(audit / f"{mode}_detections.csv",
+                        ref / f"{mode}_detections.csv")
+    class FakeCapture:
+        def __init__(self, path):
+            self.pos = 0
+            self.released = False
+            self.seeks = []
+        def isOpened(self): return True
+        def set(self, _key, frame):
+            self.seeks.append(frame)
+            self.pos = int(frame)
+            return True
+        def read(self):
+            self.pos += 1
+            return True, np.zeros((280, 350, 3), dtype=np.uint8)
+        def get(self, _key): return float(self.pos)
+        def release(self): self.released = True
+
+    class CV2:
+        CAP_PROP_POS_FRAMES = 1
+        FONT_HERSHEY_SIMPLEX = 2
+        IMWRITE_JPEG_QUALITY = 3
+        cap = None
+        @classmethod
+        def VideoCapture(cls, path):
+            cls.cap = FakeCapture(path)
+            return cls.cap
+        @staticmethod
+        def circle(img, center, radius, color, thickness):
+            img[0,0,0] = 1
+        @staticmethod
+        def putText(img, txt, xy, font, scale, color, thickness):
+            return img
+        @staticmethod
+        def resize(img, dim):
+            assert dim[0] == img.shape[1] * 2
+            assert dim[1] == img.shape[0] * 2
+            return np.repeat(np.repeat(img, 2, axis=0), 2, axis=1)
+        @staticmethod
+        def hconcat(images): return np.concatenate(images, axis=1)
+        @staticmethod
+        def imwrite(path, image, flags):
+            assert image.shape[1] >= 1000
+            Path(path).write_bytes(b"test-image")
+            return True
+    selected = select_visual_targets(summary)
+    assert any(x["class"] == "BUS" for x in selected)
+    assert selected[0]["review_reason"] == (
+        "pytorch_openvino_truth_observation_disagreement")
+    output = tmp_path / "gallery"
+    before = (audit / "sliced_detections.csv").read_bytes()
+    result = render_detector_review(
+        review_json=visual, reference_dir=ref, openvino_dir=audit,
+        output_dir=output, cv2_module=CV2, crop_size=256)
+    assert result["eligible_for_promotion"] is False
+    assert result["image_count"] >= 5
+    assert len(list(output.glob("*.jpg"))) == result["image_count"]
+    assert (output / "index.json").is_file()
+    assert (audit / "sliced_detections.csv").read_bytes() == before
+    assert CV2.cap.released is True
+    assert set(CV2.cap.seeks) == {0, 1}
+    with pytest.raises(FileExistsError):
+        render_detector_review(
+            review_json=visual, reference_dir=ref, openvino_dir=audit,
+            output_dir=output, cv2_module=CV2, crop_size=256)
+
+
+def test_local_visual_gallery_refuses_tampered_review_source(tmp_path):
+    from streetlab_phase3.video.sahi_detector_visual_review import render_detector_review
+    audit, parity = make_audit(tmp_path)
+    summary = audit_unmatched_detections(audit, parity_file=parity)
+    summary["prediction_source"] = str(tmp_path / "different.csv")
+    review = tmp_path / "review.json"
+    review.write_text(json.dumps(summary))
+    with pytest.raises(ValueError, match="Review is not"):
+        render_detector_review(
+            review_json=review, reference_dir=audit,
+            openvino_dir=audit, output_dir=tmp_path / "wrong")
