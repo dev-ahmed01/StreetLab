@@ -17,6 +17,7 @@ from streetlab_phase3.identity_benchmark import IdentityBenchmark
 from streetlab_phase3.pixel_benchmark import PixelBenchmark, normalize_fluid_pixel_truth
 from streetlab_phase3.serialization import package_to_dict
 from streetlab_phase3.video.class_diagnostics import class_diagnostics
+from streetlab_phase3.video.paired_error_audit import paired_error_audit
 
 
 def _manifest(path: Path) -> dict[str, Any]:
@@ -73,11 +74,13 @@ def compare_existing_runs(
         raise ValueError("No supported FLUID annotations found")
     window = (start_frame + 1, end_frame + 1)
     results: dict[str, Any] = {}
+    prediction_sets: dict[str, Any] = {}
     for name, filename, manifest in (
         ("standard", standard_tracks, standard_manifest),
         ("sliced", sliced_tracks, sliced_manifest),
     ):
         predictions = load_geotrax_pixel_tracks(filename)
+        prediction_sets[name] = predictions
         metric = package_to_dict(PixelBenchmark(50.).evaluate(
             predictions, truth, frame_offsets=(1,), evaluation_frame_range=window))
         identity = IdentityBenchmark(50.).evaluate(
@@ -159,5 +162,8 @@ def compare_existing_runs(
             "unmatched predictions; repeat longer with equal warm-up before any gate."
         ),
         "deltas_sliced_minus_standard": changes,
+        "paired_error_audit": paired_error_audit(
+            prediction_sets["standard"], prediction_sets["sliced"], truth,
+            start_frame=start_frame, end_frame=end_frame),
         "results": results,
     }
