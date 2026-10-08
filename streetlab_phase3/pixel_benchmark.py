@@ -85,19 +85,31 @@ class PixelBenchmark:
         truth: Sequence[FluidPixelTruth],
         *,
         frame_offsets: Sequence[int] = (-2, -1, 0, 1, 2),
+        evaluation_frame_range: tuple[int, int] | None = None,
     ) -> PixelBenchmarkReport:
         if not frame_offsets:
             raise ValueError("At least one frame offset is required")
 
+        if evaluation_frame_range is not None:
+            start, end = evaluation_frame_range
+            if start < 0 or end < start:
+                raise ValueError("evaluation_frame_range must be a nonnegative inclusive interval")
         pred_supported = [
             p for p in predicted if p.vehicle_class in _SUPPORTED_GEOTRAX_CLASSES
+            and (evaluation_frame_range is None or
+                 any(evaluation_frame_range[0] <= p.frame + offset <= evaluation_frame_range[1]
+                     for offset in frame_offsets))
         ]
+        truth_scored = (
+            truth if evaluation_frame_range is None
+            else [p for p in truth if evaluation_frame_range[0] <= p.frame <= evaluation_frame_range[1]]
+        )
 
         scored = [
             (
                 self.match_points(
                     pred_supported,
-                    truth,
+                    truth_scored,
                     frame_offset=offset,
                 ),
                 offset,
@@ -113,6 +125,14 @@ class PixelBenchmark:
             ),
         )
 
+        if evaluation_frame_range is not None:
+            # Do not give recall credit for failing to emit detections on edge frames.
+            # Filtering after offset selection retains only the exact evaluation cohort.
+            pred_supported = [
+                p for p in pred_supported
+                if evaluation_frame_range[0] <= p.frame + best_offset <= evaluation_frame_range[1]
+            ]
+
         errors = [m[2] for m in best_matches]
         class_matches = [m[0].vehicle_class == m[1].vehicle_class for m in best_matches]
         matched_truth_tracks = {m[1].track_id for m in best_matches}
@@ -120,7 +140,10 @@ class PixelBenchmark:
         dataset_truth_tracks = {p.track_id for p in truth}
         pred_tracks = {p.track_id for p in pred_supported}
 
-        if pred_supported:
+        if evaluation_frame_range is not None:
+            evaluation_frame_start, evaluation_frame_end = evaluation_frame_range
+            truth_window = list(truth_scored)
+        elif pred_supported:
             evaluation_frame_start = min(p.frame + best_offset for p in pred_supported)
             evaluation_frame_end = max(p.frame + best_offset for p in pred_supported)
             truth_window = [
