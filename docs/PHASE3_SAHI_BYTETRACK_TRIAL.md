@@ -308,6 +308,47 @@ detections; a shadow association is not an official benchmark score.
 No model inference is rerun and none of the original evidence is
 overwritten. The output is exploratory, never eligible for promotion.
 
+## First visual adjudication and confirmed-track box audit
+
+A manual review of 20 May-26 W04 raw-vs-overlay crops suggested distinct
+hypotheses: multiple visible small motorcycles really recovered by sliced
+inference, sometimes *multiple green centers on one motorcycle*, and CAR
+detections placed along roofs/sections of large buses. Several unmatched
+CAR markers also sit on visibly real cars; therefore unmatched != false
+physical object, and no detector/class labels were overwritten. Crops
+with two close motorcycles show why center-distance-only suppression
+would be unsafe.
+
+The existing 14-column candidate Geo-trax exports include the raw pixel
+center and box **width and height** (columns 2–5); no new inference is
+required to inspect overlap of **confirmed track boxes**. The optional
+`phase3_box_forensics.py` reports, for the already unmatched observations:
+- same-class IoU >=0.30 across distinct confirmed tracker IDs;
+- unmatched CAR box coverage >=0.60 inside an exported BUS or HEAVY_VEHICLE
+  track box; and
+- high-confidence CAR (>=0.50) versus unmatched MOTORCYCLE summaries.
+
+To run after the earlier `W04_shadow_check01.json` comparison:
+
+```powershell
+cd C:\Users\Admin\Desktop\StreetLab-engine-trial
+git pull --ff-only
+$python = ".\\.venv-sahi-audit\\Scripts\\python.exe"
+& $python scripts/phase3_box_forensics.py `
+  --comparison "artifacts/phase3/sahi_tracker_trials/W04_shadow_check01.json" `
+  --sliced-tracks "artifacts/phase3/sahi_tracker_trials/W04_sliced_smoke01.txt" `
+  --output "artifacts/phase3/sahi_tracker_trials/W04_confirmed_box_forensics01.json"
+```
+
+The report is new and immutable. It includes per-target track IDs,
+box coordinates, and overlapping neighboring exported track boxes. This
+is **not a raw SAHI NMS diagnostic**: ByteTrack has already associated
+objects, so real overlaps may occur and upstream rejected duplicates are
+unobservable. A CAR on a bus without a separately exported BUS track will
+not be counted as containment; inspect raw CCTV regardless of overlap
+count. No threshold or suppression should be promoted from these three
+tuned frames.
+
 ## Evidence produced
 
 - `*.txt`: Geo-trax 14-column track file with confirmed real IDs.
