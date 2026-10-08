@@ -64,6 +64,16 @@ def test_custom_model_class_mapping_is_validated(tmp_path):
         load_class_map(str(path))
 
 
+def test_onnx_checkpoint_can_map_explicit_class_indices(tmp_path):
+    index_map = tmp_path / "geotrax_ids.json"
+    index_map.write_text(json.dumps({"0": 0, "1": 1, "2": 2, "3": 3}))
+    mapped = model_class_ids({0: "class0", 1: "class1", 2: "class2", 3: "class3"},
+                             load_class_map(str(index_map)))
+    assert mapped == {0: 0, 1: 1, 2: 2, 3: 3}
+    assert "bicycle" not in load_class_map(None)
+
+
+
 def test_unknown_detector_taxonomy_fails_closed():
     with pytest.raises(ValueError, match="No model classes map"):
         model_class_ids({0: "bicycle", 1: "person"}, load_class_map(None))
