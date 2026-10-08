@@ -584,6 +584,87 @@ that it does not exclude real motorcycles. Do not select masks
 using the FLUID labels and claim held-out performance.
 This May-26 footage remains tuned, not a true generalization test.
 
+## W04 1280-tile CPU probe — rejected on same five detector frames
+
+The user ran two configurations on the **same five May-26 W04 source frames**
+10750, 10900, 11050, 11200 and 11350 (93 FLUID MOTORCYCLE observations):
+
+| Detector-only score | Existing SAHI 640x640 tiles, 0.20 overlap | New 1280x1280 tiles, 0.10 overlap |
+|---|---:|---:|
+| Motorcycle matches / 93 | 80/93 = 86.02% | 46/93 = 49.46% |
+| Motorcycle precision | 75.47% | 93.88% |
+| Overall recall | 91.01% | 71.91% |
+| Overall precision | 73.97% | 87.07% |
+| Unmatched detector predictions | 57 | 19 |
+
+**Reject 1280x1280 tiles at model size 640.** They lose 34 correct
+motorcycle observations, a **36.56 percentage point** motorcycle-recall
+regression, on this small paired sample. At median CPU time 3.535 s/frame
+across five test frames they are cheaper than the prior 640-tile
+21-frame median of 12.055 s, but those latency medians are unpaired
+and do not establish a stable speedup ratio. The loss of motorcycle
+recall is sufficient to reject the candidate regardless.
+
+### Next low-risk CPU acceleration investigation: OpenVINO with identical 640 tiles
+
+Keep the **640x640 image tiles, 0.20 overlap and model image size 640**.
+Rather than make motorcycles smaller, try a separate **non-INT8** CPU
+OpenVINO export of the same frozen YOLO checkpoint through Ultralytics.
+SAHI's Ultralytics wrapper supports OpenVINO model directories according
+to upstream documentation; this project's version-specific compatibility
+and any gains must be established by a real local parity test.
+
+Export requires optional OpenVINO packages. Install them into only the
+experiment venv, not the project production environment. The exporter
+copies the original checkpoint into an isolated temporary folder,
+converts once, records model bytes and checkpoint hashes and atomically
+publishes a new immutable export. It never edits the original checkpoint.
+
+```powershell
+cd C:\Users\Admin\Desktop\StreetLab-engine-trial
+git pull --ff-only
+$python = ".\.venv-sahi-audit\Scripts\python.exe"
+$video = "C:\Users\Admin\Desktop\StreetLabData\Video_2\20250526_video.mp4"
+$truth = "C:\Users\Admin\Desktop\StreetLabData\Video_2\20250526_video_Traj.csv"
+$weights = "C:\Users\Admin\.cache\huggingface\hub\models--rfonod--geo-trax\snapshots\f512e0d1445e65fc2cf505d7474deccf33f11bf9\geotrax_hbb_yolov8s_1920_v1.pt"
+
+# Optional CPU backend, kept in the isolated test virtual environment:
+& $python -m pip install "ultralytics[export-openvino]"
+
+# Convert original .pt to a separate non-quantized candidate model:
+& $python scripts/phase3_export_openvino.py `
+  --weights $weights --image-size 640 `
+  --output-dir "artifacts/phase3/sahi_detector_trials/W04_openvino_export640_01"
+
+$ov = "artifacts/phase3/sahi_detector_trials/W04_openvino_export640_01/checkpoint_openvino_model"
+
+# A fresh 5-frame detector-only parity test, not tracker validation:
+& $python scripts/phase3_sahi_audit.py `
+  --video $video --fluid-tracks $truth --weights $weights `
+  --runtime-model $ov `
+  --output-dir "artifacts/phase3/sahi_detector_trials/W04_openvino640_probe5_01" `
+  --start-frame 10750 --end-frame 11350 --sample-step 150 `
+  --confidence 0.15 --image-size 640 --slice-height 640 `
+  --slice-width 640 --overlap 0.20 --device cpu
+
+# Detector gate may exit code 2; if report.json exists, it is evidence.
+# Compare against cached PyTorch 640 tiles on identical five frames:
+& $python scripts/phase3_compare_cached_detector_subsets.py `
+  --reference-dir "artifacts/phase3/sahi_detector_trials/W04_spaced21_control640_01" `
+  --candidate-dir "artifacts/phase3/sahi_detector_trials/W04_openvino640_probe5_01" `
+  --output "artifacts/phase3/sahi_detector_trials/W04_torch_vs_openvino640_5frames01.json"
+```
+
+Actual outcomes are **unknown**; never promise the reported upstream
+speedup on this model, video or CPU. Use the newly persisted runtime
+model hash and reference .pt SHA to verify checkpoint lineage. The
+comparator re-scores the previously cached .pt predictions on exactly
+the same five frames and identifies the OpenVINO backend separately.
+OpenVINO conversion may change detection scores numerically; observed
+motorcycle parity is a required check. Do not equate original 21-frame
+latency median to the new 5-frame median as a strictly paired benchmark.
+Do not relax the detector gate and do not promote to production.
+
 ## Evidence produced
 
 - `*.txt`: Geo-trax 14-column track file with confirmed real IDs.
