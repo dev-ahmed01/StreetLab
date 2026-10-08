@@ -35,6 +35,7 @@ jobs:
             scripts/phase3_compare_existing_trials.py
             scripts/phase3_visual_error_review.py
             scripts/phase3_box_forensics.py
+            scripts/phase3_offline_geometry_suppression.py
             scripts/phase2_m4_ensemble_demo.py
             tests
             data/models/sumo_persona_priors.csv
