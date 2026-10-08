@@ -7,7 +7,6 @@ SAHI/OpenCV/Ultralytics are optional runtime dependencies.
 from __future__ import annotations
 
 import csv
-import hashlib
 import importlib.metadata
 import json
 import math
@@ -268,15 +267,17 @@ def run_detector_audit(
             position = cap.get(cv2_module.CAP_PROP_POS_FRAMES)
             if abs(float(position) - (frame + 1)) > 0.51:
                 raise RuntimeError(f"Decode misalignment at frame {frame}: got position {position}")
+            # OpenCV decodes BGR but SAHI expects RGB for ndarray sources.
+            rgb = cv2_module.cvtColor(image, cv2_module.COLOR_BGR2RGB)
             # Alternate evaluation order to reduce warmup/order advantage.
             modes = ("standard", "sliced") if frame % 2 == 0 else ("sliced", "standard")
             for mode in modes:
                 begin = timer()
                 if mode == "standard":
-                    response = standard_fn(image, model, verbose=0)
+                    response = standard_fn(rgb, model, verbose=0)
                 else:
                     response = sliced_fn(
-                        image, model,
+                        rgb, model,
                         slice_height=trial.slice_height, slice_width=trial.slice_width,
                         overlap_height_ratio=trial.overlap,
                         overlap_width_ratio=trial.overlap,
