@@ -12,6 +12,9 @@ on:
       - "scripts/phase3_calibrate_observation.py"
       - "scripts/phase3_video_plan.py"
       - "scripts/phase3_compare_geotrax_fluid.py"
+      - "scripts/phase3_engine_shootout.py"
+      - "scripts/phase3_identity_benchmark.py"
+      - "scripts/phase3_recall_loss_diagnosis.py"
       - "scripts/phase3_setup_geotrax_windows.ps1"
       - "scripts/phase3_run_geotrax_windows.ps1"
       - "tests/**"
@@ -33,6 +36,10 @@ jobs:
             scripts/phase3_calibrate_observation.py
             scripts/phase3_video_plan.py
             scripts/phase3_compare_geotrax_fluid.py
+            scripts/phase3_identity_benchmark.py
+            scripts/phase3_recall_loss_diagnosis.py
+            scripts/phase3_motorcycle_visual_audit.py
+            scripts/phase3_engine_shootout.py
             scripts/phase3_setup_geotrax_windows.ps1
             scripts/phase3_run_geotrax_windows.ps1
             tests
