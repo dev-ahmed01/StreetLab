@@ -349,6 +349,60 @@ not be counted as containment; inspect raw CCTV regardless of overlap
 count. No threshold or suppression should be promoted from these three
 tuned frames.
 
+## W04 geometry-only suppression simulation (offline, fully reversible)
+
+The user's latest **unmatched-only** box audit flagged 11 observations:
+CAR track 22 contained in a large vehicle on source frames
+10750–10752; CAR 33 overlapping another CAR on 10750;
+MOTORCYCLE 45 on 10750, 51 and 52 on 10751 and 52 on 10752;
+and overlapping BUS observations (21 / 26). These are **track
+observations**, not confirmed false-positive objects. Since earlier
+crops showed multiple nearby real motorcycles and real cars on the road,
+it would be unsound to remove rows simply because FLUID marked them
+unmatched.
+
+The new independent offline simulator applies geometry-only policies to
+**all** confirmed source detections, not just those marked unmatched:
+- MOTORCYCLE same-class overlap: greedily retain the higher-confidence
+  box at IoU >=0.50 or IoU >=0.30, per frame.
+- CAR containment: consider the car box for suppression if at least
+  80% or 60% of its area lies inside an exported BUS/HEAVY_VEHICLE
+  box at least twice its area.
+- Separate conservative and exploratory combinations.
+
+These six **post-hoc hypotheses** are applied on the existing W04
+source outputs without accessing ground-truth or matching labels when
+making suppression decisions. Each policy is then scored separately
+against the identical frozen +1, 50px FLUID cohort. The report shows
+point recall, precision, correct-class MOTORCYCLE recall, correct-class
+CAR recall, unmatched predicted points and identity diagnostics.
+It saves all removed `(video_frame, track_id)` decisions as evidence
+but never rewrites the raw tracking outputs.
+
+```powershell
+cd C:\Users\Admin\Desktop\StreetLab-engine-trial
+git pull --ff-only
+$python = ".\\.venv-sahi-audit\\Scripts\\python.exe"
+$truth = "C:\Users\Admin\Desktop\StreetLabData\Video_2\20250526_video_Traj.csv"
+& $python scripts/phase3_offline_geometry_suppression.py `
+  --comparison "artifacts/phase3/sahi_tracker_trials/W04_shadow_check01.json" `
+  --sliced-tracks "artifacts/phase3/sahi_tracker_trials/W04_sliced_smoke01.txt" `
+  --fluid-tracks $truth `
+  --output "artifacts/phase3/sahi_tracker_trials/W04_geometry_whatif01.json"
+```
+
+The JSON is immutable and SHA-256-hashed to the source track, FLUID
+annotations, and comparison; choose a fresh filename to rerun. This
+analysis still covers only **three frames from previously tuned May-26**
+and is not a production gating experiment. Suppressing confirmed tracks
+after ByteTrack cannot reconstruct what upstream NMS or ByteTrack
+association would have done. A policy that increases precision yet
+reduces motorcycle recall or creates temporal identity holes should
+not be adopted. CAR-on-BUS suppression is particularly dangerous
+when the BUS class itself is uncertain. After this diagnostic, choose
+a narrower one-factor-at-a-time experiment and validate against
+a longer, fixed-cohort recording before discussing promotion.
+
 ## Evidence produced
 
 - `*.txt`: Geo-trax 14-column track file with confirmed real IDs.
