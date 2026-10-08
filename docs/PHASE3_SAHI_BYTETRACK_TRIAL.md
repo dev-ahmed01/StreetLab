@@ -131,6 +131,55 @@ not identical image input sizes. Keep the manifest settings visible so
 accuracy and compute comparisons remain honest. Never use tiny warm-up or
 10-frame identity results as production quality evidence.
 
+## First actual May-26 W04 pilots and fair offline A/B
+
+The user has now executed the experiments locally on the same authentic video:
+3840x2160, 10 FPS, original official overhead checkpoint SHA-256
+`7d462ae523b15f3679a83f74ab08aa79d2978f319ca2f0cf2892fbbb60df79da`.
+
+| Run | Source video frames | Warm-up | Model image size | Point recall | Point precision | Elapsed |
+|---|---|---:|---:|---:|---:|---:|
+| Standard+ByteTrack | 10750–10759 (10) | 5 | 1920 | 246/368 = 66.85% | 246/262 = 93.89% | 32.97s / 15 processed |
+| SAHI+ByteTrack | 10750–10752 (3) | 2 | 640 tile and inference | 98/113 = 86.73% | 98/127 = 77.17% | 65.89s / 5 processed |
+
+**These two headline recalls are not comparable**: the denominator and
+interval differ. The 10-frame standard per-class diagnostic showed
+MOTORCYCLE: 65/186 spatial matches (34.95%), 121 spatial misses, 11
+unmatched motorcycle predictions, zero spatially matched class confusions;
+CAR: 171/172 spatial matches (99.42%), with 21 car→bus class mismatches.
+Thus motorcycle detection coverage is the primary observed weakness, while
+car/bus classification is a secondary target. Identity fragmentation
+measured over three or ten frames is too short to support a tracking claim.
+
+**Do not run more inference yet.** Both raw `.txt` exports already contain
+the shared source frames 10750–10752. The new offline comparator re-scores
+both on the SAME three FLUID frames, reports motorcycle recall and unmatched
+predictions and refuses unmatched checkpoint hashes or tracker settings:
+
+```powershell
+cd C:\Users\Admin\Desktop\StreetLab-engine-trial
+git pull --ff-only
+$python = ".\\.venv-sahi-audit\\Scripts\\python.exe"
+$truth = "C:\Users\Admin\Desktop\StreetLabData\Video_2\20250526_video_Traj.csv"
+& $python scripts/phase3_compare_existing_trials.py `
+  --standard-tracks "artifacts/phase3/sahi_tracker_trials/W04_standard_pilot01.txt" `
+  --sliced-tracks "artifacts/phase3/sahi_tracker_trials/W04_sliced_smoke01.txt" `
+  --fluid-tracks $truth --start-frame 10750 --end-frame 10752 `
+  --output "artifacts/phase3/sahi_tracker_trials/W04_existing_3frame_comparison.json"
+```
+
+It reports both per-class and identity summaries in a new JSON, plus the
+sliced-minus-standard differences. It deliberately records **unequal
+warm-up (5 versus 2)** and **image-size (1920 versus 640)** as confounders;
+thus even the same-three-frame comparison is exploratory, not a controlled
+component-level ablation or evidence for production promotion. To isolate
+the effects of tiling, later rerun both configurations on identical image
+size, confidence, source window and 90-frame tracker warm-up.
+
+`T000` original Geo-trax track export has not been located in the earlier
+searched `C:\Users\Admin\Desktop\StreetLab\artifacts` directory. Do
+not invent its score or use a different-window summary as a replacement.
+
 ## Evidence produced
 
 - `*.txt`: Geo-trax 14-column track file with confirmed real IDs.
