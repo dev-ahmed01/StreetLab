@@ -10,7 +10,9 @@ import csv
 import importlib.metadata
 import json
 import math
+import shutil
 import statistics
+import tempfile
 import time
 from collections import defaultdict
 from dataclasses import asdict, dataclass
@@ -317,16 +319,29 @@ def run_detector_audit(
         "sliced": scored["sliced"],
         "gate": gate,
     }
-    # Publish results only on complete success. Never overwrite earlier evidence.
+    # Assemble all evidence in a unique temporary directory, then atomically
+    # rename it only after successful completion. A failed export is discarded.
     output = Path(trial.output_dir)
-    output.mkdir(parents=True, exist_ok=False)
-    (output / "report.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    for mode in ("standard", "sliced"):
-        with (output / f"{mode}_detections.csv").open("w", encoding="utf-8", newline="") as fh:
-            writer = csv.writer(fh)
-            writer.writerow(("frame", "x_px", "y_px", "vehicle_class", "confidence"))
-            for frame in frames:
-                for point in results[mode][frame]:
-                    writer.writerow((point.frame, point.x_px, point.y_px,
-                                     point.vehicle_class, point.confidence))
+    output.parent.mkdir(parents=True, exist_ok=True)
+    temporary = Path(tempfile.mkdtemp(prefix=f".{output.name}.tmp-",
+                                      dir=output.parent))
+    try:
+        (temporary / "report.json").write_text(
+            json.dumps(payload, indent=2), encoding="utf-8")
+        for mode in ("standard", "sliced"):
+            with (temporary / f"{mode}_detections.csv").open(
+                "w", encoding="utf-8", newline=""
+            ) as fh:
+                writer = csv.writer(fh)
+                writer.writerow(("frame", "x_px", "y_px", "vehicle_class", "confidence"))
+                for frame in frames:
+                    for point in results[mode][frame]:
+                        writer.writerow((point.frame, point.x_px, point.y_px,
+                                         point.vehicle_class, point.confidence))
+        if output.exists():
+            raise FileExistsError(f"Refusing to overwrite existing audit: {output}")
+        temporary.rename(output)
+    finally:
+        if temporary.exists():
+            shutil.rmtree(temporary)
     return payload
