@@ -39,3 +39,33 @@ The gallery renders the **same original raw 3840×2160 frame crop** at left, and
 **Second: inspect raw SAHI boxes or regenerate only fixed, bounded raw inference evidence**, if necessary, with original slice origins, xyxy coordinates, NMS/merge outcomes and source frame ID. Do **not** infer bounding-box IoU or NMS behavior from the current center-only CSV. Any candidate geometry-only rule must apply blindly to **all predictions**, never use FLUID matched/unmatched flags to choose removals. Compare correct-class recall, overall recall, precision, duplicate boxes, cars, motorcycles, object/track continuity and detection CPU latency against unchanged sources.
 
 **Third: untouched validation and promotion gates.** Fixing evaluation label coverage/ontology does not authorize editing FLUID ground truth silently or rewriting frozen historical scorecards. Shadow adjudication and any new matcher must get separate filenames/scorecards. Require continuous tracking with proper warm-up and independent unseen CCTV before any production adoption. PR #10 stays DRAFT.
+
+## Next local check: exact original FLUID `type` near each reviewed vehicle
+
+The gallery suggests label gaps and type-ontology differences, but we have
+**not yet inspected the raw FLUID CSV for the 15 selected positions**.
+Before declaring any bus missing from ground truth, inspect the nearest
+raw `type` string, its canonical mapping, and center distance. The
+new audit preserves *all* raw types, even classes omitted by the
+four-class detector scorer (e.g., `van` → `LIGHT_COMMERCIAL`).
+
+```powershell
+cd C:\Users\Admin\Desktop\StreetLab-engine-trial
+git pull --ff-only
+$python = ".\.venv-sahi-audit\Scripts\python.exe"
+$truth = "C:\Users\Admin\Desktop\StreetLabData\Video_2\20250526_video_Traj.csv"
+& $python scripts/phase3_raw_fluid_label_review.py \`
+  --index "artifacts/phase3/sahi_detector_trials/W04_openvino_visual_review21_01/index.json" \`
+  --precision-review "artifacts/phase3/sahi_detector_trials/W04_openvino_unmatched_review21_01.json" \`
+  --fluid-tracks $truth \`
+  --output "artifacts/phase3/sahi_detector_trials/W04_raw_fluid_label_nearest15_01.json"
+```
+
+The command is **zero inference** and **zero video decoding**. It checks
+the gallery's source references, reads only the original CSV, and lists
+up to three nearest *raw* labels and Euclidean center distances for each
+of 15 cases. Nearest-neighbor labels are hypotheses, never proof that
+the annotation describes the same physical vehicle. The original FLUID
+CSV remains byte-for-byte unchanged, and no score is rewritten. Preserve
+the JSON output and report any raw bus/heavy/light-commercial disparities
+rather than quietly relabeling the video.
