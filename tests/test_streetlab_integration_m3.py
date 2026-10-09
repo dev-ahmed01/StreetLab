@@ -226,3 +226,49 @@ def test_no_geometry_does_not_fabricate_coordinates(local):
     assert result["quality"]["status"]=="NEEDS_DATA"
     assert result["quality"]["mapped_observations"]==0
     assert result["quality"]["real_site_sumo_allowed"] is False
+
+
+
+def test_source_frame_viewer_decodes_actual_video_without_invented_image(tmp_path, monkeypatch):
+    """Real OpenCV decoding contract, from a generated AVI, not road-accuracy data."""
+    cv2=pytest.importorskip("cv2")
+    path=tmp_path/"frame_source.avi"
+    writer=cv2.VideoWriter(str(path),cv2.VideoWriter_fourcc(*"MJPG"),10.0,(320,240))
+    if not writer.isOpened():
+        pytest.skip("No MJPG encoder on this CI host")
+    for i in range(5):
+        image=np.zeros((240,320,3),dtype=np.uint8)
+        image[:,:,:]=[20+i*5,40+i*7,80+i*9]
+        writer.write(image)
+    writer.release()
+    store=VideoStore(tmp_path/"real_media")
+    project=store.create_project("Real decoder integration")
+    source=store.save_source(project["id"],"source.avi",io.BytesIO(path.read_bytes()))
+    assert source["metadata"]["frames"]==5
+    job=store.queue(project["id"],last_frame=4)
+    monkeypatch.setattr(worker,"pinned_model",lambda *a:("a"*64,"b"*64))
+
+    def fake_runner(video,folder,model,config,fps,source_sha,model_sha,progress):
+        folder.mkdir(parents=True)
+        export=folder/"primary_ios030.txt"
+        with export.open("w",newline="") as out:
+            writer=csv.writer(out)
+            for n in range(5):
+                writer.writerow([n,7,50+n,60,20,10,50+n,60,20,10,0,.8,20,10])
+        (folder/"manifest.json").write_text(json.dumps({
+            "schema_version":1,"status":"STREETLAB_M2_OBSERVED_AUTO_PIXEL_ONLY",
+            "source_video_sha256":source_sha,"model_tree_sha256":model_sha,
+            "files":{"primary_ios030.txt":sha(export)},"overlay_files":[]}))
+        progress(5)
+    assert worker.run_once(store,Path("unused"),Path("unused"),"cpu-2",runner=fake_runner)
+    assert store.job(job["id"])["status"]=="SUCCEEDED"
+    from streetlab_phase2.api import create_app
+    client=TestClient(create_app(service=object(),observation_workdir=store.root))
+    image_response=client.get("/api/jobs/"+job["id"]+"/source-frame?frame=2")
+    assert image_response.status_code==200
+    assert image_response.headers["content-type"].startswith("image/jpeg")
+    assert image_response.headers["x-streetlab-source-frame"]=="2"
+    decoded=cv2.imdecode(np.frombuffer(image_response.content,dtype=np.uint8),
+                         cv2.IMREAD_COLOR)
+    assert decoded.shape[:2]==(240,320)
+    assert client.get("/api/jobs/"+job["id"]+"/source-frame?frame=5").status_code==422
