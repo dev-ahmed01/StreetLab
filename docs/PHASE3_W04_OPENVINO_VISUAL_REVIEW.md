@@ -146,3 +146,67 @@ and `remaining_without_unused_fluid_center_within_50px_by_class`.
 Treat shadow associations strictly as hypotheses to guide further
 manual verification. No inference, NMS, tracking, FLUID relabeling,
 or production promotion occurs.
+
+## W04 full 21-frame shadow cross-class pairing — completed
+
+All 670 original matched detector observations are preserved. Out
+of **857** OpenVINO detections, **187** remain unmatched against the
+frozen four-class FLUID scorer (official recall **670/739=90.66%**,
+official precision **670/857=78.18%**). Exactly **21** of the
+187 evaluator-unmatched predictions were spatially paired with
+unused original FLUID annotations of *different* classes within
+the fixed 50px radius. **4** of those unused labels belong to
+classes excluded from the benchmark (3 PEDESTRIAN, 1 OTHER/tricycle).
+The other 17 are disagreements between included classes. **166**
+predictions remain without an **unused** truth-center partner;
+this does NOT mean the 166 have no nearby raw annotations.
+
+| Predicted | Original raw FLUID type | Count |
+|---|---|---:|
+| BUS | car | 5 |
+| CAR | moped | 3 |
+| HEAVY_VEHICLE | car | 4 |
+| HEAVY_VEHICLE | moped | 5 |
+| HEAVY_VEHICLE | tricycle → OTHER | 1 |
+| MOTORCYCLE | pedestrian → PEDESTRIAN | 3 |
+| **Total** | | **21** |
+
+After locking all original and cross-class shadow matches,
+remaining unpaired counts are **BUS 7**, **CAR 63**,
+**HEAVY_VEHICLE 10**, **MOTORCYCLE 86** (166 total).
+The original raw FLUID label coverage in those frames is
+**CAR 354, HEAVY_VEHICLE 5, MOTORCYCLE 380, OTHER 1,
+PEDESTRIAN 3**. Original FLUID is unchanged.
+
+### Next: categorize the 166 by evidence without filtering anything
+
+Run the new zero-inference `phase3_unmatched_residual_triage.py`
+against already saved reports. It subtracts the 21 explicit
+cross-class pairs by a multi-set of full prediction identities,
+verifies hashes/provenance and original counts, then assigns
+**exclusive manual REVIEW tiers**: near an already matched
+same-class prediction (≤25px); near a same-class original
+annotation (≤50px); near a different-class raw annotation;
+or no raw annotation within 50px. It also reports
+**overlapping non-exclusive proximity flags** to avoid overreading
+one ranking threshold. Raw FLUID and predictions remain untouched.
+
+```powershell
+cd C:\Users\Admin\Desktop\StreetLab-engine-trial
+git pull --ff-only
+$python = ".\.venv-sahi-audit\Scripts\python.exe"
+& $python scripts/phase3_unmatched_residual_triage.py `
+  --audit-dir "artifacts/phase3/sahi_detector_trials/W04_openvino_spaced21_01" `
+  --precision-review "artifacts/phase3/sahi_detector_trials/W04_openvino_unmatched_review21_01.json" `
+  --shadow-report "artifacts/phase3/sahi_detector_trials/W04_shadow_raw_fluid_ontology21_01.json" `
+  --output "artifacts/phase3/sahi_detector_trials/W04_residual_unmatched_triage21_01.json"
+```
+
+After that output, choose **representative crops** from each
+review tier, especially high-confidence unpaired cars and
+motorcycle detections near an already matched motorcycle. Then
+prepare a small manually adjudicated truth sidecar and capture
+raw post-NMS bounding boxes on predeclared frames if necessary;
+never reinterpret center closeness as proven same-object IoU.
+No production promotion or automatic threshold tuning.
+
