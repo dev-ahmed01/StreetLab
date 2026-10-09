@@ -38,6 +38,7 @@ on:
       - "scripts/phase3_w04_shadow_review_queue.py"
       - "scripts/phase3_w04_visual_review_pack.py"
       - "scripts/phase3_w04_review_consensus.py"
+      - "scripts/phase3_w04_object_correspondence_audit.py"
       - "scripts/phase3_cached_class_partition_ablation.py"
       - "scripts/phase3_manual_review.py"
       - "scripts/phase3_integrated_box_lab.py"
@@ -93,6 +94,7 @@ jobs:
             scripts/phase3_w04_shadow_review_queue.py
             scripts/phase3_w04_visual_review_pack.py
             scripts/phase3_w04_review_consensus.py
+            scripts/phase3_w04_object_correspondence_audit.py
             scripts/phase3_cached_class_partition_ablation.py
             scripts/phase3_manual_review.py
             scripts/phase3_integrated_box_lab.py
