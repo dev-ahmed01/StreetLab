@@ -11,6 +11,9 @@ import sys
 import pytest
 from fastapi.testclient import TestClient
 
+# Legacy Phase 2/3 CI uses sparse checkout without the new integration package.
+# Integration-M1 CI checks this module in full; other suites intentionally skip.
+pytest.importorskip("streetlab_integration.observation_bridge")
 from streetlab_integration.observation_bridge import (
     STATUS, ingest_track_file, latest_report, load_native_tracks,
     build_report, sha,
