@@ -251,7 +251,8 @@ def test_cross_site_source_binding_and_proposal_immutability(admitted):
         verified_scenario(db,other["id"],new["revision"])
 
 
-def test_real_sumo_paired_experiment_synthetic_fixture(local):
+@pytest.mark.parametrize("signalized",[False,True])
+def test_real_sumo_paired_experiment_synthetic_fixture(local,signalized):
     """Actual SUMO, but holdout is derived from synthetic simulation -- NOT independent."""
     import shutil
     if not (shutil.which("sumo") and shutil.which("netconvert")):
@@ -259,6 +260,13 @@ def test_real_sumo_paired_experiment_synthetic_fixture(local):
     db,project,job=local
     geo=reconstruct(db,project["id"],job["id"],site())
     fixture=field_fixture()
+    if signalized:
+        fixture["control"]={
+            "kind":"FIXED_TIME_SIGNAL",
+            "measurement_ref":"Synthetic timed phase review 2026-10-01",
+            "link_index_review_ref":"Synthetic lane link index review 2026-10-01",
+            "phases":[{"duration_s":30,"state":"G"},{"duration_s":3,"state":"r"}],
+        }
     initial=save_baseline(db,project["id"],geo["revision"],fixture)
     prior=run_baseline(db,project["id"],initial["revision"])
     duration=prior["per_movement"][0]["simulated_mean_s"]
@@ -269,7 +277,8 @@ def test_real_sumo_paired_experiment_synthetic_fixture(local):
     fixture["holdout"][0]["mean_travel_time_s"]=duration
     good=save_baseline(db,project["id"],geo["revision"],fixture)
     assert run_baseline(db,project["id"],good["revision"])["status"]=="BASELINE_FIDELITY_CHECKED"
-    created=create_scenario(db,project["id"],good["revision"],scenario_input())
+    created=create_scenario(db,project["id"],good["revision"],
+                            scenario_input("FIXED_SIGNAL_PLAN" if signalized else "APPROACH_SPEED_LIMIT"))
     output=run_scenario(db,project["id"],created["revision"])
     assert output["paired_runs"]==9
     assert len(output["records"])==9
