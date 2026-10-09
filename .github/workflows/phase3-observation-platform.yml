@@ -40,6 +40,7 @@ on:
       - "scripts/phase3_w04_review_consensus.py"
       - "scripts/phase3_w04_object_correspondence_audit.py"
       - "scripts/phase3_correspondence_holdout.py"
+      - "scripts/phase3_unseen_dual_lane.py"
       - "scripts/phase3_cached_class_partition_ablation.py"
       - "scripts/phase3_manual_review.py"
       - "scripts/phase3_integrated_box_lab.py"
@@ -97,6 +98,7 @@ jobs:
             scripts/phase3_w04_review_consensus.py
             scripts/phase3_w04_object_correspondence_audit.py
             scripts/phase3_correspondence_holdout.py
+            scripts/phase3_unseen_dual_lane.py
             scripts/phase3_cached_class_partition_ablation.py
             scripts/phase3_manual_review.py
             scripts/phase3_integrated_box_lab.py
