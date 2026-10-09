@@ -121,6 +121,45 @@ def frozen_score_comparison(actual: dict, expected: dict) -> dict:
             'checks':len(checks),'successful':True}
 
 
+def development_safety_gate(experiment: dict, control: dict) -> dict:
+    """Conservative development filter; NEVER a holdout or production gate.
+
+    Fail closed on any known correct-class rare-vehicle regression, added
+    identity switches, large fragmentation, or a >=2pp precision loss.
+    """
+    cls=experiment['class_diagnostics']['by_class']
+    baseline=control['class_diagnostics']['by_class']
+    issues=[]
+    def numeric(x):
+        if not isinstance(x,(int,float)) or not math.isfinite(x):
+            raise ValueError('Nonfinite W04 policy metric')
+        return float(x)
+    if numeric(experiment['pixel']['point_precision']) < numeric(
+            control['pixel']['point_precision'])-.02:
+        issues.append('point precision fell more than 2 percentage points')
+    if numeric(experiment['pixel']['point_recall']) < numeric(
+            control['pixel']['point_recall'])-.01:
+        issues.append('point recall fell more than 1 percentage point')
+    for label in ('MOTORCYCLE','HEAVY_VEHICLE'):
+        if numeric(cls[label]['correct_class_recall']) < numeric(
+                baseline[label]['correct_class_recall']):
+            issues.append(label+' correct-class recall regressed')
+    if numeric(cls['CAR']['correct_class_recall']) < numeric(
+            baseline['CAR']['correct_class_recall'])-.01:
+        issues.append('CAR correct-class recall regressed by >1pp')
+    if experiment['identity']['total_contiguous_id_switches'] > (
+            control['identity']['total_contiguous_id_switches']):
+        issues.append('additional contiguous FLUID-matched ID switches')
+    if numeric(experiment['identity']['fraction_truth_tracks_fragmented']) > numeric(
+            control['identity']['fraction_truth_tracks_fragmented'])+.02:
+        issues.append('truth-track fragmentation rose by >2pp')
+    return {'development_gate_passed':not issues,
+            'violations':issues,
+            'production_eligible':False,
+            'no_T000_comparison':True,
+            'physical_truth_not_verified':True}
+
+
 def _safe_delta(new: float | None, old: float | None):
     if new is None or old is None:
         return None
@@ -302,6 +341,9 @@ def run_all(batch_dir: Path, output_dir: Path, *,
                 'proposed_differences_from_native':emitted_proposals,
                 'proposed_differences_raw_supported':supported_proposals,
                 'pixel':pixel,'identity':identity,'class_diagnostics':classes,
+                'development_safety_gate': development_safety_gate(
+                    {'pixel':pixel,'identity':identity,'class_diagnostics':classes},
+                    originals[ORIGINAL_CONTROL]),
                 'delta_vs_frozen_ios030':compare_to_original(
                     {'pixel':pixel,'identity':identity,'class_diagnostics':classes},
                     originals[ORIGINAL_CONTROL]),
