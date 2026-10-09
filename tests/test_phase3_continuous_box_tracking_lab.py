@@ -271,3 +271,22 @@ def test_contiguous_video_decoder_seeks_only_once_and_validates_absolute_frame()
     assert [a for a,_ in frames]==[3,4,5]
     assert FakeCv2.cap.seeks==[3]
     assert FakeCv2.cap.released is True
+
+
+def test_empty_supervision_result_without_ids_still_advances_tracking(tmp_path):
+    class NoIdOnEmptyTracker(FakeTracker):
+        def update(self,detection):
+            result=super().update(detection)
+            if not len(result.xyxy):
+                result.tracker_id=None
+            return result
+    truth=tmp_path/'original.csv';truth.write_text('frame,id,cx,cy,type\n')
+    report=stream_tracking_matrix(
+        raw_stream=raw_seq(),first_frame=10,start_frame=11,end_frame=13,
+        output_dir=tmp_path/'empty',fluid_tracks=truth,
+        configs=policy_matrix(('raw_unmerged',)),
+        tracker_factory=NoIdOnEmptyTracker,detection_class=FakeDetections,
+        rows_converter=as_rows,score_fn=score_stub)
+    assert report['processed_frames']==4
+    assert len(list((tmp_path/'empty').glob('*.txt')))==1
+    assert report['policies'][0]['evaluation_confirmed_rows']==6
