@@ -130,7 +130,12 @@ def as_tracker_detections(boxes: Sequence[Any], detection_class: Callable[..., A
 
 
 def _count_ids(tracks: Any) -> int:
-    ids = np.asarray(getattr(tracks, 'tracker_id', []))
+    raw_ids=getattr(tracks,'tracker_id',None)
+    if raw_ids is None:
+        if len(np.asarray(tracks.xyxy)) == 0:
+            return 0
+        raise ValueError('Nonempty tracker results require genuine IDs')
+    ids = np.asarray(raw_ids)
     if ids.ndim != 1:
         raise ValueError('Tracker IDs must be a one-dimensional vector')
     return sum(int(i) >= 0 for i in ids)
@@ -273,7 +278,14 @@ def stream_tracking_matrix(
                 state['tracking_seconds'].append(clock()-begin)
                 if frame < start_frame:
                     continue
-                rows, unconfirmed = rows_converter(tracked,frame)
+                # Some supervision versions expose tracker_id=None on an
+                # entirely empty result. Do not invent an ID, and still call
+                # the tracker exactly once to advance its lost-track buffer.
+                if (len(np.asarray(tracked.xyxy)) == 0
+                    and getattr(tracked,'tracker_id',None) is None):
+                    rows,unconfirmed = [],0
+                else:
+                    rows,unconfirmed = rows_converter(tracked,frame)
                 if any(len(row) != 14 or int(row[0]) != frame for row in rows):
                     raise ValueError('Geo-trax row schema or absolute frame violated')
                 if len(rows) != _count_ids(tracked):
