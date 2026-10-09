@@ -100,6 +100,25 @@ def _verify_m5(store: VideoStore, project_id: str, base: dict, experiment: dict)
             "experiment_revision":experiment["revision"]}
 
 
+def _independent_model_hash(model_dir: Path, frozen_provenance: Path) -> tuple[str,str]:
+    """Re-check W04 provenance independently from the worker's mutable call path."""
+    if (model_dir.is_symlink() or not model_dir.is_dir()
+        or frozen_provenance.is_symlink() or not frozen_provenance.is_file()):
+        raise ValueError("Actual local frozen-model/provenance input is missing")
+    if not list(model_dir.glob("*.xml")) or not list(model_dir.glob("*.bin")):
+        raise ValueError("Frozen OpenVINO XML and BIN must be present")
+    reference=json.loads(frozen_provenance.read_text(encoding="utf-8"))
+    digest=reference.get("openvino_model_sha256")
+    if (reference.get("eligible_for_promotion") is not False
+        or not isinstance(digest,str) or len(digest)!=64 or
+        any(c not in "0123456789abcdef" for c in digest)):
+        raise ValueError("M8 independent frozen W04 provenance is invalid")
+    from streetlab_phase3.video.openvino_export import hash_model_tree
+    if hash_model_tree(model_dir)!=digest:
+        raise ValueError("Frozen OpenVINO bytes do not match W04 hash")
+    return digest,sha(frozen_provenance)
+
+
 def evaluate_release(
     store: VideoStore,project_id: str, *,
     model_dir: Path | None=None,
@@ -157,8 +176,7 @@ def evaluate_release(
                    "Supply --model-dir and --frozen-provenance to check frozen W04 model bytes")
         else:
             try:
-                from streetlab_integration.worker import pinned_model
-                model_sha,provenance_sha=pinned_model(model_dir,frozen_provenance)
+                model_sha,provenance_sha=_independent_model_hash(model_dir,frozen_provenance)
                 job=store.job(latest["job_id"])
                 manifest=verified_run(store.root/"runs"/job["id"],source["sha256"])
                 if manifest["model_tree_sha256"]!=model_sha:
