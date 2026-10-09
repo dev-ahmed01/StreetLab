@@ -45,3 +45,24 @@ This reports `FOUND/MISSING` for each original/experimental candidate directory 
 
 **Scientific restriction:** `20250526_video.txt` from a generic original Geo-trax full run might be a useful control but must not automatically be named `T000` unless its original T000 model/config provenance is established. A valid track file may omit zero-detection frames; `frame_coverage_complete=false` alone is not conclusive. Even with a baseline, production promotion remains blocked by independent held-out physical review and CPU p95 evidence.
 
+
+
+## Follow-up: historical scan returned zero again
+
+The user supplied `W04_T000_HISTORICAL_CANDIDATES_01.json`: four historical and experimental paths targeted, **zero `.txt` track candidates**. The original scanner silently skipped missing directories, so it does **not** establish whether the older checkout or T000 output directory currently exists.
+
+Prior T000 Stage-A work reportedly required **12,093.078 seconds (~3h22m)** and generated full-run metrics of **58.2575% point recall**, **96.6231% point precision**, and **30.0339% motorcycle recall**. These historical full-run values are *not* the same scoring cohort as the current W04 201-frame continuous benchmark; never compare them directly.
+
+### Last bounded recovery pass, rather than another filename guess
+
+From the experimental repo:
+
+```powershell
+cd C:\Users\Admin\Desktop\StreetLab-engine-trial
+git pull --ff-only origin codex/phase3-engine-shootout
+& ".\scripts\RUN_W04_T000_FORENSIC_INVENTORY.ps1"
+```
+
+Upload `artifacts\phase3\sahi_detector_trials\W04_T000_FORENSIC_INVENTORY_01.json`. The standalone read-only inventory reports existence for historical paths and searches relevant artifacts, outputs, runs, experiments and benchmark directories in StreetLab-named Desktop checkouts. It recognizes track files, summaries, manifests, compressed archives and experiment configurations. Virtual environments and large model/frames folders are excluded; errors and scan truncation are disclosed. No source file is changed and no candidate is certified as the original T000.
+
+**After that single inventory:** If a genuine T000 track is found, authenticate source video and model/config/Geo-trax version and score its exact original frame window 10750–10950 (+1 FLUID offset, 50px rule). If only summaries survive, archive them as historical evidence but do not invent missing tracks. If nothing survives, record original T000 as unavailable and reconstruct an explicitly *new* baseline only after verifying its exact processing and frame-alignment method. Proceed with cached-box class-aware ablations without new OpenVINO inference in parallel. Production promotion still requires same-window baseline, independent holdout, physical review and CPU p95 evidence.
