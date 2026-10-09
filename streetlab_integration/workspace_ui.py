@@ -11,7 +11,7 @@ def workspace_ui() -> str:
 <p>Start with real footage, then build an evidence-supported site comparison. Next actions appear only when inputs are ready.</p></div>
 <label>Active project<select id="slwProject"><option value="">Choose a project</option></select></label>
 </div>
-<div class="eyelinks"><button type="button" class="secondary" id="slwAddProject">New project</button><button type="button" class="secondary" id="slwRefresh">Refresh evidence</button>
+<div class="eyelinks"><a class="cta" id="slwReport" href="/reports">Evidence report ↗</a><button type="button" class="secondary" id="slwAddProject">New project</button><button type="button" class="secondary" id="slwRefresh">Refresh evidence</button>
 <span id="slwLatest" role="status" aria-live="polite"></span></div>
 <div class="surface" id="slwEmpty" style="margin-top:18px">
 <h2>Create a site project</h2><p>A project preserves its own video, calibration, baseline and experiments.</p>
