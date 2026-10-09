@@ -46,6 +46,7 @@ jobs:
             scripts/phase3_shadow_raw_fluid_ontology.py
             scripts/phase3_unmatched_residual_triage.py
             scripts/phase3_continuous_box_tracking_lab.py
+            scripts/phase3_holdout_validation.py
             scripts/phase3_manual_review.py
             scripts/phase3_integrated_box_lab.py
             scripts/phase2_m5_api_smoke.py
