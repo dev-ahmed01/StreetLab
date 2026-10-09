@@ -114,6 +114,8 @@ def _polygon(points: Any, width: int, height: int) -> list[list[float]]:
     if not isinstance(points, list) or not 3 <= len(points) <= 24:
         raise ReconstructionError("A zone polygon needs between 3 and 24 vertices")
     verts = [_point(v, width, height) for v in points]
+    if len(set(verts)) != len(verts):
+        raise ReconstructionError("Zone polygon cannot repeat vertices")
     if _polygon_area(verts) < 4:
         raise ReconstructionError("Zone polygon is too small or degenerate")
     n = len(verts)
@@ -169,8 +171,8 @@ def validate_model(raw: dict, *, width: int, height: int) -> tuple[dict, dict, n
     normalized_zones = []
     zone_ids = set()
     for zone in zones:
-        if not isinstance(zone, dict):
-            raise ReconstructionError("Invalid zone definition")
+        if not isinstance(zone, dict) or zone.get("provenance") != "OBSERVED_MANUAL":
+            raise ReconstructionError("Zones must be explicitly OBSERVED_MANUAL")
         id_ = zone.get("id")
         if (not isinstance(id_, str) or not 1 <= len(id_) <= 30
             or any(ch not in "abcdefghijklmnopqrstuvwxyz0123456789_" for ch in id_)
