@@ -7,10 +7,10 @@ $python = Join-Path $repo '.venv-sahi-audit\Scripts\python.exe'
 
 # Ensure child Python finds StreetLab package regardless of the caller's session.
 $priorPythonPath = $env:PYTHONPATH
-$env:PYTHONPATH = if ($priorPythonPath) {
-    $repo + [System.IO.Path]::PathSeparator + $priorPythonPath
+if ($priorPythonPath) {
+    $env:PYTHONPATH = $repo + [System.IO.Path]::PathSeparator + $priorPythonPath
 } else {
-    $repo
+    $env:PYTHONPATH = $repo
 }
 $runner = Join-Path $repo 'scripts\phase3_w04_unified_hybrid_replay.py'
 $lab = Join-Path $repo 'artifacts\phase3\sahi_detector_trials'
