@@ -20,7 +20,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any, Callable, Iterable
 
-from .integrated_box_lab import ALL_CLASSES, RawBox, box_dict, evaluate_candidates
+from .integrated_box_lab import ALL_CLASSES, RawBox, box_dict, evaluate_candidates, merge_boxes
 
 MODEL_CLASS_MAP = {
     'car':'CAR','automobile':'CAR',
@@ -197,6 +197,15 @@ def run_integrated_lab(
     if not model_path.is_dir() or not list(model_path.glob('*.xml')) or not list(model_path.glob('*.bin')):
         raise ValueError('OpenVINO model directory requires XML+BIN')
     frames, labels, evidence=bundle_data(bundle)
+    # The model used for ACTUAL inference must be precisely the non-INT8
+    # OpenVINO export recorded in the immutable W04 evidence manifest.
+    # Stub model loaders in tests cannot satisfy this SHA and are explicitly
+    # marked unverified in their result, never interpreted as performance.
+    verified_runtime = loader is None
+    if verified_runtime:
+        from streetlab_phase3.video.openvino_export import hash_model_tree
+        if hash_model_tree(model_path) != evidence['openvino_sha256']:
+            raise ValueError('Actual OpenVINO model tree differs from W04 frozen export SHA')
     if loader is None:
         from sahi import AutoDetectionModel
         loader=AutoDetectionModel.from_pretrained
@@ -213,6 +222,7 @@ def run_integrated_lab(
     raw, times=capture_boxes(iterable,model,slicer=slicer,predictor=predictor)
     report=evaluate_candidates(raw,labels,frames)
     report['source_frame_evidence']=source
+    report['verified_original_openvino_export']=verified_runtime
     report['source_provenance']=evidence
     report['frame_inference']=times
     report['known_reference_from_prior_SAHI_run']={
@@ -227,12 +237,57 @@ def run_integrated_lab(
         with (tmp/'pre_global_merge_boxes.jsonl').open('w',encoding='utf-8') as f:
             for b in raw:
                 f.write(json.dumps(box_dict(b))+'\n')
+        candidates_dir=tmp/'candidate_boxes'
+        candidates_dir.mkdir()
+        candidate_checksums={}
+        for outcome in report['candidates']:
+            config=outcome['settings']
+            boxes=merge_boxes(raw,**{k:v for k,v in config.items() if k!='name'})
+            dest=candidates_dir/(outcome['name']+'.csv')
+            with dest.open('w',encoding='utf-8',newline='') as handle:
+                writer=csv.writer(handle)
+                writer.writerow(('frame','x1','y1','x2','y2',
+                                 'confidence','vehicle_class','source_indices'))
+                for box in boxes:
+                    writer.writerow((box.frame,box.x1,box.y1,box.x2,box.y2,
+                                     box.confidence,box.vehicle_class,
+                                     '|'.join(str(i) for i in box.contributors)))
+            candidate_checksums[outcome['name']]=_sha(dest.read_bytes())
+        report['candidate_box_csv_sha256']=candidate_checksums
+        # A 15-case review sidecar contains NO invented human labels; it is
+        # merely a structured, immutable request for independent adjudication.
+        with zipfile.ZipFile(bundle) as archive:
+            prior='previous/W04_raw_fluid_label_nearest15_01.json'
+            if prior in archive.namelist():
+                original=json.loads(archive.read(prior))
+                review_cases=[{
+                    'case_file':r['image_file'],
+                    'video_frame':r['source_frame'],
+                    'selected_class':r['selected_class'],
+                    'raw_fluid_nearest':r.get('nearest_raw_fluid_labels',[]),
+                    'visible_object_presence':'UNREVIEWED',
+                    'adjudicated_object_class':'UNREVIEWED',
+                    'number_distinct_objects_visible':None,
+                    'same_physical_object_as_nearest_label':'UNREVIEWED',
+                    'occlusion_or_ambiguity':'UNREVIEWED',
+                    'reviewer':None,
+                } for r in original['cases']]
+                _write_json(tmp/'adjudication_template.json',{
+                    'status':'BLANK_W04_MANUAL_ADJUDICATION_SIDECAR',
+                    'source_original_fluid_annotation_sha256':
+                        evidence['archived_csv_sha256'],
+                    'eligible_for_promotion':False,
+                    'cases':review_cases,
+                    'warning':'Templates are UNREVIEWED: no class corrections were assumed.'
+                })
         _write_json(tmp/'matrix_report.json',report)
         _write_json(tmp/'capture_metadata.json',{
             'status':'W04_OPENVINO_PER_TILE_BOX_EVIDENCE_NOT_PRODUCTION',
             'frames':frames,'source':source,'provenance':evidence,
             'frame_inference':times,
             'raw_boxes_sha256':_sha((tmp/'pre_global_merge_boxes.jsonl').read_bytes()),
+            'verified_original_openvino_export':verified_runtime,
+            'candidate_box_csv_sha256':candidate_checksums,
         })
         if output_dir.exists():
             raise FileExistsError('Refusing experiment overwrite')
