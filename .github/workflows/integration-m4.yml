@@ -1,0 +1,47 @@
+name: StreetLab Integration M4 - Observed-Site SUMO
+
+on:
+  push:
+    branches: [codex/streetlab-integration-m4]
+  pull_request:
+    paths:
+      - "streetlab_integration/**"
+      - "streetlab_phase2/api.py"
+      - "tests/test_streetlab_integration_m4.py"
+      - ".github/workflows/integration-m4.yml"
+
+jobs:
+  baseline-evidence-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            streetlab_integration
+            streetlab_phase1
+            streetlab_phase2
+            streetlab_phase3
+            scripts/streetlab_integration_m1.py
+            tests/test_streetlab_integration_m1.py
+            tests/test_streetlab_integration_m2.py
+            tests/test_streetlab_integration_m3.py
+            tests/test_streetlab_integration_m4.py
+            tests/test_phase2_m6_api.py
+            requirements.txt
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install application and video decoder test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest opencv-python-headless
+      - name: Compile all integration sources and Phase 2
+        run: python -m compileall -q streetlab_integration streetlab_phase2
+      - name: M1-M4 acceptance and Phase 2 evidence regressions
+        env:
+          PYTHONPATH: .
+        run: |
+          pytest -q tests/test_streetlab_integration_m1.py tests/test_streetlab_integration_m2.py tests/test_streetlab_integration_m3.py tests/test_streetlab_integration_m4.py tests/test_phase2_m6_api.py
