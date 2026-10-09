@@ -32,6 +32,7 @@ on:
       - "scripts/phase3_w04_integrated_review_run.py"
       - "scripts/phase3_continuous_box_tracking_lab.py"
       - "scripts/phase3_holdout_validation.py"
+      - "scripts/phase3_offline_class_flip_attribution.py"
       - "scripts/phase3_manual_review.py"
       - "scripts/phase3_integrated_box_lab.py"
       - "scripts/phase3_identity_benchmark.py"
@@ -80,6 +81,7 @@ jobs:
             scripts/phase3_w04_integrated_review_run.py
             scripts/phase3_continuous_box_tracking_lab.py
             scripts/phase3_holdout_validation.py
+            scripts/phase3_offline_class_flip_attribution.py
             scripts/phase3_manual_review.py
             scripts/phase3_integrated_box_lab.py
             scripts/phase3_setup_geotrax_windows.ps1
