@@ -281,10 +281,21 @@ def create_app(service: Any | None = None, *, observation_workdir: str | Path | 
             return ""
     else:
         mount_product_routes(app, observation_workdir)
+        from streetlab_integration.spatial_api import mount_spatial_routes
+        mount_spatial_routes(app, observation_workdir)
 
     @app.get("/", response_class=HTMLResponse)
     def index()->str:
-        return _html().replace("<main>", "<main>" + m2_ui(), 1)
+        spatial_link = (
+            '<section class="panel" aria-label="Guided junction reconstruction">'
+            '<h2>Junction reconstruction <span class="muted">— Guided calibration</span></h2>'
+            '<p class="muted">Review a real source frame, enter measured ground-plane points, '
+            'mark approaches and exits, and inspect evidence readiness. '
+            'Site SUMO remains blocked until a validated network and demand exist.</p>'
+            '<p><a href="/calibration">Open guided geometry editor →</a></p></section>'
+            if m2_ui() else ""
+        )
+        return _html().replace("<main>", "<main>" + m2_ui() + spatial_link, 1)
 
     @app.get("/api/health")
     def health()->dict[str,str]:
