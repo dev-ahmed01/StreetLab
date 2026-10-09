@@ -61,6 +61,22 @@ def _verified_receipt(root: Path, digest: str) -> dict:
     return report
 
 
+def safe_failure(exc: Exception) -> str:
+    """Categorize actionable failures without exposing local filesystem paths."""
+    message = str(exc).lower()
+    if isinstance(exc, ModuleNotFoundError):
+        return "Video runtime dependency missing; install the frozen-model worker environment"
+    if isinstance(exc, FileNotFoundError):
+        return "Source or frozen model file missing; verify local worker inputs"
+    if "no confirmed tracks" in message:
+        return "No confirmed vehicle tracks; inspect the source view and model suitability"
+    if "sha" in message or "model" in message and "mismatch" in message:
+        return "Video or frozen model integrity check failed; verify source and model checksums"
+    if isinstance(exc, OSError):
+        return "Local media I/O failed; verify storage permissions and available disk space"
+    return "Video processing failed; review the local worker logs before retrying"
+
+
 def job_report(store: VideoStore, job_id: str) -> dict:
     job = store.job(job_id)
     if job["status"] != "SUCCEEDED" or not job["report_sha256"]:
@@ -111,13 +127,13 @@ def run_once(store: VideoStore, model_dir: Path, provenance: Path,
         store.finish(job["id"], worker_id, "CANCELLED",
                      error="Analysis cancelled; source footage was preserved")
         LOG.info("Cancelled job %s", job["id"])
-    except Exception:
+    except Exception as exc:
         LOG.exception("Analysis job %s failed", job["id"])
         # Details (including local path and model internals) go to worker logs,
         # never directly to an HTTP client.
         try:
             store.finish(job["id"], worker_id, "FAILED",
-                         error="Video processing failed; check the local worker logs and retry")
+                         error=safe_failure(exc))
         except (ValueError, JobCancelled):
             LOG.exception("Worker lease lost while recording failure")
     return True
