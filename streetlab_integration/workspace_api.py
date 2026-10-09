@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
 from streetlab_integration.video_jobs import VideoStore, JobError
 from streetlab_integration.reconstruction import ReconstructionError
 from streetlab_integration.site_inputs import SiteInputError
@@ -19,3 +20,12 @@ def mount_workspace_routes(app: FastAPI, workdir: Path) -> None:
             raise HTTPException(status_code=404 if "not found" in str(exc).lower() else 409,detail=str(exc)) from exc
         except (ScenarioError,SiteInputError,ReconstructionError,ValueError,TypeError,KeyError,FileNotFoundError,OSError,json.JSONDecodeError) as exc:
             raise HTTPException(status_code=409,detail="Project evidence could not be verified; inspect source receipts and retry") from exc
+    @app.get("/assets/streetlab-workspace.css")
+    def stylesheet():
+        source=Path(__file__).resolve().parent/"assets"/"workspace.css"
+        return FileResponse(source,media_type="text/css",headers={"Cache-Control":"no-cache","X-Content-Type-Options":"nosniff"})
+
+    @app.get("/assets/streetlab-workspace.js")
+    def javascript():
+        source=Path(__file__).resolve().parent/"assets"/"workspace.js"
+        return FileResponse(source,media_type="application/javascript",headers={"Cache-Control":"no-cache","X-Content-Type-Options":"nosniff"})
