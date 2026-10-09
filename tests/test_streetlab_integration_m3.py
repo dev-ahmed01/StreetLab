@@ -72,8 +72,7 @@ def local(tmp_path, monkeypatch):
             out=csv.writer(f)
             for frame,x in enumerate([10,20,50,75,90]):
                 out.writerow([frame,7,x,10,10,8,x,10,10,8,0,.9,10,8])
-            for frame,x in enumerate([120,120,120,120,120]):
-                out.writerow([frame,8,x,40,10,8,x,40,10,8,3,.85,10,8])
+                out.writerow([frame,8,120,40,10,8,120,40,10,8,3,.85,10,8])
         payload={"schema_version":1,
                  "status":"STREETLAB_M2_OBSERVED_AUTO_PIXEL_ONLY",
                  "source_video_sha256":source_hash,"model_tree_sha256":model_hash,
