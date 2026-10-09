@@ -18,6 +18,14 @@ import json
 import math
 import os
 from pathlib import Path
+
+# Direct `python scripts/this_file.py` execution sets sys.path[0] to scripts/.
+# Explicitly put the repository root on the import path before local imports.
+# This must also work when launched from another working directory.
+import sys
+_ROOT = Path(__file__).resolve().parents[1]
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
 import shutil
 import statistics
 import tempfile
