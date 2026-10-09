@@ -147,3 +147,16 @@ def test_invalid_workspace_evidence_is_not_rendered_as_success(local):
     response=client.get('/api/projects/'+project["id"]+'/workspace')
     assert response.status_code==409
     assert response.json()["detail"]=="Project evidence could not be verified; inspect source receipts and retry"
+
+
+def test_workspace_rejects_missing_original_video_after_success(local):
+    db,project,job=local
+    original=db.source(job["source_id"])
+    location=db.source_path(original)
+    location.unlink()
+    with pytest.raises(ValueError,match="Stored source"):
+        project_workspace(db,project["id"])
+    from streetlab_phase2.api import create_app
+    response=TestClient(create_app(service=object(),observation_workdir=db.root)).get(
+        "/api/projects/"+project["id"]+"/workspace")
+    assert response.status_code==409
