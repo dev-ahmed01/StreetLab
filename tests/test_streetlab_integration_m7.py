@@ -206,3 +206,43 @@ def test_bad_security_mode_or_weak_password_fail_at_startup(local,monkeypatch):
     monkeypatch.setenv("STREETLAB_ACCESS_PASSWORD","too-short")
     with pytest.raises(ValueError,match="20"):
         create_app(service=object(),observation_workdir=db.root)
+
+
+
+def test_metadata_backup_is_online_consistent_and_can_be_audited(local):
+    db,project,job=local
+    from streetlab_integration.maintenance import (
+        audit,backup_metadata,verify_backup,
+    )
+    check=audit(db)
+    assert check["status"]=="PASS"
+    assert check["project_count"]==1
+    original_sha=db.source(job["source_id"])["sha256"]
+    backup=backup_metadata(db)
+    assert backup["scope"]=="SQLITE_METADATA_ONLY_NO_MEDIA_OR_MODEL_WEIGHTS"
+    assert backup["size_bytes"]>0
+    done=verify_backup(db,backup["backup_file"])
+    assert done["verified"] is True
+    assert done["metadata_only"] is True
+    assert db.source(job["source_id"])["sha256"]==original_sha
+    store=db.root/"backups"/backup["backup_file"]
+    assert store.is_file()
+    with pytest.raises(ValueError,match="Invalid metadata backup name"):
+        verify_backup(db,"../../etc/passwd")
+    store.write_bytes(store.read_bytes()+b"tamper")
+    with pytest.raises(ValueError,match="checksum"):
+        verify_backup(db,backup["backup_file"])
+
+
+def test_metadata_audit_fails_on_ruptured_observation_receipt(local):
+    db,project,job=local
+    from streetlab_integration.maintenance import audit
+    from streetlab_integration.worker import job_report
+    tracked=job_report(db,job["id"])
+    (db.root/"observations"/tracked["source_tracking_sha256"]/"report.json").write_text(
+        '{"tampered":true}',encoding="utf-8")
+    result=audit(db)
+    assert result["status"]=="FAIL"
+    assert result["project_count"]==1
+    assert result["projects"][0]["status"]=="EVIDENCE_INTEGRITY_FAILURE"
+    assert "projects" in result
