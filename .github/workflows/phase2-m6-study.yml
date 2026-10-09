@@ -28,6 +28,29 @@ jobs:
             scripts/phase3_setup_geotrax_windows.ps1
             scripts/phase3_run_geotrax_windows.ps1
             scripts/phase3_compare_geotrax_fluid.py
+            scripts/phase3_identity_benchmark.py
+            scripts/phase3_recall_loss_diagnosis.py
+            scripts/phase3_motorcycle_visual_audit.py
+            scripts/phase3_engine_shootout.py
+            scripts/phase3_class_diagnostics.py
+            scripts/phase3_compare_existing_trials.py
+            scripts/phase3_visual_error_review.py
+            scripts/phase3_box_forensics.py
+            scripts/phase3_offline_geometry_suppression.py
+            scripts/phase3_compare_cached_detector_subsets.py
+            scripts/phase3_export_openvino.py
+            scripts/phase3_paired_detector_truth_parity.py
+            scripts/phase3_sahi_unmatched_detection_review.py
+            scripts/phase3_sahi_detector_visual_review.py
+            scripts/phase3_raw_fluid_label_review.py
+            scripts/phase3_shadow_raw_fluid_ontology.py
+            scripts/phase3_unmatched_residual_triage.py
+            scripts/phase3_compare_reviewed_cached_centers.py
+            scripts/phase3_w04_integrated_review_run.py
+            scripts/phase3_continuous_box_tracking_lab.py
+            scripts/phase3_holdout_validation.py
+            scripts/phase3_manual_review.py
+            scripts/phase3_integrated_box_lab.py
             scripts/phase2_m6_study_demo.py
             tests
             data/models/sumo_persona_priors.csv
