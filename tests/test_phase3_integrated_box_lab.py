@@ -153,5 +153,42 @@ def test_staged_output_immutable_and_no_model_requirement(monkeypatch,tmp_path):
     result=mod.run_integrated_lab(bundle=source,model_path=model,output_dir=folder,loader=loader)
     assert result['candidate_count']==25 and folder.joinpath('matrix_report.json').is_file()
     assert folder.joinpath('pre_global_merge_boxes.jsonl').is_file()
+    assert len(list((folder/'candidate_boxes').glob('*.csv')))==25
+    sidecar=json.loads((folder/'adjudication_template.json').read_text())
+    assert sidecar['cases'] and all(c['visible_object_presence']=='UNREVIEWED' for c in sidecar['cases'])
     with pytest.raises(FileExistsError):
         mod.run_integrated_lab(bundle=source,model_path=model,output_dir=folder,loader=loader)
+
+
+def test_actual_openvino_model_provenance_mismatch_fails_before_inference(monkeypatch,tmp_path):
+    import sys
+    import types
+    import streetlab_phase3.video.premerge_box_capture as module
+    source=real_bundle_path()
+    if not source.exists():pytest.skip('W04 evidence bundle unavailable')
+    fake=types.ModuleType('streetlab_phase3.video.openvino_export')
+    fake.hash_model_tree=lambda folder: 'tampered SHA'
+    monkeypatch.setitem(sys.modules,'streetlab_phase3.video.openvino_export',fake)
+    fake_model=tmp_path/'model'
+    fake_model.mkdir()
+    (fake_model/'model.xml').write_text('<xml/>')
+    (fake_model/'model.bin').write_bytes(b'data')
+    with pytest.raises(ValueError,match='model tree differs'):
+        module.run_integrated_lab(bundle=source,model_path=fake_model,
+                                  output_dir=tmp_path/'should_not_exist')
+    assert not (tmp_path/'should_not_exist').exists()
+
+
+def test_bundle_integrity_guard_detects_modified_raw_fluid_rows(tmp_path):
+    import zipfile
+    original=real_bundle_path()
+    if not original.is_file():pytest.skip('W04 evidence bundle unavailable')
+    tampered=tmp_path/'tampered.zip'
+    with zipfile.ZipFile(original) as src,zipfile.ZipFile(tampered,'w') as out:
+        for member in src.namelist():
+            payload=src.read(member)
+            if member=='truth/raw_fluid_selected.csv':
+                payload+=b'99999,phantom,10,10,moped\n'
+            out.writestr(member,payload)
+    with pytest.raises(ValueError,match='evidence SHA mismatch'):
+        bundle_data(tampered)
