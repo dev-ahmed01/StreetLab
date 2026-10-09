@@ -23,6 +23,9 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+_SCRIPT_DIR = str(Path(__file__).resolve().parent)
+if _SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPT_DIR)
 
 from streetlab_phase3.video.holdout_validation import verify_batch
 from phase3_w04_shadow_review_queue import (
@@ -335,19 +338,28 @@ label{font-size:14px;font-weight:600}select,textarea{width:100%;border:1px solid
 footer{position:sticky;bottom:0;background:#f6f7f8;padding:12px;border-top:1px solid #cbd5e1}
 @media(max-width:900px){.shots{grid-template-columns:1fr 1fr}.shots figure:first-child{grid-column:span 2}.answers{grid-template-columns:1fr}.answers label:last-child{grid-column:span 1}}
 """
-    return ('<!doctype html><html lang="en"><meta charset="utf-8">'
-            '<meta name="viewport" content="width=device-width,initial-scale=1">'
-            '<title>W04 Independent Visual Review</title><style>'+style+'</style>'
-            '<body data-reviewer="'+html.escape(reviewer,quote=True)+'"><main><header>'
-            '<h1>Independent physical-vehicle review</h1><p class="note">Reviewer '
-            +html.escape(reviewer)+' · 7 anonymous W04 cases · Original source frames</p>'
-            '<p>Yellow outlines the proposed target. Gray outlines in the third view show '
-            'existing primary tracks. Do not guess the detector label. Record only what '
-            'the images support; choose UNCLEAR when necessary. Do not consult the other reviewer.</p>'
-            '</header>'+''.join(cards)
-            +'<footer><button id="export" type="button">Export my independent CSV</button>'
-            '<span class="note"> Save this CSV privately; do not share it with the other reviewer.</span>'
-            '</footer></main><script>'+js+'</script></body></html>')
+    intro = (
+        '<!doctype html><html lang="en"><head><meta charset="utf-8">'
+        '<meta name="viewport" content="width=device-width,initial-scale=1">'
+        '<title>W04 Independent Visual Review</title><style>' + style
+        + '</style></head><body data-reviewer="'
+        + html.escape(reviewer,quote=True)
+        + '"><main><header><h1>Independent physical-vehicle review</h1>'
+        + '<p class="note">Reviewer '+html.escape(reviewer)
+        + ' · 7 anonymous W04 cases · Original source frames</p>'
+        + '<p>Yellow outlines the proposed target. Gray outlines in the third '
+        + 'view show existing primary tracks. Do not guess the detector label. '
+        + 'Record only what the images support; choose UNCLEAR when necessary. '
+        + 'Do not consult the other reviewer.</p></header>'
+    )
+    outro=(
+        '<footer><button id="export" type="button">'
+        'Export my independent CSV</button>'
+        '<span class="note"> Save this CSV privately; do not share it '
+        'with the other reviewer.</span></footer></main><script>'
+        +js+'</script></body></html>'
+    )
+    return intro + ''.join(cards) + outro
 
 
 def _select(field: str, choices: list[str], question: str) -> str:
