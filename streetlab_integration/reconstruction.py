@@ -400,6 +400,14 @@ def verified_reconstruction(store: VideoStore, project_id: str, revision: str) -
         or bound_job["report_sha256"] != model["source_track_sha256"]
         or store.source(bound_job["source_id"])["sha256"] != model["source_video_sha256"]):
         raise ReconstructionError("Reconstruction source provenance mismatch")
+    # Revalidate M2 immutable run and M1 receipt on every reconstruction read.
+    # A valid spatial CSV alone must not conceal tampered upstream observations.
+    observation = job_report(store, bound_job["id"])
+    original_run = verified_run(store.root / "runs" / bound_job["id"],
+                                model["source_video_sha256"])
+    if (observation["source_tracking_sha256"] != model["source_track_sha256"]
+        or original_run["model_tree_sha256"] != model["source_model_sha256"]):
+        raise ReconstructionError("Reconstruction upstream evidence changed")
     if quality["metric_transform_checked"] != ("source_to_world.csv" in checks):
         raise ReconstructionError("Unverified metric artifact mismatch")
     return {"revision":revision, "model":model, "quality":quality}
