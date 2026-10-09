@@ -117,6 +117,7 @@ def test_new_home_has_one_primary_workspace_and_collapsed_legacy(local):
     assert page.status_code==200
     assert 'id="slw"' in page.text
     assert 'id="slwAdvanced"' in page.text
+    assert 'id="slwAddProject"' in page.text
     assert 'id="m2Panel"' in page.text
     assert 'href="/scenarios"' in page.text
     assert '/assets/streetlab-workspace.js' in page.text
