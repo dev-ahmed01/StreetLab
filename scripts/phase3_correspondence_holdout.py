@@ -35,7 +35,7 @@ from streetlab_phase3.video.physical_object_correspondence import (
 STATUS="PHASE3_BLIND_HELDOUT_CORRESPONDENCE_NOT_PRODUCTION"
 LOCK_VERSION="PHASE3_CORRESPONDENCE_LOCK_V1"
 CODE1=Path(H.__file__).resolve()
-CODE2=Path(sys.modules[IOU_SIMILAR.__class__.__module__].__file__).resolve() if False else _ROOT/"streetlab_phase3"/"video"/"physical_object_correspondence.py"
+CODE2=_ROOT/"streetlab_phase3"/"video"/"physical_object_correspondence.py"
 REVIEWERS=("R01","R02")
 
 
