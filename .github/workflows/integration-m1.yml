@@ -1,0 +1,50 @@
+name: StreetLab Integration M1 - Observation to Decision Lab
+
+on:
+  push:
+    branches:
+      - codex/streetlab-integration-m1
+  pull_request:
+    paths:
+      - "streetlab_integration/**"
+      - "streetlab_phase2/**"
+      - "scripts/streetlab_integration_m1.py"
+      - "tests/test_streetlab_integration_m1.py"
+      - "README_INTEGRATION_M1.md"
+      - ".github/workflows/integration-m1.yml"
+
+jobs:
+  observation-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            streetlab_integration
+            streetlab_phase1
+            streetlab_phase2
+            streetlab_phase3
+            scripts/streetlab_integration_m1.py
+            tests/test_streetlab_integration_m1.py
+            tests/test_phase2_m6_api.py
+            requirements.txt
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install integration dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+      - name: Verify source track to Decision Lab API and refusal semantics
+        env:
+          PYTHONPATH: .
+        run: |
+          pytest -q tests/test_streetlab_integration_m1.py tests/test_phase2_m6_api.py
+      - name: Verify native track import entrypoint
+        env:
+          PYTHONPATH: .
+        run: |
+          python scripts/streetlab_integration_m1.py --help

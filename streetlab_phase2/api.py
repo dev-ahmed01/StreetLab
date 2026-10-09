@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+
+from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
@@ -100,8 +103,23 @@ svg{width:100%;height:340px;background:#fafafa;border-radius:10px}.edge{stroke:#
 <body>
 <header><strong>StreetLab Decision Lab</strong><div class="muted">Decision assurance for counterfactual traffic testing</div></header>
 <main>
+<section class="panel" aria-label="Observed vehicle tracking">
+<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline">
+  <h2 style="margin-top:0">Observed traffic</h2>
+  <span class="muted">Source-image tracking · research evidence</span>
+</div>
+<div class="grid">
+<div class="metric"><div class="muted">Tracked IDs</div><strong id="obsTracks">—</strong></div>
+<div class="metric"><div class="muted">Observed frames</div><strong id="obsFrames">—</strong></div>
+<div class="metric"><div class="muted">Track observations</div><strong id="obsPoints">—</strong></div>
+<div class="metric"><div class="muted">Site simulation readiness</div><strong id="obsReadiness">—</strong></div>
+</div>
+<p class="muted" id="obsClasses">No processed tracking report imported yet.</p>
+<div class="status"><strong>Source provenance and missing data</strong><span id="obsGate">Real site geometry and demand must be supplied before reconstruction-based simulation.</span></div>
+<p class="muted">The observation above is not the synthetic simulation below. Native tracking IDs are not guaranteed to be unique physical vehicles; pixels cannot measure m/s or turn demand without calibration.</p>
+</section>
 <section class="panel">
-<h2>Current simulation</h2>
+<h2>Current simulation <span class="muted">— Synthetic Decision Lab demo</span></h2>
 <div class="grid">
 <div class="metric"><div class="muted">Time</div><strong id="simTime">—</strong></div>
 <div class="metric"><div class="muted">Active vehicles</div><strong id="activeVehicles">—</strong></div>
@@ -206,16 +224,41 @@ document.getElementById('evaluateDecision').onclick=async()=>{
    root.appendChild(el);
  }
 };
+async function showObservation(){
+ const r=await request('/api/observations/latest');
+ if(r.status==='NOT_IMPORTED'){
+   document.getElementById('obsReadiness').textContent='Needs data';
+   return;
+ }
+ document.getElementById('obsTracks').textContent=String(r.tracking_identity_count);
+ document.getElementById('obsFrames').textContent=String(r.observed_frames);
+ document.getElementById('obsPoints').textContent=String(r.observed_points);
+ document.getElementById('obsReadiness').textContent=r.study_gate.status;
+ document.getElementById('obsClasses').textContent='Tracked ID classes: '+Object.entries(r.tracks_by_class)
+   .map(([name,count])=>name.replaceAll('_',' ')+' '+count).join(' · ');
+ document.getElementById('obsGate').textContent=
+   'Uncalibrated image pixels only. Missing for real-site scenarios: '+r.study_gate.missing_evidence.join(', ')+
+   '. Baseline simulator remains a separate synthetic network.';
+}
+showObservation().catch(()=>{
+ document.getElementById('obsGate').textContent='Observation receipt could not be verified. Check local artifact integrity.';
+});
 request('/api/simulation/state').then(showState).catch(()=>{});
 </script>
 </body>
 </html>"""
 
 
-def create_app(service: Any | None = None) -> FastAPI:
+def create_app(service: Any | None = None, *, observation_workdir: str | Path | None = None) -> FastAPI:
     if service is None:
         from .web_service import DecisionLabService
         service = DecisionLabService()
+
+    # Read-only local ingestion receipts; never accept a user-supplied file path
+    # over HTTP, and never reinterpret a synthetic network as observed geometry.
+    if observation_workdir is None:
+        observation_workdir = getattr(service, "workdir", Path(".streetlab-m5"))
+    observation_workdir = Path(observation_workdir)
 
     app=FastAPI(
         title="StreetLab Decision Lab API",
@@ -237,6 +280,21 @@ def create_app(service: Any | None = None) -> FastAPI:
     @app.get("/api/network")
     def network()->dict:
         return NETWORK
+
+    @app.get("/api/observations/latest")
+    def latest_observation()->dict:
+        from streetlab_integration.observation_bridge import latest_report
+        try:
+            result = latest_report(observation_workdir)
+        except (ValueError, OSError, KeyError, TypeError, json.JSONDecodeError) as exc:
+            # Don't leak local filesystem paths to clients.
+            raise HTTPException(status_code=409,
+                                detail="Local observation report failed integrity validation") from exc
+        if result is None:
+            return {"status": "NOT_IMPORTED",
+                    "message": "Import a native tracking export with scripts/streetlab_integration_m1.py",
+                    "real_site_simulation_allowed": False}
+        return result
 
     @app.post("/api/simulation/start")
     def start()->dict:
