@@ -13,6 +13,10 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 import pytest
 
+# Legacy sparse Phase 2/3 CI does not check out the M2 product package.
+# Dedicated Integration M2 CI includes it and must execute all of these tests.
+pytest.importorskip("streetlab_integration.video_jobs")
+
 from streetlab_integration import video_jobs, worker
 from streetlab_integration.primary_runner import sha
 from streetlab_integration.video_jobs import JobCancelled, JobError, VideoStore
