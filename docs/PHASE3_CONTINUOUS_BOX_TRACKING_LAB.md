@@ -4,9 +4,11 @@
 
 ## What Build 3 delivers
 
-One REAL **contiguous** source-video frame stream passes through the SHA-verified W04 OpenVINO model exactly once per frame (per-tile inference, model-local NMS, absolute bounding boxes). The results are fanned out to 25 existing Build 1 geometry policies, each owning an entirely separate **Roboflow ByteTrack** instance. They receive exactly one update per decoded frame, including warmup and empty-detection frames. No fake identities or sparse 21-frame tracker evaluations are permitted.
+One REAL **contiguous** source-video frame stream (one initial seek, then strictly sequential reads) passes through the SHA-verified W04 OpenVINO model exactly once per frame (per-tile inference, model-local NMS, absolute bounding boxes). The results are fanned out to 25 existing Build 1 geometry policies, each owning an entirely separate **Roboflow ByteTrack** instance. They receive exactly one update per decoded frame, including warmup and empty-detection frames. No fake identities or sparse 21-frame tracker evaluations are permitted.
 
 Each candidate emits frozen **14-column Geo-trax pixel tracks** with real confirmed tracker IDs, independent +1/50px PixelBenchmark and IdentityBenchmark metrics, separate class-aware diagnostic reports (including **MOTORCYCLE correct-class recall**), and a manifest including SHA256 of all candidate track files. Tracking timing and box-policy timing are measured separately from one shared detector inference timing stream. Original FLUID is parsed **once** for all candidates, avoiding 25 reads of the whole CSV.
+
+The original absolute per-tile boxes are also saved as `original_pre_global_merge_boxes.jsonl` with SHA256, making later offline replays possible **without rerunning OpenVINO inference**.
 
 All 25 postprocessing candidates are scored in a single pass: the unmerged control and Hard NMS / linear Soft NMS / Gaussian Soft NMS / weighted fusion, across IoU and IoS with thresholds 0.30 / 0.50 / 0.70. **These methods are not guaranteed physically safe**: overlapping real motorcycles might be merged. The output never auto-selects a winning policy or promotes production. The original class-mapping ontology is retained; two-wheeler vs bicycle and car vs bus are never silently merged.
 
@@ -39,6 +41,7 @@ Optionally provide `--baseline-tracks <unchanged same-window T000.txt>` to score
 
 - `batch_report.json`: continuous and warmup frame counts, per-policy tracks/pixel/identity/class scorecard, detector median and per-policy postprocess/tracker medians, no promotion.
 - `source_provenance.json`: original video, FLUID and model/bundle SHA256 plus exact frame interval, written transactionally with the report.
+- `original_pre_global_merge_boxes.jsonl`: every raw per-tile absolute XYXY prediction with tile/source identifiers and checksum.
 - `<policy>.txt` / `<policy>.score.json`: exact tracked vehicles and per-policy evidence, written within one atomic staged output directory. Any gap, duplicate/invalid track row, invalid label cohort, or model hash mismatch fails the trial; no partial output directory is published.
 - Existing frozen P3B matcher remains unchanged. Pixel and identity benchmark matches are **class-agnostic spatial associations**; `class_diagnostics` reports correct-class recall independently. The tracker is a real ByteTrack when the local inference path is executed; CI tests use explicit synthetic tracker doubles and **do not claim physical identity performance**.
 - Captured boxes are per-tile **post local YOLO NMS** and pre SAHI global merge. No raw network logits, optimization of model weights, or guaranteed safe suppression is implied.
