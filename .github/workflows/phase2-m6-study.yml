@@ -44,6 +44,7 @@ jobs:
             scripts/phase3_sahi_detector_visual_review.py
             scripts/phase3_raw_fluid_label_review.py
             scripts/phase3_shadow_raw_fluid_ontology.py
+            scripts/phase3_unmatched_residual_triage.py
             scripts/phase2_m6_study_demo.py
             tests
             data/models/sumo_persona_priors.csv
