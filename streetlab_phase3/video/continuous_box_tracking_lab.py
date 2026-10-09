@@ -23,8 +23,8 @@ from typing import Any, Callable, Iterable, Sequence
 
 import numpy as np
 
-from .integrated_box_lab import RawBox, CANONICAL, candidate_matrix, merge_boxes
-from .premerge_box_capture import bundle_data, capture_boxes, sample_video_rgb_frames
+from .integrated_box_lab import RawBox, candidate_matrix, merge_boxes, box_dict
+from .premerge_box_capture import bundle_data, capture_boxes
 
 CANONICAL_IDS = {'CAR': 0, 'BUS': 1, 'HEAVY_VEHICLE': 2, 'MOTORCYCLE': 3}
 STATUS = 'EXPERIMENTAL_CONTINUOUS_BOX_BYTETRACK_BENCHMARK_NOT_PRODUCTION'
@@ -73,6 +73,32 @@ class ContinuousTrial:
             raise ValueError('Isolated OpenVINO IR model directory required')
         if self.baseline_tracks is not None and not self.baseline_tracks.is_file():
             raise FileNotFoundError('Same-window T000 track file not found')
+
+
+def sequential_video_rgb_frames(video: Path, first_frame: int, end_frame: int,
+                                *, cv2_module: Any = None):
+    """ONE seek then sequential reads; fail on any timestamp/frame gap."""
+    if type(first_frame) is not int or type(end_frame) is not int or not 0 <= first_frame <= end_frame:
+        raise ValueError('Source video frame range invalid')
+    if cv2_module is None:
+        import cv2 as cv2_module
+    cap=cv2_module.VideoCapture(str(video))
+    if not cap.isOpened():
+        cap.release()
+        raise RuntimeError(f'Cannot open 4K source video: {video}')
+    try:
+        if not cap.set(cv2_module.CAP_PROP_POS_FRAMES,first_frame):
+            raise RuntimeError(f'Cannot seek to first warmup frame {first_frame}')
+        for frame in range(first_frame,end_frame+1):
+            ok,img=cap.read()
+            position=float(cap.get(cv2_module.CAP_PROP_POS_FRAMES))
+            if not ok or not math.isfinite(position) or abs(position-(frame+1))>.51:
+                raise RuntimeError(f'Continuous decode alignment failure at {frame}')
+            if img is None or img.shape[:2] != (2160,3840):
+                raise ValueError('Expected original 3840x2160 source video')
+            yield frame,cv2_module.cvtColor(img,cv2_module.COLOR_BGR2RGB)
+    finally:
+        cap.release()
 
 
 def policy_matrix(names: Sequence[str] | None = None) -> list[dict[str, Any]]:
@@ -198,6 +224,8 @@ def stream_tracking_matrix(
     temporary = Path(tempfile.mkdtemp(prefix=f'.{output_dir.name}.stage-',dir=output_dir.parent))
     states = {}
     try:
+        raw_path=temporary/'original_pre_global_merge_boxes.jsonl'
+        raw_file=raw_path.open('w',encoding='utf-8')
         for p in configs:
             name = p['name']
             tracker = tracker_factory(
@@ -231,6 +259,8 @@ def stream_tracking_matrix(
                 raise ValueError('Duplicate tile prediction source indices in frame')
             detector_seconds.append(float(detector_time))
             raw_boxes += len(raw)
+            for original_box in raw:
+                raw_file.write(json.dumps(box_dict(original_box))+'\n')
             for p in configs:
                 name = p['name']
                 state = states[name]
@@ -258,6 +288,7 @@ def stream_tracking_matrix(
             total_frames += 1
         if total_frames != end_frame-first_frame+1:
             raise ValueError('Missing last source frames or warmup frames in tracker stream')
+        raw_file.close()
         for state in states.values():
             state['handle'].close()
         results = []
@@ -311,6 +342,8 @@ def stream_tracking_matrix(
             'processed_frames':total_frames,
             'evaluated_frames':end_frame-start_frame+1,
             'candidate_count':len(configs),'raw_tile_boxes':raw_boxes,
+            'raw_pre_global_merge_boxes_file':raw_path.name,
+            'raw_pre_global_merge_boxes_sha256':_sha(raw_path),
             'detector_median_seconds':statistics.median(detector_seconds),
             'independent_tracker_instance_per_policy':True,
             'policies':results,'same_window_T000':baseline,
@@ -340,6 +373,8 @@ def stream_tracking_matrix(
         os.replace(temporary,output_dir)
         return summary
     finally:
+        if 'raw_file' in locals() and not raw_file.closed:
+            raw_file.close()
         for state in states.values():
             try:
                 if not state['handle'].closed:
@@ -388,8 +423,8 @@ def run_continuous_tracking_lab(trial: ContinuousTrial) -> dict[str, Any]:
     first=max(0,trial.start_frame-trial.warmup_frames)
     import cv2
     def source() -> Iterable[tuple[int,Sequence[RawBox],float]]:
-        for frame,rgb in sample_video_rgb_frames(
-                trial.video,range(first,trial.end_frame+1),cv2_module=cv2):
+        for frame,rgb in sequential_video_rgb_frames(
+                trial.video,first,trial.end_frame,cv2_module=cv2):
             boxes,times=capture_boxes([(frame,rgb)],model,
                                       slicer=get_slice_bboxes,predictor=get_prediction,
                                       overlap=trial.tile_overlap,slice_size=trial.tile_size)
