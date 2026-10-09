@@ -4,6 +4,14 @@ $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
 Set-Location $repo
 $python = Join-Path $repo '.venv-sahi-audit\Scripts\python.exe'
+
+# Ensure child Python finds StreetLab package regardless of the caller's session.
+$priorPythonPath = $env:PYTHONPATH
+$env:PYTHONPATH = if ($priorPythonPath) {
+    $repo + [System.IO.Path]::PathSeparator + $priorPythonPath
+} else {
+    $repo
+}
 $runner = Join-Path $repo 'scripts\phase3_w04_unified_hybrid_replay.py'
 $lab = Join-Path $repo 'artifacts\phase3\sahi_detector_trials'
 $original = Join-Path $lab 'W04_box_tracking_batch201_01'
