@@ -285,6 +285,8 @@ def create_app(service: Any | None = None, *, observation_workdir: str | Path | 
         mount_spatial_routes(app, observation_workdir)
         from streetlab_integration.baseline_api import mount_baseline_routes
         mount_baseline_routes(app, observation_workdir)
+        from streetlab_integration.scenario_api import mount_scenario_routes
+        mount_scenario_routes(app, observation_workdir)
 
     @app.get("/", response_class=HTMLResponse)
     def index()->str:
@@ -306,7 +308,16 @@ def create_app(service: Any | None = None, *, observation_workdir: str | Path | 
             '<p><a href="/baseline">Open observed-site baseline workflow →</a></p></section>'
             if m2_ui() else ""
         )
-        return _html().replace("<main>", "<main>" + m2_ui() + spatial_link + baseline_link, 1)
+        scenarios_link = (
+            '<section class="panel" aria-label="Audited SUMO scenario comparison">'
+            '<h2>Scenario experiments <span class="muted">— Phase M5</span></h2>'
+            '<p class="muted">Compare a single reviewed operational intervention against the '
+            'same site-specific baseline over paired seeds and demand stress cases. '
+            'Only audited simulations; no real-world impact claims.</p>'
+            '<p><a href="/scenarios">Open scenario comparison →</a></p></section>'
+            if m2_ui() else ""
+        )
+        return _html().replace("<main>", "<main>" + m2_ui() + spatial_link + baseline_link + scenarios_link, 1)
 
     @app.get("/api/health")
     def health()->dict[str,str]:
