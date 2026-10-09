@@ -200,3 +200,62 @@ def test_direct_cli_help_works_without_pythonpath(tmp_path):
                        cwd=tmp_path,env=env,text=True,capture_output=True,timeout=30)
     assert run.returncode==0,run.stderr
     assert "prepare" in run.stdout and "evaluate" in run.stdout
+
+
+def test_prepare_generates_separate_blinded_packets_without_truth_or_primary_edits(
+        tmp_path,monkeypatch):
+    dev=tmp_path/"original_dev.zip"
+    with zipfile.ZipFile(dev,"w") as z:
+        z.writestr("audit_summary.json",json.dumps({
+            "eligible_for_production":False,"all_191_unmatched_observations":191,
+            "original_primary_modified":False}))
+    lock=tmp_path/"lock.json"
+    entry.freeze(dev,lock)
+    video=tmp_path/"never_used_camera.mp4"
+    video.write_bytes(b"independent-test-video-not-genuine-footage")
+    ppath=tmp_path/"primary.txt"
+    spath=tmp_path/"shadow.txt"
+    original=[]
+    shadow=[]
+    for frame in range(5):
+        for objid in range(16):
+            pos=objid*43.
+            original.append(native(frame,objid,0,pos))
+            shadow.append(native(frame,100+objid,3,pos+3.))
+    write_export(ppath,original)
+    write_export(spath,shadow)
+    before=ppath.read_bytes()
+
+    def fake_render(source,pairs,folder,**kwargs):
+        folder.mkdir()
+        images={}
+        for pair in pairs:
+            for frame in pair["source_frames_sampled"][:3]:
+                for suffix in ("scene","detail"):
+                    filename=f"{pair['case_id']}_f{frame}_{suffix}.jpg"
+                    (folder/filename).write_bytes(b"\xff\xd8\xff\xd9")
+                    images[(pair["case_id"],frame,suffix)]="images/"+filename
+        return images
+
+    monkeypatch.setattr(entry,"draw_review_assets",fake_render)
+    out=tmp_path/"packet"
+    report=entry.prepare(lock,video,ppath,spath,0,119,out)
+    assert report["selected_blind_pairs"]>=30
+    assert ppath.read_bytes()==before
+    with zipfile.ZipFile(out/"REVIEWER_R01_ONLY.zip") as z:
+        filenames=z.namelist()
+        assert "index.html" in filenames
+        html_page=z.read("index.html").decode()
+        assert "DUPLICATE_HYPOTHESIS" not in html_page
+        assert "NEARBY_NEGATIVE_CONTROL" not in html_page
+        assert "shadow_id" not in html_page
+        assert "data-reviewer=\"R01\"" in html_page
+        assert "INTERNAL_manifest.json" not in filenames
+    with zipfile.ZipFile(out/"REVIEWER_R02_ONLY.zip") as z:
+        assert "data-reviewer=\"R02\"" in z.read("index.html").decode()
+    manifest=json.loads((out/"INTERNAL_manifest.json").read_text())
+    assert manifest["all_unlabeled_candidate_pairs"]>=len(manifest["selected_pairs"])
+    assert manifest["source_is_distinct_from_W04_by_SHA"] is True
+    assert all(row["physically_verified"] is False for row in manifest["selected_pairs"])
+    with pytest.raises(FileExistsError):
+        entry.prepare(lock,video,ppath,spath,0,119,out)
