@@ -269,8 +269,18 @@ def create_app(service: Any | None = None, *, observation_workdir: str | Path | 
         ),
     )
 
-    from streetlab_integration.product_api import mount_product_routes, m2_ui
-    mount_product_routes(app, observation_workdir)
+    # Legacy sparse Phase 2 CI excludes integration packages; preserve its
+    # standalone synthetic Decision Lab tests. Normal M2 deployments include
+    # the product integration and must import it without suppressing errors.
+    try:
+        from streetlab_integration.product_api import mount_product_routes, m2_ui
+    except ModuleNotFoundError as exc:
+        if exc.name not in {"streetlab_integration", "streetlab_integration.product_api"}:
+            raise
+        def m2_ui() -> str:
+            return ""
+    else:
+        mount_product_routes(app, observation_workdir)
 
     @app.get("/", response_class=HTMLResponse)
     def index()->str:
