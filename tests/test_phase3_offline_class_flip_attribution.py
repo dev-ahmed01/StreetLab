@@ -7,6 +7,8 @@ from pathlib import Path
 import pytest
 
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "phase3_offline_class_flip_attribution.py"
+if not SCRIPT.is_file():
+    pytest.skip("Offline class-flip script excluded by this sparse CI checkout", allow_module_level=True)
 SPEC = importlib.util.spec_from_file_location("phase3_class_flip_attribution", SCRIPT)
 assert SPEC is not None and SPEC.loader is not None
 mod = importlib.util.module_from_spec(SPEC)
