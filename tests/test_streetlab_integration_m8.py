@@ -201,3 +201,20 @@ def test_real_sumo_release_reconciliation_stays_blocked_without_field(tmp_path,l
     assert result["checks"]["frozen_worker_model"]["status"]=="NEEDS_VERIFICATION"
     assert result["acceptance_status"]=="RELEASE_BLOCKED"
     assert result["production_release_approved"] is False
+
+
+
+def test_release_navigator_is_only_readiness_preview(local):
+    from fastapi.testclient import TestClient
+    from streetlab_phase2.api import create_app
+    db,project,job=local
+    client=TestClient(create_app(service=object(),observation_workdir=db.root))
+    page=client.get("/release")
+    assert page.status_code==200
+    assert "Production release: NOT APPROVED." in page.text
+    assert "LOCAL CLI VERIFICATION REQUIRED" in page.text
+    assert "STREETLAB_M8.ps1 -Mode acceptance" in page.text
+    home=client.get("/")
+    assert home.status_code==200
+    assert 'id="slwRelease"' in home.text
+    assert "Release readiness" in home.text
