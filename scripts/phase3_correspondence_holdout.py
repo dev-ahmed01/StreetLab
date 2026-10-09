@@ -65,6 +65,7 @@ def freeze(development_audit: Path, out: Path):
         "development_source_video_sha256_exclusion":H.W04_VIDEO_SHA,
         "algorithm_sha256":H.sha(CODE1),
         "geometric_implementation_sha256":H.sha(CODE2),
+        "scoring_and_packet_cli_sha256":H.sha(Path(__file__).resolve()),
         "locked_params":{
             "same_extent_iou_min":IOU_SIMILAR,
             "part_whole_ios_min":IOS_CONTAINED,
@@ -95,6 +96,7 @@ def verify_lock(lock: Path):
         or value.get("lock_sha256")!=locking_hash(value)
         or value.get("algorithm_sha256")!=H.sha(CODE1)
         or value.get("geometric_implementation_sha256")!=H.sha(CODE2)
+        or value.get("scoring_and_packet_cli_sha256")!=H.sha(Path(__file__).resolve())
         or value.get("development_source_video_sha256_exclusion")!=H.W04_VIDEO_SHA
         or value.get("locked_params",{}).get("sample_pairs_max")!=H.MAX_REVIEW_PAIRS):
         raise ValueError("Frozen holdout protocol or implementation code has changed")
