@@ -213,3 +213,30 @@ def test_m3_missing_checkpoints_never_package_real_sumo(local):
     incomplete=reconstruct(db,project["id"],job["id"],site(False))
     with pytest.raises(SiteInputError,match="M3"):
         save_baseline(db,project["id"],incomplete["revision"],field_fixture())
+
+
+
+@pytest.mark.parametrize("signalized",[False,True])
+def test_actual_sumo_cli_compiles_and_runs_reviewed_synthetic_site(
+    ready,signalized,
+):
+    """External SUMO executable acceptance, still NOT empirical road validation."""
+    import shutil
+    if not (shutil.which("sumo") and shutil.which("netconvert")):
+        pytest.skip("Actual SUMO + netconvert binaries not present on test runner")
+    db,project,spatial,original=ready
+    model=field_fixture()
+    if signalized:
+        model["control"]={
+            "kind":"FIXED_TIME_SIGNAL",
+            "measurement_ref":"Synthetic fixed-time control reference for CLI acceptance",
+            "link_index_review_ref":"Synthetic lane index order checked for CLI acceptance",
+            "phases":[{"duration_s":30,"state":"G"},{"duration_s":3,"state":"r"}],
+        }
+    package=save_baseline(db,project["id"],spatial["revision"],model)
+    runtime=run_baseline(db,project["id"],package["revision"])
+    assert runtime["status"] in {"BASELINE_NEEDS_REVIEW","BASELINE_FIDELITY_CHECKED"}
+    assert runtime["simulated_trips_completed"]>=0
+    assert runtime["manual_count_demand"]==5
+    assert runtime["model_revision"]==package["revision"]
+    assert latest_baseline(db,project["id"])["runtime"]["status"]==runtime["status"]
