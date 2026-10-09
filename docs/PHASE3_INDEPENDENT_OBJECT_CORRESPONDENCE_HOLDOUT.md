@@ -41,6 +41,13 @@ The thresholds are *predeclared diagnostic criteria*, not empirically justified 
 - Two independent authorized human reviewers, and reviewed crops from the **new** source video. Reviewer forms intentionally hide tracker IDs, classes, algorithm prediction and developer-case judgments.
 - The immutable W04 development audit ZIP previously supplied in this chat. It is used **only to preregister a source/code lock**, never as heldout testing truth.
 
+## Shortlist of outside validation datasets (availability not confirmed)
+
+- **UA-DETRAC** — 100 fixed-roadside-camera traffic sequences with manually annotated vehicle trajectories, including car/bus/van/other vehicle classes. Good for crowded/occluded non-motorcycle negative controls, but `other` is not a reliably annotated MOTORCYCLE class and these sequences use roughly 960×540 pixels rather than the 4K W04 geometry. Research background: [benchmark paper](https://faculty.ucmerced.edu/mhyang/papers/cviu2020_detrac.pdf), [dataset details](https://github.com/auag92/eva/blob/master/data/ua_detrac/README.md). The prior StreetLab experiments have not used or downloaded it in this branch; verify actual provenance and licenses.
+- **AI City Challenge 2023 Track 5** — fixed traffic camera videos and source-frame motorcycle bounding boxes with video-local track IDs, 20-second sequences at 10 FPS. Better for motorcycle-specific distinct-object and duplicate testing, but no verified heavy-truck class benchmark or full car ontology. Download may require a dataset request and terms acceptance; [challenge data and official annotations](https://www.aicitychallenge.org/2023-data-and-evaluation/).
+- **AI City Challenge 2019 multi-camera vehicle tracking** — multiple fixed intersection cameras with identity boxes, but the official page warns only vehicles traversing >=2 cameras were annotated. **Not** suitable as exhaustive total-vehicle truth without supplementary physical review. [Official dataset note](https://www.aicitychallenge.org/2019-data-sets/).
+
+**Preferred study**: an untouched UA-DETRAC test sequence plus a licensed AI City motorcycle scene, evaluated as distinct cohorts with the *same frozen* geometric algorithm. Both datasets require one actual source-video file and paired StreetLab primary/shadow 14-column exports for the implemented reviewer pack; existing external ground-truth IDs should supplement, not be silently equated with, the independent blinded reviewer pair labels.
 ## Windows commands
 
 First **before examining the new video's labels**, place `W04_PHYSICAL_CORRESPONDENCE_AUDIT.zip` in the `StreetLab-engine-trial` root and preregister the lock:
