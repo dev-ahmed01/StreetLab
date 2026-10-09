@@ -6,6 +6,7 @@ The web server does not run CPU inference; a separately started worker claims jo
 from __future__ import annotations
 
 import hashlib
+from contextlib import contextmanager
 import json
 import math
 import os
@@ -108,13 +109,21 @@ class VideoStore:
                 CREATE INDEX IF NOT EXISTS job_queue ON jobs(status, created);
             """)
 
-    def connection(self) -> sqlite3.Connection:
+    @contextmanager
+    def connection(self):
         conn = sqlite3.connect(str(self.db), isolation_level=None, timeout=30)
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA foreign_keys=ON")
-        conn.execute("PRAGMA busy_timeout=30000")
-        conn.execute("PRAGMA journal_mode=WAL")
-        return conn
+        try:
+            conn.row_factory = sqlite3.Row
+            conn.execute("PRAGMA foreign_keys=ON")
+            conn.execute("PRAGMA busy_timeout=30000")
+            conn.execute("PRAGMA journal_mode=WAL")
+            yield conn
+            conn.commit()
+        except BaseException:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
 
     @staticmethod
     def _dict(row: sqlite3.Row | None) -> dict | None:
@@ -170,7 +179,7 @@ class VideoStore:
         source_id = uuid.uuid4().hex
         folder = self.root / "projects" / project_id / "sources"
         folder.mkdir(parents=True, exist_ok=True)
-        temporary = folder / ("." + source_id + ".upload")
+        temporary = folder / ("." + source_id + ".upload" + suffix)
         dest = folder / (source_id + suffix)
         digest = hashlib.sha256()
         size = 0
@@ -310,11 +319,13 @@ class VideoStore:
     def cancel(self, job_id: str) -> dict:
         with self.connection() as conn:
             conn.execute("BEGIN IMMEDIATE")
-            job = self.job(job_id)
-            if job["status"] == "QUEUED":
+            row = conn.execute("SELECT status FROM jobs WHERE id=?", (_uuid(job_id),)).fetchone()
+            if row is None:
+                raise JobError("Job not found")
+            if row["status"] == "QUEUED":
                 conn.execute("UPDATE jobs SET status='CANCELLED',updated=? WHERE id=?",
                              (_now(), job_id))
-            elif job["status"] == "RUNNING":
+            elif row["status"] == "RUNNING":
                 conn.execute("UPDATE jobs SET cancel_requested=1,updated=? WHERE id=?",
                              (_now(), job_id))
             else:
