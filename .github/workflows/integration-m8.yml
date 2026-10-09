@@ -1,0 +1,93 @@
+name: StreetLab Integration M8 - Final Acceptance
+
+on:
+  push:
+    branches: [codex/streetlab-integration-m8]
+  pull_request:
+    paths:
+      - 'streetlab_integration/**'
+      - 'streetlab_phase2/api.py'
+      - 'scripts/STREETLAB_M8.ps1'
+      - 'tests/test_streetlab_integration_m8.py'
+      - '.github/workflows/integration-m8.yml'
+
+jobs:
+  full-integration-and-native-sumo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            streetlab_integration
+            streetlab_phase1
+            streetlab_phase2
+            streetlab_phase3
+            scripts/streetlab_integration_m1.py
+            tests/test_streetlab_integration_m1.py
+            tests/test_streetlab_integration_m2.py
+            tests/test_streetlab_integration_m3.py
+            tests/test_streetlab_integration_m4.py
+            tests/test_streetlab_integration_m5.py
+            tests/test_streetlab_integration_m6.py
+            tests/test_streetlab_integration_m7.py
+            tests/test_streetlab_integration_m8.py
+            tests/test_phase2_m6_api.py
+            requirements.txt
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install application and acceptance dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest opencv-python-headless
+      - name: Compile Python and validate browser JavaScript
+        run: |
+          python -m compileall -q streetlab_integration streetlab_phase2
+          node --check streetlab_integration/assets/workspace.js
+      - name: Run full M1-M8 regression with scientifically blocked synthetic fixtures
+        env:
+          PYTHONPATH: .
+          STREETLAB_SECURITY_MODE: local
+        run: |
+          pytest -q tests/test_streetlab_integration_m1.py tests/test_streetlab_integration_m2.py tests/test_streetlab_integration_m3.py tests/test_streetlab_integration_m4.py tests/test_streetlab_integration_m5.py tests/test_streetlab_integration_m6.py tests/test_streetlab_integration_m7.py tests/test_streetlab_integration_m8.py tests/test_phase2_m6_api.py
+      - name: Install genuine SUMO/netconvert for synthetic contract smoke only
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq sumo
+          sumo --version
+          netconvert --version
+      - name: Run actual native SUMO engine across M4 and M5
+        env:
+          PYTHONPATH: .
+        run: |
+          pytest -q tests/test_streetlab_integration_m4.py -k actual_sumo_cli_compiles
+          pytest -q tests/test_streetlab_integration_m5.py -k real_sumo_paired_experiment_synthetic_fixture
+      - name: Re-score native baseline and all eighteen scenario outputs for M8 release gate
+        env:
+          PYTHONPATH: .
+        run: |
+          pytest -q tests/test_streetlab_integration_m8.py -k real_sumo_release_reconciliation
+
+  windows-launcher-syntax:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scripts/STREETLAB_M8.ps1
+          sparse-checkout-cone-mode: false
+      - name: Parse native Windows PowerShell launcher without running external programs
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PWD 'scripts/STREETLAB_M8.ps1'), [ref]$tokens, [ref]$errors) | Out-Null
+          if ($errors.Count -gt 0) {
+            foreach ($error in $errors) { Write-Error $error.ToString() }
+            exit 1
+          }
+          Write-Host 'Windows launcher PowerShell parser: PASS (no actual source video or frozen model exercised)'
