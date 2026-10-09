@@ -289,6 +289,10 @@ def create_app(service: Any | None = None, *, observation_workdir: str | Path | 
         mount_scenario_routes(app, observation_workdir)
         from streetlab_integration.workspace_api import mount_workspace_routes
         mount_workspace_routes(app, observation_workdir)
+        from streetlab_integration.report_api import mount_report_routes
+        mount_report_routes(app, observation_workdir)
+        from streetlab_integration.access_guard import install_guard
+        install_guard(app)
 
     @app.get("/", response_class=HTMLResponse)
     def index()->str:
