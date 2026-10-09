@@ -147,3 +147,89 @@ def test_cli_is_new_output_only(tmp_path):
     assert len(json.loads(output.read_text())["shadow_pairs"]) == 3
     again = subprocess.run(cmd,capture_output=True,text=True)
     assert again.returncode != 0 and "FileExistsError" in again.stderr
+
+def test_post_shadow_residual_review_keeps_every_official_match(tmp_path):
+    from streetlab_phase3.video.sahi_unmatched_detection_review import audit_unmatched_detections
+    from streetlab_phase3.video.unmatched_residual_triage import triage_unmatched_residual
+    audit, truth = make_fixture(tmp_path)
+    frozen_report = (audit / "report.json").read_bytes()
+    frozen_labels = truth.read_bytes()
+    review_path = tmp_path / "review.json"
+    shadow_path = tmp_path / "shadow.json"
+    review_path.write_text(json.dumps(audit_unmatched_detections(audit)))
+    shadow_path.write_text(json.dumps(shadow_raw_fluid_ontology(audit)))
+    result = triage_unmatched_residual(
+        audit_dir=audit, review_file=review_path, shadow_file=shadow_path)
+    assert result["eligible_for_promotion"] is False
+    assert result["original_frozen_class_aware"]["matched"] == 2
+    assert result["original_frozen_class_aware"]["unmatched"] == 5
+    assert result["shadow_cross_class_pairs"] == 3
+    assert result["residual_unpaired_predictions"] == 2
+    assert result["exclusive_review_tiers"] == {
+        "review_no_raw_FLUID_center_within_50px": 2}
+    assert result["exclusive_tiers_by_prediction_class"]["CAR"] == {
+        "review_no_raw_FLUID_center_within_50px": 1}
+    assert result["exclusive_tiers_by_prediction_class"]["HEAVY_VEHICLE"] == {
+        "review_no_raw_FLUID_center_within_50px": 1}
+    assert (audit / "report.json").read_bytes() == frozen_report
+    assert truth.read_bytes() == frozen_labels
+
+
+def test_near_matched_motorcycle_is_not_filtered_and_report_is_immutable(tmp_path):
+    from streetlab_phase3.video.sahi_unmatched_detection_review import audit_unmatched_detections
+    from streetlab_phase3.video.unmatched_residual_triage import triage_unmatched_residual
+    audit, truth = make_fixture(tmp_path)
+    # Inject a 4px center-neighbor at frame 0 around an already official
+    # matched motorcycle. Re-score the UNCHANGED frozen scoring methodology.
+    with (audit / "sliced_detections.csv").open("a", encoding="utf-8") as f:
+        f.write("0,304,50,MOTORCYCLE,0.70\n")
+    with truth.open("r", encoding="utf-8", newline="") as f:
+        truth_data = normalize_fluid_pixel_truth(csv.DictReader(f))
+    from streetlab_phase3.video.cached_detector_subset import _detections
+    cached = _detections(audit,"sliced",[0,1])
+    report_file = audit / "report.json"
+    report = json.loads(report_file.read_text())
+    report["sliced"] = score_detections(cached,truth_data,[0,1])
+    report_file.write_text(json.dumps(report))
+    review_path = tmp_path / "review.json"
+    shadow_path = tmp_path / "shadow.json"
+    review_path.write_text(json.dumps(audit_unmatched_detections(audit)))
+    shadow_path.write_text(json.dumps(shadow_raw_fluid_ontology(audit)))
+    result = triage_unmatched_residual(
+        audit_dir=audit, review_file=review_path, shadow_file=shadow_path)
+    assert result["original_frozen_class_aware"]["matched"] == 2
+    assert result["original_frozen_class_aware"]["unmatched"] == 6
+    assert result["shadow_cross_class_pairs"] == 3
+    assert result["residual_unpaired_predictions"] == 3
+    assert result["exclusive_review_tiers"]["review_center_cluster_near_matched_prediction"] == 1
+    assert result["exclusive_review_tiers"]["review_no_raw_FLUID_center_within_50px"] == 2
+    assert any(row["prediction_class"] == "MOTORCYCLE"
+               and row["review_tier"] == "review_center_cluster_near_matched_prediction"
+               for row in result["residual_rows"])
+
+    cli = Path(__file__).resolve().parents[1] / "scripts" / "phase3_unmatched_residual_triage.py"
+    output = tmp_path / "residual.json"
+    args = [sys.executable, str(cli), "--audit-dir", str(audit),
+            "--precision-review", str(review_path),
+            "--shadow-report", str(shadow_path), "--output", str(output)]
+    run = subprocess.run(args, check=True, capture_output=True, text=True)
+    assert json.loads(run.stdout)["residual_unpaired_predictions"] == 3
+    assert output.is_file()
+    again = subprocess.run(args, capture_output=True, text=True)
+    assert again.returncode != 0
+    assert "FileExistsError" in again.stderr
+
+
+def test_post_shadow_triage_refuses_mismatched_provenance(tmp_path):
+    from streetlab_phase3.video.sahi_unmatched_detection_review import audit_unmatched_detections
+    from streetlab_phase3.video.unmatched_residual_triage import triage_unmatched_residual
+    audit, _ = make_fixture(tmp_path)
+    review_path = tmp_path / "review.json"
+    shadow_path = tmp_path / "shadow.json"
+    review_path.write_text(json.dumps(audit_unmatched_detections(audit)))
+    data = shadow_raw_fluid_ontology(audit)
+    data["source_model_sha256"] = "0" * 64
+    shadow_path.write_text(json.dumps(data))
+    with pytest.raises(ValueError, match="Shadow raw FLUID evidence"):
+        triage_unmatched_residual(
+            audit_dir=audit, review_file=review_path, shadow_file=shadow_path)
