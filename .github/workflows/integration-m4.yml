@@ -45,3 +45,15 @@ jobs:
           PYTHONPATH: .
         run: |
           pytest -q tests/test_streetlab_integration_m1.py tests/test_streetlab_integration_m2.py tests/test_streetlab_integration_m3.py tests/test_streetlab_integration_m4.py tests/test_phase2_m6_api.py
+      - name: Install actual SUMO and netconvert (synthetic network runtime acceptance)
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq sumo
+          sumo --version
+          netconvert --version
+      - name: Execute real SUMO topology and signalized smoke on synthetic software fixture
+        env:
+          PYTHONPATH: .
+        run: |
+          pytest -q tests/test_streetlab_integration_m4.py -k actual_sumo_cli_compiles
+
