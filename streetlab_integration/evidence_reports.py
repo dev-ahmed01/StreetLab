@@ -244,11 +244,29 @@ def check_bundle(data: bytes, project_id: str | None = None) -> dict:
                        or ".." in n.split("/") for n in names)
                 or not {"report.json","report.md","SHA256SUMS.json"}<=set(names)):
                 raise ReportError("Untrusted report package member names")
+            known={
+                "report.json","report.md","SHA256SUMS.json",
+                "evidence/m1_observation_receipt.json",
+                "evidence/m2_source_run_manifest.json",
+                "evidence/m3_site_model.json",
+                "evidence/m3_geometry_quality.json",
+                "evidence/m4_baseline_input.json",
+                "evidence/m4_baseline_quality.json",
+                "evidence/m4_sumo_run_receipt.json",
+                "evidence/m5_scenario_proposal.json",
+                "evidence/m5_scenario_quality.json",
+                "evidence/m5_paired_experiment_receipt.json"}
+            if set(names)-known:
+                raise ReportError("Unknown or forbidden report package member")
             entries={}
+            total=0
             for item in archive.infolist():
                 if (item.file_size>MAX_EVIDENCE_FILE
                     or item.is_dir() or item.flag_bits & 0x1):
                     raise ReportError("Unsafe compressed evidence member")
+                total+=item.file_size
+                if total>MAX_TOTAL_BYTES:
+                    raise ReportError("Decompressed evidence exceeds report budget")
                 payload=archive.read(item.filename)
                 if len(payload)!=item.file_size:
                     raise ReportError("Compressed evidence size mismatch")
@@ -267,3 +285,22 @@ def check_bundle(data: bytes, project_id: str | None = None) -> dict:
     if report["project"]["id"]!=manifest["project_id"]:
         raise ReportError("Report identity does not match the manifest")
     return manifest
+
+
+
+def main() -> None:
+    """Offline verification without extracting the evidence archive."""
+    import argparse
+    parser=argparse.ArgumentParser(description="Verify a StreetLab metadata ZIP with SHA-256")
+    parser.add_argument("archive",type=Path)
+    parser.add_argument("--project",help="Expected project UUID (recommended)")
+    args=parser.parse_args()
+    payload=args.archive.read_bytes()
+    result=check_bundle(payload,project_id=args.project)
+    print(json.dumps({"verified":True,"project_id":result["project_id"],
+                      "files":sorted(result["sha256"]),
+                      "not_a_digital_signature":True},indent=2))
+
+
+if __name__=="__main__":
+    main()
