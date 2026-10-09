@@ -214,3 +214,16 @@ def test_opencv_generated_media_decoder_smoke(tmp_path):
     assert metadata["height"] == 240
     assert metadata["frames"] == 3
     assert metadata["fps"] == pytest.approx(10., rel=.1)
+
+
+@pytest.mark.parametrize("failure,phrase", [
+    (ModuleNotFoundError("sahi not installed"), "dependency missing"),
+    (FileNotFoundError("C:/private/path/model.xml"), "file missing"),
+    (ValueError("No confirmed tracks on this video"), "No confirmed"),
+    (ValueError("Model SHA mismatch"), "integrity check failed"),
+    (OSError("C:/private/disk/path"), "media I/O failed"),
+])
+def test_worker_error_messages_are_actionable_and_do_not_leak_paths(failure, phrase):
+    message = worker.safe_failure(failure)
+    assert phrase in message
+    assert "private" not in message
