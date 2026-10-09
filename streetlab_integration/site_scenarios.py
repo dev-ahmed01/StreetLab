@@ -40,6 +40,8 @@ def validate_scenario(raw: dict, baseline: dict) -> dict:
         by_zone={a["zone_id"]:a for a in model["arms"]}
         if zone not in by_zone:
             raise ScenarioError("The changed arm must exist in the audited M4 baseline")
+        if by_zone[zone]["role"]!="APPROACH":
+            raise ScenarioError("Only a surveyed APPROACH arm may receive an approach speed-limit intervention")
         old=by_zone[zone]["speed_mps"]
         speed=number(intervention.get("speed_mps"),"proposed speed limit",1,45)
         if not (speed<old and speed>=old*.5):
