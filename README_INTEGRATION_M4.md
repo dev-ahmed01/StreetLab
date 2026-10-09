@@ -55,7 +55,7 @@ Replace both placeholders with real data from the UI. For a local SUMO executabl
 - These QA thresholds are product heuristics, NOT scientific certification. The operator's physical measurements, site realism, camera distortion, vehicle dynamics, observed arrival times, signal plans and model external validity still require review.
 - A passing baseline authorizes only provisional M5 scenario consideration, not any causal or actual-road performance claim.
 
-Only the standalone CLI runs SUMO, using an explicit executable, bound on subprocess execution, no user-supplied HTTP path, an atomic runtime output directory and SHA-verified files. If SUMO isn't available no run is claimed. CI fake-subprocess verification is not a real-site simulation.
+Only the standalone CLI runs SUMO, using an explicit executable, bound on subprocess execution, no user-supplied HTTP path, an atomic runtime output directory and SHA-verified files. If SUMO isn't available no run is claimed. CI checks both mocked subprocess orchestration and ACTUAL installed SUMO/netconvert execution against two SYNTHETIC software-site fixtures (unsignalized and fixed-time signal). These passing runs verify toolchain integration but are not a real-field measured road simulation.
 
 SUMO reference: https://sumo.dlr.de/docs/netconvert.html and https://sumo.dlr.de/docs/Definition_of_Vehicles,_Vehicle_Types,_and_Routes.html .
 
