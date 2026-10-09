@@ -287,6 +287,8 @@ def create_app(service: Any | None = None, *, observation_workdir: str | Path | 
         mount_baseline_routes(app, observation_workdir)
         from streetlab_integration.scenario_api import mount_scenario_routes
         mount_scenario_routes(app, observation_workdir)
+        from streetlab_integration.workspace_api import mount_workspace_routes
+        mount_workspace_routes(app, observation_workdir)
 
     @app.get("/", response_class=HTMLResponse)
     def index()->str:
@@ -317,7 +319,32 @@ def create_app(service: Any | None = None, *, observation_workdir: str | Path | 
             '<p><a href="/scenarios">Open scenario comparison →</a></p></section>'
             if m2_ui() else ""
         )
-        return _html().replace("<main>", "<main>" + m2_ui() + spatial_link + baseline_link + scenarios_link, 1)
+        if not m2_ui():
+            return _html()
+        from streetlab_integration.workspace_ui import workspace_ui
+        legacy = (
+            '<details id="slwAdvanced" style="margin-top:4px">'
+            '<summary style="cursor:pointer;padding:13px 16px;border:1px solid #dae2e6;'
+            'border-radius:10px;background:#fff;font-size:14px">'
+            'Detailed video tools and synthetic research demo</summary>'
+            + m2_ui() + spatial_link + baseline_link + scenarios_link
+        )
+        home = _html().replace(
+            "<main>", "<main>" + workspace_ui() + legacy, 1
+        ).replace("</main>", "</details></main>", 1)
+        home = home.replace(
+            "StreetLab Decision Lab</strong>",
+            "StreetLab · Junction workspace</strong>", 1
+        )
+        # Expose the earlier video-upload/worker console only when requested.
+        home = home.replace("</body>",
+            '<script>document.addEventListener("DOMContentLoaded",()=>{'
+            'if(new URLSearchParams(location.search).get("advanced")==="1"){'
+            'const details=document.getElementById("slwAdvanced");'
+            'if(details)details.open=true;'
+            'if(location.hash){const target=document.querySelector(location.hash);'
+            'if(target)target.scrollIntoView();}}});</script></body>', 1)
+        return home
 
     @app.get("/api/health")
     def health()->dict[str,str]:
