@@ -272,3 +272,27 @@ def test_source_frame_viewer_decodes_actual_video_without_invented_image(tmp_pat
                          cv2.IMREAD_COLOR)
     assert decoded.shape[:2]==(240,320)
     assert client.get("/api/jobs/"+job["id"]+"/source-frame?frame=5").status_code==422
+
+
+
+def test_assumed_zone_and_repeated_vertices_cannot_be_laundered_as_manual():
+    model=site()
+    model["zones"][0]["provenance"]="ASSUMED"
+    with pytest.raises(ReconstructionError,match="OBSERVED_MANUAL"):
+        validate_model(model,width=320,height=240)
+    model=site()
+    model["zones"][0]["polygon_pixels"].append([0,0])
+    with pytest.raises(ReconstructionError,match="repeat vertices"):
+        validate_model(model,width=320,height=240)
+
+
+def test_spatial_reader_rechecks_immutable_upstream_tracker_receipt(local):
+    db,project,job=local
+    result=reconstruct(db,project["id"],job["id"],site())
+    assert result["quality"]["metric_transform_checked"]
+    from streetlab_integration.worker import job_report
+    original=job_report(db,job["id"])
+    receipt=(db.root/"observations"/original["source_tracking_sha256"]/"report.json")
+    receipt.write_text("tampered",encoding="utf-8")
+    with pytest.raises((ValueError, json.JSONDecodeError),match="integrity|invalid|Expecting"):
+        latest_reconstruction(db,project["id"])
