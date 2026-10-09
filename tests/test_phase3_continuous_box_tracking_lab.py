@@ -240,3 +240,34 @@ def test_source_provenance_is_atomic_with_report(tmp_path):
             rows_converter=as_rows,score_fn=score_stub,
             provenance={'eligible_for_promotion':True})
     assert not (tmp_path/'bad').exists()
+
+
+def test_contiguous_video_decoder_seeks_only_once_and_validates_absolute_frame():
+    from streetlab_phase3.video.continuous_box_tracking_lab import sequential_video_rgb_frames
+    class FakeVideo:
+        def __init__(self):
+            self.position=0
+            self.seeks=[]
+            self.released=False
+        def isOpened(self): return True
+        def set(self, key, pos):
+            self.seeks.append(pos)
+            self.position=int(pos)
+            return True
+        def read(self):
+            self.position+=1
+            return True,np.zeros((2160,3840,3),dtype=np.uint8)
+        def get(self,key):return float(self.position)
+        def release(self):self.released=True
+    class FakeCv2:
+        CAP_PROP_POS_FRAMES=1
+        COLOR_BGR2RGB=2
+        cap=FakeVideo()
+        @classmethod
+        def VideoCapture(cls,path):return cls.cap
+        @staticmethod
+        def cvtColor(img,code):return img
+    frames=list(sequential_video_rgb_frames(Path('unused.mp4'),3,5,cv2_module=FakeCv2))
+    assert [a for a,_ in frames]==[3,4,5]
+    assert FakeCv2.cap.seeks==[3]
+    assert FakeCv2.cap.released is True
