@@ -22,6 +22,7 @@ import os
 import shutil
 import sys
 import tempfile
+import zipfile
 
 _ROOT=Path(__file__).resolve().parents[1]
 if str(_ROOT) not in sys.path:
