@@ -34,6 +34,7 @@ on:
       - "scripts/phase3_holdout_validation.py"
       - "scripts/phase3_offline_class_flip_attribution.py"
       - "scripts/phase3_t000_forensic_inventory.py"
+      - "scripts/phase3_w04_unified_hybrid_replay.py"
       - "scripts/phase3_cached_class_partition_ablation.py"
       - "scripts/phase3_manual_review.py"
       - "scripts/phase3_integrated_box_lab.py"
@@ -85,6 +86,7 @@ jobs:
             scripts/phase3_holdout_validation.py
             scripts/phase3_offline_class_flip_attribution.py
             scripts/phase3_t000_forensic_inventory.py
+            scripts/phase3_w04_unified_hybrid_replay.py
             scripts/phase3_cached_class_partition_ablation.py
             scripts/phase3_manual_review.py
             scripts/phase3_integrated_box_lab.py
