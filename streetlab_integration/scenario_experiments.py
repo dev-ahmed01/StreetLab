@@ -54,8 +54,15 @@ def _runtime(directory: Path) -> dict:
             r"(?:tripinfo|summary)\.xml|netconvert\.log", name)
             for name in hashes)):
         raise ScenarioError("Unexpected experiment output manifest")
-    if not {"baseline.net.xml","scenario.net.xml","netconvert.log"}<=set(hashes):
-        raise ScenarioError("Missing comparison networks or tool log")
+    required={"baseline.net.xml","scenario.net.xml","netconvert.log"}
+    required.update(f"{label}.rou.xml" for label in ("low","mid","high"))
+    for label in ("low","mid","high"):
+        for seed in (42,43,44):
+            for name in ("baseline","scenario"):
+                required.add(f"{label}_{name}_s{seed}.tripinfo.xml")
+                required.add(f"{label}_{name}_s{seed}.summary.xml")
+    if set(hashes)!=required:
+        raise ScenarioError("Partial paired simulation evidence manifest is not publishable")
     for name,digest in hashes.items():
         item=folder/name
         if item.is_symlink() or sha(item)!=digest:
@@ -98,7 +105,23 @@ def verified_scenario(store: VideoStore, project_id: str, revision: str) -> dict
         or baseline["model"]["spatial_revision"]!=proposal["spatial_revision"]):
         raise ScenarioError("Underlying M4 field baseline or original evidence is untrusted")
     quality=json.loads((folder/"quality.json").read_text(encoding="utf-8"))
-    return {"revision":revision,"proposal":proposal,"quality":quality,"runtime":_runtime(folder)}
+    runtime=_runtime(folder)
+    if runtime["status"]!="NOT_EXECUTED":
+        if (runtime.get("scenario_revision")!=revision or
+            runtime.get("baseline_revision")!=proposal["baseline_revision"] or
+            runtime.get("run_engine")!="ACTUAL_SUMO_PAIRED_BASELINE_INTERVENTION"):
+            raise ScenarioError("Experiment execution receipt does not match proposal/source revisions")
+        planned={
+            (label,seed) for label in proposal["sensitivity"]["demand_multipliers"]
+            for seed in proposal["sensitivity"]["seeds"]
+        }
+        recorded={
+            (p.get("demand_multiplier"),p.get("seed"))
+            for p in runtime.get("records",[])
+        }
+        if len(runtime.get("records",[]))!=9 or planned!=recorded:
+            raise ScenarioError("Experiment paired seed/demand conditions differ from approved design")
+    return {"revision":revision,"proposal":proposal,"quality":quality,"runtime":runtime}
 
 
 def create_scenario(store: VideoStore, project_id: str, baseline_revision: str,
