@@ -37,7 +37,7 @@ def scenario_input(kind="APPROACH_SPEED_LIMIT"):
         "intervention":(
             {"kind":"APPROACH_SPEED_LIMIT","zone_id":"west_in","speed_mps":7.5}
             if kind=="APPROACH_SPEED_LIMIT" else
-            {"kind":"FIXED_SIGNAL_PLAN","phase_durations_s":[25,5]}
+            {"kind":"FIXED_SIGNAL_PLAN","phase_durations_s":[25,4]}
         ),
         "assumptions":{
             "decision_question":"Whether the changed rule could affect paired simulated junction travel times",
@@ -132,7 +132,7 @@ def test_signal_plan_requires_reviewed_original_phase_program(local,monkeypatch)
     model=verified_baseline(db,project["id"],baseline["revision"])
     proposal=validate_scenario(scenario_input("FIXED_SIGNAL_PLAN"),model)
     alt=experiment_model(model["model"],proposal,1.0,True)
-    assert [p["duration_s"] for p in alt["control"]["phases"]]==[25.,5.]
+    assert [p["duration_s"] for p in alt["control"]["phases"]]==[25.,4.]
     assert [p["state"] for p in alt["control"]["phases"]]==["G","r"]
     original=model["model"]["control"]["phases"]
     assert [p["duration_s"] for p in original]==[30.,3.]
