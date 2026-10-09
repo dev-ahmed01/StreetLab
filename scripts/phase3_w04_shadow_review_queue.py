@@ -260,6 +260,17 @@ def analyze(baseline_zip: Path, hybrid_zip: Path):
             raise ValueError("Incomplete four-policy unified hybrid comparison")
         original_reference=next(
             x for x in report["policies"] if x["name"]=="hard_nms_ios_0.30")
+        # Verify every original 25-policy track, not merely the chosen control.
+        if len(report["policies"])!=25 or len({x["name"] for x in report["policies"]})!=25:
+            raise ValueError("Incomplete original policy manifest")
+        for original_policy in report["policies"]:
+            if digest(read_zip(b,original_policy["tracks"]))!=original_policy["tracks_sha256"]:
+                raise ValueError("Original saved tracker file SHA mismatch")
+        provenance=json.loads(read_zip(b,"source_provenance.json"))
+        if (provenance.get("video_sha256")!=unified.get("source_video_sha256_verified")
+            or provenance.get("fluid_sha256")!=unified.get("source_fluid_sha256_verified")
+            or provenance.get("video_frame_window")!=[START,END]):
+            raise ValueError("Source-video or frozen FLUID manifest drift")
         original_control=read_zip(b,original_reference["tracks"])
         if digest(original_control)!=original_reference["tracks_sha256"]:
             raise ValueError("Frozen original IoS .30 primary track was altered")
@@ -278,6 +289,22 @@ def analyze(baseline_zip: Path, hybrid_zip: Path):
                 sidecar_rows=list(csv.DictReader(f))
             if len(sidecar_rows)!=item["sidecar_evidence_rows"]:
                 raise ValueError("Class sidecar row count mismatch")
+            # Native raw class/ID/frame is authoritative, and sidecars must
+            # refer to precisely those actual observations, not fabricated IDs.
+            by_key={(row["frame"],row["id"]):row["class"]
+                    for group in tracks.values() for row in group}
+            sidecar_seen=set()
+            for record in sidecar_rows:
+                key=(int(record["frame"]),int(record["tracker_id"]))
+                if (key in sidecar_seen or key not in by_key
+                    or record["native_class"]!=by_key[key]):
+                    raise ValueError("Class sidecar ID/frame/native label mismatch")
+                sidecar_seen.add(key)
+            if set(by_key)!=sidecar_seen or item.get("eligible_for_production") is not False:
+                raise ValueError("Unverified or incomplete native class sidecar")
+            # Same run policy scorecard must match exact manifest document.
+            if json.loads(read_zip(h,mode+".score.json"))!=item:
+                raise ValueError("Per-policy scorecard differs from unified manifest")
             source_tracks[mode]=tracks
         if read_zip(h,results["control_ios030"]["tracks"])!=original_control:
             raise ValueError("Primary authoritative track control is NOT byte-identical")
