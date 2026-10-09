@@ -257,6 +257,7 @@ get("slwProject").onchange=()=>{
  if(!project){get("slwContent").classList.add("hidden");get("slwEmpty").classList.remove("hidden");return}
  refresh(true).catch(e=>get("slwLatest").textContent=e.message);
 };
+get("slwAddProject").onclick=()=>get("slwEmpty").classList.toggle("hidden");
 get("slwCreate").onclick=()=>mutate(async()=>{
  const item=await api("/api/projects",{method:"POST",
   headers:{"Content-Type":"application/json"},
