@@ -28,6 +28,7 @@ on:
       - "scripts/phase3_raw_fluid_label_review.py"
       - "scripts/phase3_shadow_raw_fluid_ontology.py"
       - "scripts/phase3_unmatched_residual_triage.py"
+      - "scripts/phase3_continuous_box_tracking_lab.py"
       - "scripts/phase3_manual_review.py"
       - "scripts/phase3_integrated_box_lab.py"
       - "scripts/phase3_identity_benchmark.py"
@@ -72,6 +73,7 @@ jobs:
             scripts/phase3_raw_fluid_label_review.py
             scripts/phase3_shadow_raw_fluid_ontology.py
             scripts/phase3_unmatched_residual_triage.py
+            scripts/phase3_continuous_box_tracking_lab.py
             scripts/phase3_manual_review.py
             scripts/phase3_integrated_box_lab.py
             scripts/phase3_setup_geotrax_windows.ps1
