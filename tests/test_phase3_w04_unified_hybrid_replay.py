@@ -98,3 +98,21 @@ def test_immutable_destination_rejected_without_any_expensive_work(tmp_path):
     target.mkdir()
     with pytest.raises(FileExistsError):
         mod.run_all(tmp_path,target)
+
+
+def test_direct_script_entrypoint_works_outside_repo_without_pythonpath(tmp_path):
+    """Regression for Windows PowerShell launching scripts/ file directly."""
+    import os
+    import subprocess
+    import sys
+
+    env = os.environ.copy()
+    env.pop('PYTHONPATH', None)
+    result = subprocess.run(
+        [sys.executable, str(RUNNER), '--help'],
+        cwd=tmp_path, env=env, text=True, capture_output=True, timeout=30,
+        check=False,
+    )
+    assert result.returncode == 0, (result.stdout, result.stderr)
+    assert '--batch-dir' in result.stdout
+    assert '--output-dir' in result.stdout
