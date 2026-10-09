@@ -140,7 +140,7 @@ function checkResult(v){
   const link=document.createElement('a');link.href=base+name;link.textContent='View verified '+name;
   link.target='_blank';link.rel='noopener noreferrer';$('files').appendChild(link);
  }
- const cmd=['cd C:\\Users\\Admin\\Desktop\\StreetLab-engine-trial',
+ const cmd=['cd C:\\Users\\Admin\\Desktop\\StreetLab-engine-trial;',
   '& ".\\.venv-sahi-audit\\Scripts\\python.exe" -m streetlab_integration.site_baseline',
   '  --workdir ".streetlab-m5"',
   '  --project "'+project+'"',
