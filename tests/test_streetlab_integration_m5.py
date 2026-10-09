@@ -98,6 +98,7 @@ def test_site_gate_refuses_unexecuted_and_bad_baseline(local):
     (lambda d:d["intervention"].update({"speed_mps":12}),"only allows reductions"),
     (lambda d:d["intervention"].update({"speed_mps":1}),"only allows reductions"),
     (lambda d:d["intervention"].update({"zone_id":"unseen"}),"must exist"),
+    (lambda d:d["intervention"].update({"zone_id":"east_out"}),"APPROACH"),
     (lambda d:d["intervention"].update({"kind":"ROAD_CLOSURE"}),"closures need verified detours"),
     (lambda d:d["assumptions"].update({"provenance":"MEASURED_EFFECT"}),"HYPOTHETICAL_REVIEWED"),
     (lambda d:d.update({"demand_multipliers":[1,1,1]}),"low"),
@@ -232,6 +233,14 @@ def test_immutable_proposals_http_and_fake_paired_Sumo_execution(admitted,monkey
         run_scenario(db,project["id"],revision)
     # Evidence SHA changes fail closed.
     runtime=db.root/"projects"/project["id"]/"scenarios"/revision/"runtime"
+    receipt=runtime/"experiment_receipt.json"
+    original=receipt.read_bytes()
+    altered=json.loads(original)
+    altered["scenario_revision"]="0"*64
+    receipt.write_text(json.dumps(altered),encoding="utf-8")
+    with pytest.raises(ScenarioError,match="does not match proposal"):
+        verified_scenario(db,project["id"],revision)
+    receipt.write_bytes(original)
     (runtime/"scenario.net.xml").write_text("tampered")
     with pytest.raises(ScenarioError,match="SHA integrity"):
         verified_scenario(db,project["id"],revision)
