@@ -68,7 +68,6 @@ def test_verified_source_report_is_project_specific_without_media(local):
     assert checks["not_a_digital_signature"] is True
     assert archive==bundle_bytes(VideoStore(db.root),proj["id"])
     second=db.create_project("Unrelated junction")
-    assert check_bundle(archive,second["id"]) is None if False else True
     with pytest.raises(ReportError,match="binding"):
         check_bundle(archive,second["id"])
 
@@ -90,7 +89,7 @@ def test_m3_and_m4_verified_receipts_are_exported_without_source_rows(local):
         assert overview["site_baseline"]["revision"]==package["revision"]
         assert overview["site_baseline"]["sumo_run_status"]=="NOT_EXECUTED"
         assert overview["site_baseline"]["scenario_gate"] is False
-        assert overview["real_world_effect_verified"] is False if "real_world_effect_verified" in overview else True
+        assert overview["scenarios"]["real_world_effect_verified"] is False
 
 
 def test_scenario_proposal_export_remains_hypothetical(local,monkeypatch):
