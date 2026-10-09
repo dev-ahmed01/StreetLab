@@ -22,6 +22,11 @@ def project_workspace(store: VideoStore, project_id: str) -> dict:
             "SELECT * FROM sources WHERE project_id=?", (project_id,)
         ).fetchone()
     source=store._dict(row)
+    if source is not None:
+        # Cheap fail-closed local media check (path, symlink and size).
+        # Full source SHA is enforced at ingestion, worker run and frame export;
+        # do not rehash a multi-GiB source on every dashboard poll.
+        store.source_path(source)
     jobs=store.jobs(project_id)
     newest=jobs[0] if jobs else None
     successful=next((j for j in jobs if j["status"]=="SUCCEEDED"),None)
