@@ -33,6 +33,25 @@ To prevent accidental identity loss, validate pair-level matching against both `
 
 The thresholds are *predeclared diagnostic criteria*, not empirically justified operational safety guarantees. Even observing zero false merges among twenty labeled distinct pairs leaves considerable statistical uncertainty and does **not** establish production readiness. True new-vehicle recall and whole-video vehicle count accuracy are not measured by this pair-level diagnostic.
 
+## New-video model run and paired tracker exports (now implemented)
+
+The original W04 matrix runner was locked to its original W04 FLUID CSV and could not fairly process an unseen camera. This has been addressed with:
+
+- `streetlab_phase3/video/unseen_dual_lane.py`: original frozen non-INT8 OpenVINO model SHA verification from W04 `source_provenance.json`, SHA check rejecting the original W04 MP4 bytes, source-native frame width/height/FPS, **ONE** SAHI tiled inference pass per consecutive source frame, and two *independent real* ByteTrack instances: original IoS .30 primary and rare-IoU .50 hybrid shadow. Both receive identical physical source frames and warmup. Both emit authentic 14-column track rows from true ByteTrack returned IDs. No FLUID, fake IDs or new truth is involved.
+- `scripts/phase3_unseen_dual_lane.py`: bounded CPU-only video CLI (min 120/max 600 evaluated source frames, >=30 consecutive warmup), atomic output and hashes for input video, original model, frozen provenance, original pre-global box JSONL and both track exports. Captures detector, NMS and tracking wall-time median/p95; **not full-pipeline CPU p95** (decoding/formatting/writes excluded).
+- `scripts/RUN_PHASE3_HOLDOUT_SOURCE_AND_REVIEW.ps1`: **one execution after the source lock is frozen** that invokes real original-model dual-lane tracking once and generates both separate blinded reviewer ZIPs. This eliminates the need to manually create 14-column exports before the review.
+- `tests/test_phase3_unseen_dual_lane.py`: synthetic source continuity, original-vs-hybrid suppression, 2×frame tracker update count, unique ID export, SHA manifest and fail-closed incomplete stream behavior. These tests do not pretend real OpenVINO/ByteTrack was executed in CI.
+
+After running `-Mode Lock` (see below) and obtaining untouched new traffic footage plus the original **frozen** model export path, execute:
+
+```powershell
+& '.\scripts\RUN_PHASE3_HOLDOUT_SOURCE_AND_REVIEW.ps1' `
+  -Video 'C:\Data\never_used_fixed_camera.mp4' `
+  -ModelDir 'C:\path\to\the\original\frozen\openvino_model' `
+  -FirstEvalFrame 30 -LastEvalFrame 329 -WarmupFrames 30
+```
+
+These are **example paths** until a real unseen source has been selected and acquired. The model must match the immutable original W04 model SHA. The launcher uses the original `W04_box_tracking_batch201_01\source_provenance.json` if available. It writes `DUAL_LANE_SOURCE_01\primary_ios030.txt` and `shadow_rare_iou050.txt` along with independent reviewer ZIPs in `PAIR_REVIEW_PACKET_01`. Never regenerate or replace the original W04 evidence.
 ## Source inputs required for actual execution
 
 - A genuinely new continuous fixed-camera traffic video, not W04 and not used earlier to tune the detector/trackers. SHA-256 and capture/source details must be archived; a nonmatching SHA **alone** does not prove the footage was never seen.
