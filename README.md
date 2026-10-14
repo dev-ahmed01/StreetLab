@@ -1,78 +1,64 @@
-# StreetLab — Phase 1A Starter
+# StreetLab — Evidence-First Traffic Observation and Decision Support
 
-This starter isolates the first scientific question:
+StreetLab is a **local-first, research-backed traffic analysis platform** joining source-video observations, verified junction geometry, field-supported traffic demand, and reproducible SUMO experiments. It is not a certified road-design system, nor does a simulator prove an intervention's real-world outcome.
 
-> Can real Indian mixed-traffic trajectories be converted into stable behavioural measurements that we can later reproduce in SUMO?
+## Current product
 
-It deliberately does **not** start with AI agents, computer vision, road redesign, or scenario testing.
+The application provides a source-bound four-step project workspace:
 
-## Dataset roles
+1. **Observe** — create a project, upload an original fixed-camera traffic video, run a separate frozen OpenVINO/SAHI/ByteTrack worker, and inspect verified source-pixel tracks.
+2. **Reconstruct** — manually calibrate a local ground-plane using independent measurements and describe entry/exit polygons, lanes, and allowed movements. Pixel coordinates are not GPS coordinates. Tracker IDs are not physical vehicle counts.
+3. **Validate SUMO** — supply an independent field vehicle census and observed trip holdout; execute a real native SUMO baseline in a separate CLI and review model-to-field agreement.
+4. **Compare** — execute controlled, nine-condition (18 SUMO runs) simulation experiments on a verified model. Modeled differences are not observed causal improvements.
 
-- `ChennaiTrajectoryData2.45-3.00PM.xlsx` → **CALIBRATION / development**
-- `ChennaiTrajectoryData3.00-3.15PM.xlsx` → **VALIDATION / holdout**
+Other pages: `/fieldwork` (prepare **blank** genuine fieldwork forms), `/reports` (SHA-bound provenance export) and `/release` (formal operator acceptance blockers).
 
-Never tune the behaviour model on the validation file.
+**Implementation:** M1–M9 integration code is delivered. A genuine local Windows W04 model run, independent physical site measurements, and external review are still prerequisites to scientific acceptance or deployment.
 
-## Setup (Windows PowerShell)
+## Quick start — Windows PowerShell
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-```
-
-Copy both Excel files into `data/raw/`.
-
-Then run:
+Use a fresh clone of the **main** branch once the integration PRs have merged:
 
 ```powershell
-$env:PYTHONPATH = "."
-python scripts/phase1_profile.py `
-  --calibration "data/raw/ChennaiTrajectoryData2.45-3.00PM.xlsx" `
-  --validation "data/raw/ChennaiTrajectoryData3.00-3.15PM.xlsx"
+git clone --depth 1 https://github.com/dev-ahmed01/StreetLab.git
+cd StreetLab
+py -3.12 -m venv .venv-sahi-audit
+& .\.venv-sahi-audit\Scripts\python.exe -m pip install -r requirements.txt pytest opencv-python-headless
+.\scripts\STREETLAB_M8.ps1 -Mode environment
+.\scripts\STREETLAB_M8.ps1 -Mode web
 ```
 
-## Outputs
+Open **http://127.0.0.1:8000**. The local app is **not authorized for public exposure**. The video worker is a second process requiring the actual frozen W04 OpenVINO model, SHA-pinned provenance and original runtime dependencies; these are intentionally not included in GitHub. The project database and original media are stored in local `.streetlab-m5/` and are never automatically copied from previous research environments.
 
-`data/processed/` will contain:
+```powershell
+.\scripts\STREETLAB_M8.ps1 -Mode worker -ModelDir 'C:\REAL\W04_MODEL' -FrozenProvenance 'C:\REAL\source_provenance.json'
+```
 
-- `calibration_clean.parquet`
-- `validation_clean.parquet`
-- `calibration_vehicle_features.parquet`
-- `validation_vehicle_features.parquet`
-- `calibration_class_profile.csv`
-- `validation_class_profile.csv`
-- `calibration_qa.json`
-- `validation_qa.json`
+On Windows, use `scripts/STREETLAB_M9.ps1 -Mode plan|kit|hashes|check` after real M3 reconstruction. See [M9 operator guide](README_INTEGRATION_M9.md) and [M8 formal acceptance](README_INTEGRATION_M8.md). Do not create synthetic counts or trip times to clear the gates.
 
-## What the first script proves
+## Clean installation and testing
 
-1. We can map the source spreadsheet to a stable StreetLab trajectory schema.
-2. We remove manually corrected/flagged points when the source provides such a flag.
-3. We check timestamp sampling and obvious physical/data problems.
-4. We create one feature row per vehicle without inventing personas.
-5. Calibration and validation data stay separated.
+```powershell
+& .\.venv-sahi-audit\Scripts\python.exe scripts\repository_hygiene.py --root .
+& .\.venv-sahi-audit\Scripts\python.exe scripts\repository_smoke.py
+& .\.venv-sahi-audit\Scripts\python.exe -m pytest -q tests\test_streetlab_integration_m*.py tests\test_phase2_m6_api.py
+```
 
-## What comes next
+CI also validates the real native SUMO executable against synthetic test fixtures; see the [Actions](https://github.com/dev-ahmed01/StreetLab/actions). Real-site video inference and physical field survey are NOT tested on GitHub runners.
 
-**Sprint 1B:** validate features and identify leader/follower + lateral-neighbour interactions.
+## Repository and data hygiene
 
-**Sprint 1C:** compare two hypotheses:
+The main code contains no committed Python installation or virtualenv. `.gitignore` blocks these, Python bytecode, private footage, local databases, original field records and newly generated simulation artifacts. A tracked set of **original Chennai research trajectories and generated research outputs** is retained under `data/` for historical scientific reproducibility, subject to its separate permission/provenance review.
 
-- continuous behaviour distributions;
-- a small number of data-derived behaviour clusters/personas.
+The Git history still holds old tracked virtualenv binaries; deleting them from the current tree is **not a history rewrite**. To remove historical sensitive blobs or shrink all historical clone objects requires a separate coordinated rewrite after archived backups and collaborator migration. Do not assume that public Git history becomes private when files are removed.
 
-Personas only survive if they improve held-out reproduction.
+## Documentation
 
-**Sprint 1D:** map the validated distributions to SUMO `vType` / `vTypeDistribution` and sublane parameters.
+- [M1–M9 field-to-simulation sequence](README_INTEGRATION_M9.md)
+- [M8 release acceptance and original-file schema](README_INTEGRATION_M8.md)
+- [M7 security, reports and backup limits](README_INTEGRATION_M7.md)
+- [Phase 1 traffic behavior work](README_PHASE2_M1.md)
+- [Phase 3 video / holdout research](README_PHASE3_P3B.md)
+- [Repository security and release controls](docs/SECURITY_RELEASE.md)
 
-**Sprint 1E:** recreate the observed Chennai traffic and score simulated vs real speed/lateral-motion distributions using the untouched validation period.
-
-## Important
-
-This dataset starts after the video-to-trajectory step. A later Phase 1B-video track will prove:
-
-`raw video → detection → tracking → road coordinates → the same StreetLab trajectory schema`.
-
-That keeps CV errors separate from traffic-model errors.
+**Scope warning:** Frozen research artifacts, W04 correspondence lock, independent holdout and prior scientific evidence must not be silently changed by maintenance. Software test success is not independent ground truth, approved real-road intervention or deployment authorization.
