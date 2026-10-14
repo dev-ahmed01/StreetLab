@@ -1,0 +1,58 @@
+name: Phase 3 SAHI Real Inference Smoke
+
+on:
+  pull_request:
+    paths:
+      - "streetlab_phase3/video/sahi_detection_audit.py"
+      - "streetlab_phase3/video/sahi_tracker_trial.py"
+      - "scripts/phase3_sahi_track.py"
+      - "streetlab_phase3/video/engine_shootout.py"
+      - "scripts/phase3_sahi_live_smoke.py"
+      - ".github/workflows/phase3-sahi-live-smoke.yml"
+  workflow_dispatch:
+
+jobs:
+  sahi-live-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            streetlab_phase1
+            streetlab_phase2
+            streetlab_phase3
+            scripts/phase3_sahi_live_smoke.py
+            requirements.txt
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install optional real inference dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install "sahi[ultralytics]" opencv-python-headless "trackers==2.6.0"
+
+      - name: Run genuine SAHI + YOLO11 sample inference (NOT FLUID benchmark)
+        run: |
+          export PYTHONPATH="$PWD"
+          python scripts/phase3_sahi_live_smoke.py
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          d = json.loads(Path("sahi_live_smoke_report.json").read_text())
+          assert d["smoke_only"] is True
+          assert d["not_a_fluid_benchmark"] is True
+          assert d["standard_raw_predictions"] + d["sliced_raw_predictions"] > 0
+          assert d["real_bytetrack_14_column_schema"] is True
+          assert d["real_bytetrack_pixel_rows"] > 0
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sahi-real-inference-smoke
+          path: sahi_live_smoke_report.json
+          if-no-files-found: ignore
