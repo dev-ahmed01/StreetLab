@@ -219,6 +219,7 @@ function render(){
    baseline:renderBaseline,scenarios:renderScenarios})[selected](dest);
  get("slwReport").href="/reports?project_id="+encodeURIComponent(project);
  get("slwRelease").href="/release?project_id="+encodeURIComponent(project);
+ get("slwFieldwork").href="/fieldwork?project_id="+encodeURIComponent(project);
  const next=snapshot.next_action;get("slwNext").textContent=next.reason;
  get("slwNextLink").href=next.url;
  get("slwNextLink").textContent=next.stage==="review"?

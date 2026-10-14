@@ -37,7 +37,7 @@ button{padding:10px 13px;background:#215e66;color:white;border:0;border-radius:8
 .status{font-size:12px;color:#596b77}
 @media(max-width:790px){.columns,.grid{grid-template-columns:1fr}}
 </style></head><body>
-<header><a href="/">← StreetLab workspace</a><h1>Release acceptance</h1>
+<header><a href="/">← StreetLab workspace</a> · <a href="/fieldwork">Collect field evidence</a><h1>Release acceptance</h1>
 <p>Seven integration stages are software-built. Final acceptance must reproduce the entire real-site chain before any operational release decision.</p>
 </header><main>
 <section><label>Project<select id="project"><option value="">Choose a project</option></select></label>
