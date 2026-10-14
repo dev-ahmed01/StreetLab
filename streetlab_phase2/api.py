@@ -283,6 +283,8 @@ def create_app(service: Any | None = None, *, observation_workdir: str | Path | 
         mount_product_routes(app, observation_workdir)
         from streetlab_integration.spatial_api import mount_spatial_routes
         mount_spatial_routes(app, observation_workdir)
+        from streetlab_integration.baseline_api import mount_baseline_routes
+        mount_baseline_routes(app, observation_workdir)
 
     @app.get("/", response_class=HTMLResponse)
     def index()->str:
@@ -295,7 +297,16 @@ def create_app(service: Any | None = None, *, observation_workdir: str | Path | 
             '<p><a href="/calibration">Open guided geometry editor →</a></p></section>'
             if m2_ui() else ""
         )
-        return _html().replace("<main>", "<main>" + m2_ui() + spatial_link, 1)
+        baseline_link = (
+            '<section class="panel" aria-label="Observed-site SUMO baseline">'
+            '<h2>Observed-site baseline <span class="muted">— Phase M4</span></h2>'
+            '<p class="muted">Convert manually measured road geometry, lane links, '
+            'field-verified distinct-vehicle counts and independent travel-time '
+            'checks into a source-bound, separate SUMO baseline.</p>'
+            '<p><a href="/baseline">Open observed-site baseline workflow →</a></p></section>'
+            if m2_ui() else ""
+        )
+        return _html().replace("<main>", "<main>" + m2_ui() + spatial_link + baseline_link, 1)
 
     @app.get("/api/health")
     def health()->dict[str,str]:
