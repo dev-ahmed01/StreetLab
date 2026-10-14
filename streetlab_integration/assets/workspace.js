@@ -217,6 +217,7 @@ function render(){
  const dest=get("slwDetails");dest.replaceChildren();
  ({observation:renderObservation,geometry:renderGeometry,
    baseline:renderBaseline,scenarios:renderScenarios})[selected](dest);
+ get("slwReport").href="/reports?project_id="+encodeURIComponent(project);
  const next=snapshot.next_action;get("slwNext").textContent=next.reason;
  get("slwNextLink").href=next.url;
  get("slwNextLink").textContent=next.stage==="review"?
