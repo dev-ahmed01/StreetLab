@@ -7,3 +7,50 @@ artifacts/phase3/engine_shootout_dependencies.txt
 artifacts/phase3/sahi_audit/
 artifacts/phase3/sahi_tracker_trials/
 .streetlab-m5/
+
+# Recreate Python environments locally. Never commit installed dependencies.
+.venv/
+.venv*/
+venv/
+env/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage*
+htmlcov/
+*.egg-info/
+build/
+dist/
+
+# Private runtime, media, and original operator evidence.
+.env
+.env.*
+!.env.example
+.streetlab-*/
+artifacts/
+*.sqlite
+*.sqlite3
+*.db
+*.db-wal
+*.db-shm
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.m4v
+*.zip
+*.7z
+*.tar.gz
+*.log
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Future research data outputs are local; historical committed scientific
+# datasets remain tracked intentionally until separately archived/validated.
+data/processed/
+data/simulation/
+data/raw/
