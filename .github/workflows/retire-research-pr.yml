@@ -1,0 +1,40 @@
+name: StreetLab Post-Merge Branch Retirement (one-time)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/retire-research-pr.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  delete-merged-research-pr-only:
+    if: github.repository == 'dev-ahmed01/StreetLab' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Verify exact branch head, ancestry, and no new commits before delete
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch='codex/streetlab-research-submission'
+          expected='9b87530a577a8e87fe8a1ed493c04105746339e7'
+          got="$(gh api 'repos/dev-ahmed01/StreetLab/git/ref/heads/codex/streetlab-research-submission' --jq '.object.sha')"
+          test "$got" = "$expected"
+          protected="$(gh api 'repos/dev-ahmed01/StreetLab/branches/codex/streetlab-research-submission' --jq '.protected')"
+          test "$protected" = 'false'
+          main="$(gh api 'repos/dev-ahmed01/StreetLab/git/ref/heads/main' --jq '.object.sha')"
+          test "$main" = "$GITHUB_SHA"
+          ahead="$(gh api "repos/dev-ahmed01/StreetLab/compare/main...$expected" --jq '.ahead_by')"
+          test "$ahead" = "0"
+          got="$(gh api 'repos/dev-ahmed01/StreetLab/git/ref/heads/codex/streetlab-research-submission' --jq '.object.sha')"
+          test "$got" = "$expected"
+          gh api -X DELETE 'repos/dev-ahmed01/StreetLab/git/refs/heads/codex/streetlab-research-submission'
+          remaining="$(gh api 'repos/dev-ahmed01/StreetLab/git/refs/heads' --jq 'map(.ref) | join(",")')"
+          test "$remaining" = 'refs/heads/main'
+          echo 'Merged research PR branch safely deleted, only main remains.'
