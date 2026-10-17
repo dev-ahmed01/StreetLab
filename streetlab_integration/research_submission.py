@@ -30,6 +30,16 @@ PERSONA = "data/models/sumo_persona_priors.csv"
 
 REFERENCES = (
     {
+        "title": "Chen et al. FLUID: Fine-Grained Lightweight Urban Signalized-Intersection Dataset (Scientific Data / preprint)",
+        "url": "https://arxiv.org/abs/2509.00497",
+        "purpose": "Primary published description of FLUID imagery, trajectories, signal data and benchmark constraints",
+    },
+    {
+        "title": "FLUID published dataset archive (Figshare, CC BY 4.0)",
+        "url": "https://figshare.com/articles/dataset/FLUID_A_Fine-Grained_Lightweight_Urban_Signalized-Intersection_Dataset_of_Dense_Conflict_Trajectories/29974954",
+        "purpose": "Source dataset citation and license; local raw video/truth are not included in this Git checkout",
+    },
+    {
         "title": "FHWA Traffic Analysis Toolbox Vol III — Model Calibration (2019)",
         "url": "https://ops.fhwa.dot.gov/publications/fhwahop18036/chapter5.htm",
         "purpose": "Observation-specific calibration and the need for data-supported prediction",
