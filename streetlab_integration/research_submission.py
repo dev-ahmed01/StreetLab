@@ -200,9 +200,59 @@ def validate_simulation(result: dict[str,Any]) -> dict[str,Any]:
     }
 
 
+def _sumo_environment() -> dict[str, str]:
+    """Inherit the normal environment and discover SUMO_HOME from a real installation.
+
+    Windows package managers often expose sumo.exe on PATH without setting
+    SUMO_HOME. The bundled sumolib/traci Python modules then remain invisible.
+    Never silently download or change the project's frozen Python environment.
+    """
+    sumo=shutil.which("sumo")
+    netconvert=shutil.which("netconvert")
+    if not sumo or not netconvert:
+        raise EvidenceError(
+            "Native SUMO prerequisites missing: run 'sumo --version' and "
+            "'netconvert --version' in this same PowerShell session."
+        )
+    env=dict(__import__("os").environ)
+    supplied=env.get("SUMO_HOME", "").strip()
+    supplied_tools=Path(supplied)/"tools" if supplied else None
+    if not (supplied_tools and supplied_tools.is_dir()):
+        # Common layout on Windows/Linux: <SUMO_HOME>/bin/sumo(.exe).
+        home=Path(sumo).resolve().parent.parent
+        if (home/"tools").is_dir():
+            env["SUMO_HOME"]=str(home)
+    return env
+
+
+def _native_failure(output: Path, returncode: int) -> EvidenceError:
+    """Keep the real failure visible, not merely 'exit 1'."""
+    path=output/"native_sumo.log"
+    try:
+        lines=path.read_text(encoding="utf-8", errors="replace").splitlines()
+        detail="\n".join(lines[-24:])[-3200:] or "(native process emitted no output)"
+    except OSError:
+        detail="(native engine log unavailable)"
+    remedy=""
+    if "No module named 'traci'" in detail or 'No module named "traci"' in detail:
+        remedy=(
+            "\nSUMO's Python TraCI module is missing. In the StreetLab venv "
+            "run: python -m pip install traci sumolib. Alternatively point "
+            "SUMO_HOME at the real SUMO installation containing tools/traci."
+        )
+    elif "No module named 'sumolib'" in detail or 'No module named "sumolib"' in detail:
+        remedy=(
+            "\nSUMO's Python sumolib module is missing. In the StreetLab venv "
+            "run: python -m pip install traci sumolib."
+        )
+    return EvidenceError(
+        f"Native SUMO failed (exit {returncode}); log: {path}\n"
+        f"Last native output:\n{detail}{remedy}"
+    )
+
+
 def native_demo(root:Path, output:Path, *, timeout:int=720) -> dict[str,Any]:
-    if not shutil.which("sumo") or not shutil.which("netconvert"):
-        raise EvidenceError("Missing actual SUMO and netconvert binaries on PATH")
+    env=_sumo_environment()
     cmd=[
         sys.executable,str(root/"scripts"/"phase2_m6_study_demo.py"),
         "--project-root",str(root),
@@ -213,12 +263,20 @@ def native_demo(root:Path, output:Path, *, timeout:int=720) -> dict[str,Any]:
     try:
         p=subprocess.run(cmd,cwd=root,stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,text=True,timeout=timeout,
-            check=False,encoding="utf-8",errors="replace")
+            check=False,encoding="utf-8",errors="replace",env=env)
     except subprocess.TimeoutExpired as err:
-        raise EvidenceError("Native SUMO run timed out (not passed)") from err
+        content=err.stdout or b""
+        if isinstance(content,bytes):
+            content=content.decode("utf-8","replace")
+        (output/"native_sumo.log").write_text(
+            str(content)[-60000:],encoding="utf-8"
+        )
+        raise EvidenceError(
+            f"Native SUMO timed out; partial log: {output/'native_sumo.log'}"
+        ) from err
     (output/"native_sumo.log").write_text(p.stdout[-60000:],encoding="utf-8")
     if p.returncode!=0:
-        raise EvidenceError("Native SUMO failed; see native_sumo.log (exit "+str(p.returncode)+")")
+        raise _native_failure(output,p.returncode)
     result=checked_json(output,"native_sumo_study.json")
     return validate_simulation(result)
 
