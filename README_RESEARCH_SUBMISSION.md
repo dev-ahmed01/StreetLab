@@ -15,6 +15,12 @@ This runs the existing Phase 2 M6 study under real native SUMO (three paired ass
 - **native_sumo_study.json** — real simulation study output, only if engine succeeds
 - **native_sumo.log** — actual execution log
 - **native_sumo_runtime/** — native simulation scratch files, NOT field evidence
+- **research_results.md** — actual synthetic branch medians, per-member min–max and paired deltas; notes lower simulated arrivals under detours
+- **research_metrics.csv** — 15 source-linked scenario/metric rows for plotting and audit
+- **figure_01_queue.svg** through **figure_05_reroutes.svg** — auto-generated numerical figures, deliberately marked synthetic
+- **research_results_manifest.json** — SHA-256 hashes binding the generated outputs to source evidence and native SUMO JSON
+
+The exporter refuses unexecuted/altered evidence or overclaims of real-world impact. The three assumed assignment members do not imply statistical confidence intervals. A successful native run now produces these additional files automatically; an evidence-only run does not. To export results from an earlier successful native SUMO folder, run `python -m streetlab_integration.research_results --run-dir <existing-successful-output-directory>` in the StreetLab virtualenv.
 
 For evidence-only mode without SUMO: **.\scripts\STREETLAB_RESEARCH.ps1 -EvidenceOnly**.
 
