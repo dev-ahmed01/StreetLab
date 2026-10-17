@@ -1,0 +1,37 @@
+name: StreetLab - One-time Windows Diagnostic Branch Retirement
+
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/retire-windows-fix-once.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  delete-exact-merged-ref:
+    if: github.repository == 'dev-ahmed01/StreetLab' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Recheck exact head, protection, and inclusion before deletion
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch='fix/windows-research-sumo-diagnostics'
+          expected='c13a27bdfdca05405e7022e4dbcef34258391b99'
+          current="$(gh api 'repos/dev-ahmed01/StreetLab/git/ref/heads/fix/windows-research-sumo-diagnostics' --jq '.object.sha')"
+          test "$current" = "$expected"
+          protected="$(gh api 'repos/dev-ahmed01/StreetLab/branches/fix/windows-research-sumo-diagnostics' --jq '.protected')"
+          test "$protected" = 'false'
+          main="$(gh api 'repos/dev-ahmed01/StreetLab/git/ref/heads/main' --jq '.object.sha')"
+          test "$main" = "$GITHUB_SHA"
+          ahead="$(gh api "repos/dev-ahmed01/StreetLab/compare/main...$expected" --jq '.ahead_by')"
+          test "$ahead" = "0"
+          current="$(gh api 'repos/dev-ahmed01/StreetLab/git/ref/heads/fix/windows-research-sumo-diagnostics' --jq '.object.sha')"
+          test "$current" = "$expected"
+          gh api -X DELETE 'repos/dev-ahmed01/StreetLab/git/refs/heads/fix/windows-research-sumo-diagnostics'
+          remaining="$(gh api 'repos/dev-ahmed01/StreetLab/git/refs/heads' --jq 'map(.ref) | join(",")')"
+          test "$remaining" = 'refs/heads/main'
