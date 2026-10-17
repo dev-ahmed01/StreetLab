@@ -32,6 +32,20 @@ if (-not $EvidenceOnly) {
     }
     $ArgsList += "--run-sumo"
 }
+Write-Host "Research run output folder: $OutputDir"
 & $Python @ArgsList
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+$runExitCode = $LASTEXITCODE
+if ($runExitCode -ne 0) {
+    $failure = Join-Path $OutputDir "FAILED_RESEARCH_RUN.txt"
+    $nativeLog = Join-Path $OutputDir "native_sumo.log"
+    if (Test-Path -LiteralPath $nativeLog -PathType Leaf) {
+        Write-Host "Native SUMO failed. Showing the final 40 log lines:"
+        Get-Content -LiteralPath $nativeLog -Tail 40
+        Write-Host "Full native log: $nativeLog"
+    }
+    if (Test-Path -LiteralPath $failure -PathType Leaf) {
+        Write-Host "Failure record: $failure"
+    }
+    exit $runExitCode
+}
 Write-Host "Research submission evidence: $OutputDir"
