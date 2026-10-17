@@ -12,6 +12,7 @@ import argparse
 from datetime import datetime, timezone
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import shutil
@@ -214,7 +215,7 @@ def _sumo_environment() -> dict[str, str]:
             "Native SUMO prerequisites missing: run 'sumo --version' and "
             "'netconvert --version' in this same PowerShell session."
         )
-    env=dict(__import__("os").environ)
+    env=dict(os.environ)
     supplied=env.get("SUMO_HOME", "").strip()
     supplied_tools=Path(supplied)/"tools" if supplied else None
     if not (supplied_tools and supplied_tools.is_dir()):
