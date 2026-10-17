@@ -255,7 +255,9 @@ def _native_failure(output: Path, returncode: int) -> EvidenceError:
 def native_demo(root:Path, output:Path, *, timeout:int=720) -> dict[str,Any]:
     env=_sumo_environment()
     cmd=[
-        sys.executable,str(root/"scripts"/"phase2_m6_study_demo.py"),
+        # Module execution preserves the repository root on sys.path on Windows,
+        # unlike running scripts/phase2_m6_study_demo.py as a file.
+        sys.executable,"-m","scripts.phase2_m6_study_demo",
         "--project-root",str(root),
         "--workdir",str(output/"native_sumo_runtime"),
         "--output",str(output/"native_sumo_study.json"),
@@ -332,7 +334,7 @@ def markdown(d:dict[str,Any]) -> str:
         "Use recorded real-world trajectory/video evidence to evaluate a traffic observation and simulation research platform, then demonstrate a separate reproducible SUMO intervention study. Do not assert both empirical datasets represent the same junction.",
         "",
         "## Dataset A — Chennai observed trajectories",
-        f"- Original source: two checked-in trajectory spreadsheets, evidence SHA values in \`submission_evidence.json\`.",
+        f"- Original source: two checked-in trajectory spreadsheets, evidence SHA values in `submission_evidence.json`.",
         f"- Previously recorded validation vehicles: **{ch['validation_total_vehicles']}**.",
         f"- Boundary observation coverage: **{ch['boundary_crossing_coverage']:.2%}**.",
         f"- Capacity gate: **{'PASS' if ch['capacity_gate_pass'] else 'FAIL'}**.",
@@ -342,7 +344,7 @@ def markdown(d:dict[str,Any]) -> str:
         "",
         "## Dataset B — FLUID W04 real recorded video research",
         f"- Frozen study: **{fl['held_out_manifest_study']}**.",
-        f"- Development policy: \`{fl['policy']}\`.",
+        f"- Development policy: `{fl['policy']}`.",
         f"- Previously documented FLUID-label precision: **{fl['reported_point_precision_pct']:.2f}%**.",
         f"- Previously documented FLUID-label recall: **{fl['reported_point_recall_pct']:.2f}%**.",
         "- These scores are copied from the versioned real-video development QA document with SHA provenance; **no unseen-video evaluation is implied**.",
@@ -356,7 +358,7 @@ def markdown(d:dict[str,Any]) -> str:
             f"- Three SUMO ensemble members, paired baseline vs guided/mixed detours on a **synthetic demonstration network**.",
             "- Model demonstration uses Chennai-derived speed/persona priors, but geometry, demand and turn topology are **assumptions**.",
             "- Incomplete evidence is rejected as NEEDS_DATA; only explicitly declared assumed scenarios are simulated.",
-            "- Actual per-branch numerical scorecards are in \`native_sumo_study.json\`; never report simulated changes as measured causal improvements.",
+            "- Actual per-branch numerical scorecards are in `native_sumo_study.json`; never report simulated changes as measured causal improvements.",
         ])
     else:
         lines.append("- Not executed. No simulated outcomes can be claimed until the native SUMO run succeeds.")
@@ -376,7 +378,7 @@ def markdown(d:dict[str,Any]) -> str:
         "5. Dataset permissions and the academic submission rubric should be confirmed prior to public redistribution.",
         "",
         "## Reproduction",
-        "\`python -m streetlab_integration.research_submission --output-dir artifacts/research_01 --run-sumo\`",
+        "`python -m streetlab_integration.research_submission --output-dir artifacts/research_01 --run-sumo`",
         "Reports use only checked-in source references, real native SUMO when enabled, and non-overwriting output folders.",
         "The W04 local video worker can be independently tested in the usual local UI; its output is not silently inserted into this evidence report.",
         "",
