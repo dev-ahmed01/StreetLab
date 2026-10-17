@@ -295,6 +295,8 @@ def create_app(service: Any | None = None, *, observation_workdir: str | Path | 
         mount_release_page(app)
         from streetlab_integration.fieldwork_api import mount_fieldwork_routes
         mount_fieldwork_routes(app, observation_workdir)
+        from streetlab_integration.research_api import mount_research_routes
+        mount_research_routes(app)
         from streetlab_integration.access_guard import install_guard
         install_guard(app)
 

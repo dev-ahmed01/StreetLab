@@ -1,0 +1,81 @@
+"""Fail-closed guarantees for StreetLab's no-new-field-visit research track."""
+from __future__ import annotations
+
+import json
+from pathlib import Path
+import pytest
+from streetlab_integration.research_submission import (
+    CHENNAI,FLUID_MANIFEST,W04_DEVELOPMENT,
+    EvidenceError,chennai_evidence,checked_json,fluid_evidence,
+    markdown,study,validate_simulation
+)
+
+ROOT=Path(__file__).resolve().parents[1]
+
+
+def test_existing_heldout_failure_is_exposed_not_erased():
+    data=checked_json(ROOT,CHENNAI)
+    value=chennai_evidence(data)
+    assert value["holdout_generalization_pass"] is False
+    assert value["capacity_gate_pass"] is False
+    assert value["retuning_allowed"] is False
+    assert "failed" in value["conclusion"].lower()
+    forged=dict(data,holdout_generalization_pass="true")
+    with pytest.raises(EvidenceError):
+        chennai_evidence(forged)
+
+
+def test_fluid_qa_is_not_promoted_to_an_independent_holdout():
+    out=fluid_evidence(
+        checked_json(ROOT,FLUID_MANIFEST),
+        (ROOT/W04_DEVELOPMENT).read_text(encoding="utf-8"),
+    )
+    assert out["reported_point_precision_pct"]==86.70
+    assert out["reported_point_recall_pct"]==91.37
+    assert out["scores_recomputed_in_this_run"] is False
+    assert "NOT independent" in out["data_split"]
+    with pytest.raises(EvidenceError):
+        fluid_evidence(checked_json(ROOT,FLUID_MANIFEST),"no such score exists")
+
+
+def test_evidence_only_creates_valid_limited_submission(tmp_path):
+    out=study(ROOT,tmp_path,False)
+    assert out["native_sumo"]["status"]=="NOT_EXECUTED"
+    assert out["research_workflow_status"]=="RECORDED_EVIDENCE_ONLY_NATIVE_SUMO_NOT_RUN"
+    assert len(out["source_manifest"])==6
+    assert all(len(x["sha256"])==64 for x in out["source_manifest"])
+    assert out["external_site_transfer_validated"] is False
+    assert out["real_world_intervention_effect_proven"] is False
+    assert out["production_release_approved"] is False
+    assert out["datasets_are_from_different_sites"] is True
+    md=markdown(out)
+    assert "held-out generalization: **FAIL**" in md
+    assert "NOT performed" in md
+
+
+def test_sumo_report_cannot_falsely_claim_authentic_data():
+    sample={
+        "incomplete_study":{"status":"NEEDS_DATA"},
+        "supported_study":{"status":"SUPPORTED"},
+        "guardrails":{
+            "confidence_fabricated":False,
+            "authority_remains_final_decision_maker":True,
+            "live_runtime_mutated_by_evaluated_branch":False,
+        },
+        "ensemble":{"metadata":{
+            "provenance":"ASSUMED","same_snapshot_for_all_members":True,"members":3
+        },"branch_summaries":{
+            "BASELINE":{},"DETOUR_GUIDED":{},"DETOUR_MIXED":{}
+        }},
+    }
+    valid=validate_simulation(sample)
+    assert valid["status"]=="SUMO_EXECUTED_SYNTHETIC_ONLY"
+    assert valid["site_specific_field_validation"] is False
+    assert valid["production_release_approved"] is False
+    sample["ensemble"]["metadata"]["provenance"]="OBSERVED"
+    with pytest.raises(EvidenceError):
+        validate_simulation(sample)
+    sample["ensemble"]["metadata"]["provenance"]="ASSUMED"
+    sample["incomplete_study"]["status"]="SUPPORTED"
+    with pytest.raises(EvidenceError):
+        validate_simulation(sample)
