@@ -119,10 +119,10 @@ jobs:
           pip install pytest
           pip install opencv-python-headless==4.11.0.86
 
-      - name: Run full repository test suite
+      - name: Test the checked-out workflow scope (full suite runs in consolidation CI)
         run: |
           export PYTHONPATH="$PWD"
-          pytest -q
+          pytest -q tests/test_phase3_observation_platform.py tests/test_phase3_video_benchmark.py
 
       - name: Smoke test observation calibration CLI
         run: |
