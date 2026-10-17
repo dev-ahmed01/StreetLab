@@ -110,3 +110,61 @@ def test_sumo_home_discovery_for_windows_layout(tmp_path, monkeypatch):
     env=_sumo_environment()
     assert env["SUMO_HOME"]==str(home)
     assert os.environ.get("SUMO_HOME") is None
+
+
+def test_native_demo_is_importable_without_pythonpath(tmp_path, monkeypatch):
+    """Regression: Windows launched the file from scripts/, hiding streetlab_phase2."""
+    import os
+    import subprocess
+    import sys
+    from streetlab_integration import research_submission as module
+
+    # Model a terminal with no PYTHONPATH override; Python -m relies on cwd.
+    monkeypatch.setattr(
+        module, "_sumo_environment", lambda: {"PATH": os.environ.get("PATH", "")}
+    )
+    result = {
+        "incomplete_study": {"status": "NEEDS_DATA"},
+        "supported_study": {"status": "SUPPORTED"},
+        "guardrails": {
+            "confidence_fabricated": False,
+            "authority_remains_final_decision_maker": True,
+            "live_runtime_mutated_by_evaluated_branch": False,
+        },
+        "ensemble": {
+            "metadata": {
+                "provenance": "ASSUMED",
+                "same_snapshot_for_all_members": True,
+                "members": 3,
+            },
+            "branch_summaries": {
+                "BASELINE": {}, "DETOUR_GUIDED": {}, "DETOUR_MIXED": {}
+            },
+        },
+    }
+    called = []
+
+    def fake_run(argv, **kwargs):
+        called.append(argv)
+        assert argv[:3] == [sys.executable, "-m", "scripts.phase2_m6_study_demo"]
+        assert kwargs["cwd"] == ROOT
+        assert kwargs["env"].get("PYTHONPATH") is None
+        assert "--project-root" in argv and "--workdir" in argv
+        (tmp_path / "native_sumo_study.json").write_text(
+            json.dumps(result), encoding="utf-8"
+        )
+        return subprocess.CompletedProcess(argv, 0, "simulated native process output")
+
+    monkeypatch.setattr(module.subprocess, "run", fake_run)
+    validated = module.native_demo(ROOT, tmp_path, timeout=12)
+    assert validated["status"] == "SUMO_EXECUTED_SYNTHETIC_ONLY"
+    assert len(called) == 1
+    assert "simulated native process output" in (
+        tmp_path / "native_sumo.log"
+    ).read_text(encoding="utf-8")
+
+
+def test_research_markdown_has_no_escaped_backticks(tmp_path):
+    doc = markdown(study(ROOT, tmp_path, False))
+    assert chr(92) + chr(96) not in doc
+    assert f"{chr(96)}submission_evidence.json{chr(96)}" in doc
