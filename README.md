@@ -52,6 +52,16 @@ The main code contains no committed Python installation or virtualenv. `.gitigno
 
 The Git history still holds old tracked virtualenv binaries; deleting them from the current tree is **not a history rewrite**. To remove historical sensitive blobs or shrink all historical clone objects requires a separate coordinated rewrite after archived backups and collaborator migration. Do not assume that public Git history becomes private when files are removed.
 
+## Research submission without a new physical site inspection
+
+For an **academic research-prototype** demonstration (not field-certified predictions), StreetLab has a separate evidence-backed workflow that retains the frozen failed Chennai validation and W04 development-only score limitations:
+
+```powershell
+.\scripts\STREETLAB_RESEARCH.ps1
+```
+
+This executes **actual native SUMO** on an explicitly assumed demonstration network, with sources/hashes, outputs and scientific limitations in a new timestamped `artifacts/research_submission_*` directory. Use `-EvidenceOnly` to generate the historical research report without simulation. Open `/research` on the local server to inspect its research-status summary. If port 8000 is occupied, run `STREETLAB_M8.ps1 -Mode web -Port 8001` (localhost only). For exact scope and peer-reviewed/public references, see [Research Submission](README_RESEARCH_SUBMISSION.md). This track **never bypasses M8 original real-site acceptance**.
+
 ## Documentation
 
 - [M1–M9 field-to-simulation sequence](README_INTEGRATION_M9.md)
