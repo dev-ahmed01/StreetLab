@@ -6,6 +6,8 @@ param(
     [ValidateSet("environment","web","worker","acceptance","audit","backup")]
     [string]$Mode = "environment",
     [string]$Workdir = ".streetlab-m5",
+    [ValidateRange(1024,65535)]
+    [int]$Port = 8000,
     [string]$Python = "",
     [string]$ModelDir = "",
     [string]$FrozenProvenance = "",
@@ -41,9 +43,9 @@ switch ($Mode) {
         & $Python -m streetlab_integration.release_cli --environment
     }
     "web" {
-        Write-Host "StreetLab local web only: http://127.0.0.1:8000"
+        Write-Host "StreetLab local web only: http://127.0.0.1:$Port"
         Write-Host "Start the separate frozen worker in another PowerShell terminal."
-        & $Python -m uvicorn streetlab_phase2.api:app --host 127.0.0.1 --port 8000
+        & $Python -m uvicorn streetlab_phase2.api:app --host 127.0.0.1 --port $Port
     }
     "worker" {
         if ([string]::IsNullOrWhiteSpace($ModelDir) -or -not (Test-Path -LiteralPath $ModelDir -PathType Container)) {
