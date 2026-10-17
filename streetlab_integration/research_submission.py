@@ -407,6 +407,10 @@ def main() -> None:
             json.dumps(result,indent=2,ensure_ascii=False)+"\n",encoding="utf-8"
         )
         (dest/"submission_summary.md").write_text(markdown(result),encoding="utf-8")
+        if args.run_sumo:
+            # Fail closed if numeric results cannot be tied to this successful native run.
+            from streetlab_integration.research_results import write_results
+            write_results(dest)
     except (EvidenceError,ValueError,KeyError,OSError) as error:
         (dest/"FAILED_RESEARCH_RUN.txt").write_text(
             str(error)+"\nNo acceptance claims made.\n",encoding="utf-8"
