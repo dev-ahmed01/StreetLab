@@ -66,10 +66,10 @@ jobs:
           pip install -r requirements.txt
           pip install pytest
 
-      - name: Run full repository test suite
+      - name: Test the checked-out workflow scope (full suite runs in consolidation CI)
         run: |
           export PYTHONPATH="$PWD"
-          pytest -q
+          pytest -q tests/test_phase2_api.py tests/test_phase2_web_service.py
 
       - name: Install SUMO
         run: |

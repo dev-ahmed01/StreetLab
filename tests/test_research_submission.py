@@ -79,3 +79,34 @@ def test_sumo_report_cannot_falsely_claim_authentic_data():
     sample["incomplete_study"]["status"]="SUPPORTED"
     with pytest.raises(EvidenceError):
         validate_simulation(sample)
+
+
+def test_native_failure_exposes_root_cause_and_remedy(tmp_path):
+    from streetlab_integration.research_submission import _native_failure
+    (tmp_path/"native_sumo.log").write_text(
+        "Traceback (most recent call last):\nModuleNotFoundError: No module named 'traci'\n",
+        encoding="utf-8"
+    )
+    failure=_native_failure(tmp_path,1)
+    assert "ModuleNotFoundError" in str(failure)
+    assert "pip install traci sumolib" in str(failure)
+    assert "native_sumo.log" in str(failure)
+
+
+def test_sumo_home_discovery_for_windows_layout(tmp_path, monkeypatch):
+    import os
+    import shutil
+    from streetlab_integration.research_submission import _sumo_environment
+    home=tmp_path/"Eclipse"/"Sumo"
+    binary=home/"bin"/"sumo.exe"
+    binary.parent.mkdir(parents=True)
+    binary.write_bytes(b"test only")
+    (home/"tools").mkdir()
+    monkeypatch.delenv("SUMO_HOME", raising=False)
+    monkeypatch.setattr(shutil,"which",
+        lambda command: str(binary) if command=="sumo"
+        else str(home/"bin"/"netconvert.exe") if command=="netconvert"
+        else None)
+    env=_sumo_environment()
+    assert env["SUMO_HOME"]==str(home)
+    assert os.environ.get("SUMO_HOME") is None
