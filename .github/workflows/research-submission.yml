@@ -10,6 +10,8 @@ on:
       - "streetlab_integration/workspace_ui.py"
       - "scripts/STREETLAB_RESEARCH.ps1"
       - "scripts/STREETLAB_M8.ps1"
+      - "scripts/STREETLAB_W04_READINESS.ps1"
+      - "tests/test_w04_readiness.py"
       - "tests/test_research_submission.py"
       - ".github/workflows/research-submission.yml"
   workflow_dispatch:
@@ -62,7 +64,7 @@ jobs:
           python -W error::SyntaxWarning -m py_compile streetlab_integration/research_submission.py
       - name: Research scientific truthfulness and API regression
         run: |
-          python -m pytest -q tests/test_research_submission.py tests/test_research_results.py tests/test_streetlab_integration_m9.py tests/test_phase2_m6_api.py
+          python -m pytest -q tests/test_research_submission.py tests/test_research_results.py tests/test_w04_readiness.py tests/test_streetlab_integration_m9.py tests/test_phase2_m6_api.py
       - name: Real HTTP access to research page and fail-closed previous holdout
         run: |
           python - <<'PY'
@@ -132,13 +134,14 @@ jobs:
           sparse-checkout: |
             scripts/STREETLAB_M8.ps1
             scripts/STREETLAB_RESEARCH.ps1
+            scripts/STREETLAB_W04_READINESS.ps1
             scripts/phase2_m6_study_demo.py
             streetlab_phase2
           sparse-checkout-cone-mode: false
       - name: Parse research and port-aware local launcher
         shell: pwsh
         run: |
-          foreach ($script in @('scripts/STREETLAB_M8.ps1','scripts/STREETLAB_RESEARCH.ps1')) {
+          foreach ($script in @('scripts/STREETLAB_M8.ps1','scripts/STREETLAB_RESEARCH.ps1','scripts/STREETLAB_W04_READINESS.ps1')) {
             $tokens=$null
             $errors=$null
             [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PWD $script),[ref]$tokens,[ref]$errors) | Out-Null
