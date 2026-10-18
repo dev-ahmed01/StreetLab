@@ -76,16 +76,24 @@ class ContinuousTrial:
 
 
 def sequential_video_rgb_frames(video: Path, first_frame: int, end_frame: int,
-                                *, cv2_module: Any = None):
-    """ONE seek then sequential reads; fail on any timestamp/frame gap."""
+                                *, cv2_module: Any = None,
+                                expected_dimensions: tuple[int, int] = (3840, 2160)):
+    """ONE seek then sequential reads; native pixels, no resizing or frame skipping.
+
+    By default W04 retains its frozen 3840x2160 source contract. Separate
+    cross-date regression may supply original metadata-verified dimensions.
+    """
     if type(first_frame) is not int or type(end_frame) is not int or not 0 <= first_frame <= end_frame:
         raise ValueError('Source video frame range invalid')
+    if (not isinstance(expected_dimensions, tuple) or len(expected_dimensions) != 2
+        or any(type(v) is not int or v < 1 for v in expected_dimensions)):
+        raise ValueError('Expected original source dimensions must be positive integers')
     if cv2_module is None:
         import cv2 as cv2_module
     cap=cv2_module.VideoCapture(str(video))
     if not cap.isOpened():
         cap.release()
-        raise RuntimeError(f'Cannot open 4K source video: {video}')
+        raise RuntimeError(f'Cannot open original source video: {video}')
     try:
         if not cap.set(cv2_module.CAP_PROP_POS_FRAMES,first_frame):
             raise RuntimeError(f'Cannot seek to first warmup frame {first_frame}')
@@ -94,8 +102,13 @@ def sequential_video_rgb_frames(video: Path, first_frame: int, end_frame: int,
             position=float(cap.get(cv2_module.CAP_PROP_POS_FRAMES))
             if not ok or not math.isfinite(position) or abs(position-(frame+1))>.51:
                 raise RuntimeError(f'Continuous decode alignment failure at {frame}')
-            if img is None or img.shape[:2] != (2160,3840):
-                raise ValueError('Expected original 3840x2160 source video')
+            if img is None or img.shape[:2] != expected_dimensions[::-1]:
+                raise ValueError(
+                    f'Decoded source frame {frame} dimensions '
+                    f'{None if img is None else img.shape[:2][::-1]} '
+                    f'differ from expected original {expected_dimensions}; '
+                    'resizing is forbidden'
+                )
             yield frame,cv2_module.cvtColor(img,cv2_module.COLOR_BGR2RGB)
     finally:
         cap.release()
