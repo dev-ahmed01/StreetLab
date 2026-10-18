@@ -14,13 +14,16 @@ from pathlib import Path
 from typing import Any
 
 from .w04_holdout_intake import digest, read_json, validate_lock
+from streetlab_phase3.class_mapping import map_vehicle_class
+from streetlab_phase3.models import VehicleClass
 
 STATUS = "W04_MAY25_CROSSDATE_REGRESSION_RECORDED_NOT_BLIND_HOLDOUT"
 WINDOW = (60, 179)  # 30-frame warmup from absolute source frame 30
 WARMUP = 30
-LABELS = frozenset({"car", "bus", "truck", "motorcycle", "motorbike",
-                    "taxi", "sedan", "moped", "scooter", "heavy truck",
-                    "hgv", "lorry", "motorcycle", "bike", "2w"})
+SUPPORTED_CLASSES = frozenset({
+    VehicleClass.CAR.value, VehicleClass.BUS.value,
+    VehicleClass.HEAVY_VEHICLE.value, VehicleClass.MOTORCYCLE.value,
+})
 
 
 class CrossDateError(ValueError):
@@ -56,6 +59,8 @@ def check_inputs(*, protocol_file: Path, lock_file: Path, video: Path,
     left, right = WINDOW
     labelled = set()
     counts: dict[str, int] = {}
+    supported_rows_in_window = 0
+    skipped_blank_geometry = 0
     with truth.open("r", encoding="utf-8-sig", newline="") as stream:
         reader = csv.DictReader(stream)
         if not reader.fieldnames or not {"frame", "id", "cx", "cy", "type"}.issubset(reader.fieldnames):
@@ -71,7 +76,15 @@ def check_inputs(*, protocol_file: Path, lock_file: Path, video: Path,
             if not left + 1 <= index <= right + 1:
                 continue
             cls = str(row.get("type", "")).strip().casefold()
-            if cls not in LABELS:
+            # Source-class eligibility must match normalize_fluid_pixel_truth.
+            if map_vehicle_class(cls).canonical.value not in SUPPORTED_CLASSES:
+                continue
+            supported_rows_in_window += 1
+            # The existing FLUID PixelBenchmark normalizer omits rows whose
+            # cx/cy cells are literally empty. Treat them the same way here,
+            # without editing the source CSV or adding fake coordinates.
+            if row.get("cx") in (None, "") or row.get("cy") in (None, ""):
+                skipped_blank_geometry += 1
                 continue
             try:
                 x = float(row["cx"])
@@ -79,11 +92,15 @@ def check_inputs(*, protocol_file: Path, lock_file: Path, video: Path,
             except (ValueError, TypeError) as exc:
                 raise CrossDateError("Invalid original FLUID geometry in fixed window") from exc
             if not math.isfinite(x) or not math.isfinite(y):
-                raise CrossDateError("Invalid nonfinite FLUID center")
+                raise CrossDateError("Invalid original FLUID nonfinite center")
             labelled.add(index)
             counts[cls] = counts.get(cls, 0) + 1
     if not labelled:
-        raise CrossDateError("No supported FLUID truth labels in fixed May-25 120-frame cohort")
+        raise CrossDateError(
+            "No supported FLUID truth labels with valid cx/cy in fixed "
+            f"May-25 120-frame cohort ({skipped_blank_geometry} skipped blank "
+            "coordinate rows, source CSV unchanged)"
+        )
     if capture is None:
         import cv2 as capture
     cap = capture.VideoCapture(str(video))
@@ -122,6 +139,13 @@ def check_inputs(*, protocol_file: Path, lock_file: Path, video: Path,
         "source_video_dimensions": [int(width), int(height)],
         "source_frame_count_reported": int(frames),
         "supported_fluid_truth_points": sum(counts.values()),
+        "supported_fluid_rows_before_blank_coordinate_filter": supported_rows_in_window,
+        "skipped_fluid_rows_with_blank_coordinates": skipped_blank_geometry,
+        "blank_coordinate_handling": (
+            "Skip only literally missing/empty cx or cy, matching the "
+            "existing PixelBenchmark FLUID normalizer; reject malformed "
+            "nonempty or nonfinite coordinate values, never repair CSV."
+        ),
         "supported_fluid_labeled_frames": len(labelled),
         "original_fluid_label_types": counts,
         "same_window_t000_available": False,

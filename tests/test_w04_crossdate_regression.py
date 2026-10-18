@@ -111,6 +111,61 @@ def test_fixed_window_regression_preflight(tmp_path):
     assert report["production_release_approved"] is False
 
 
+def test_original_fluid_blank_coordinates_are_skipped_but_reported(tmp_path):
+    paths = files(tmp_path)
+    pp, lp, video, truth, model = paths
+    truth.write_text(
+        "frame,id,cx,cy,type\n"
+        "61,1,100,200,car\n"
+        "61,2,,150,motorcycle\n"
+        "62,3,99,,truck\n"
+        "62,4,,,bus\n"
+        "63,5,30,40,moped\n"
+        "64,6,15,17,lorry\n"
+        "65,7,22,50,pedestrian\n"
+        "180,8,45,60,motorcycle\n",
+        encoding="utf-8",
+    )
+    before = digest(truth)
+    report = ready(paths)
+    assert report["supported_fluid_rows_before_blank_coordinate_filter"] == 6
+    assert report["skipped_fluid_rows_with_blank_coordinates"] == 3
+    assert report["supported_fluid_truth_points"] == 3
+    assert report["supported_fluid_labeled_frames"] == 3
+    assert report["original_fluid_label_types"] == {
+        "car": 1, "moped": 1, "motorcycle": 1,
+    }
+    assert digest(truth) == before
+    assert report["independent_holdout_pass"] is False
+
+
+def test_all_original_fluid_rows_without_centers_fail_without_fake_scores(tmp_path):
+    paths = files(tmp_path)
+    truth = paths[3]
+    truth.write_text(
+        "frame,id,cx,cy,type\n"
+        "61,1,,100,car\n"
+        "62,2,200,,motorcycle\n"
+        "63,3,,,truck\n",
+    )
+    before = digest(truth)
+    with pytest.raises(cross.CrossDateError, match="3 skipped blank coordinate rows"):
+        ready(paths)
+    assert digest(truth) == before
+
+
+@pytest.mark.parametrize("bad_x", ["not-a-number", "NaN", "Infinity", " "])
+def test_malformed_nonempty_centers_still_fail_closed(tmp_path, bad_x):
+    paths = files(tmp_path)
+    paths[3].write_text(
+        "frame,id,cx,cy,type\n"
+        f"61,1,{bad_x},100,car\n"
+        "62,2,5,30,motorcycle\n",
+    )
+    with pytest.raises(cross.CrossDateError, match="Invalid original FLUID"):
+        ready(paths)
+
+
 def test_frozen_openvino_model_hash_required(tmp_path):
     paths = files(tmp_path)
     with pytest.raises(cross.CrossDateError, match="OpenVINO model"):
