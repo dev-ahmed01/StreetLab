@@ -135,7 +135,8 @@ def _csv_matches_forensics(csv_file: Path, events: list[dict]) -> None:
         raise ReviewError("review_events.csv does not exactly match forensic JSON events")
 
 
-def check_sources(*, run_dir: Path, forensics_dir: Path) -> tuple[Path, dict, list[dict]]:
+def check_sources(*, run_dir: Path, forensics_dir: Path,
+                  original_paths: dict[str, Path] | None = None) -> tuple[Path, dict, list[dict]]:
     """Hash the original May25 source and prove queue/batch correspondences."""
     forensic_path = forensics_dir / "regression_forensics.json"
     events_csv = forensics_dir / "review_events.csv"
@@ -168,8 +169,14 @@ def check_sources(*, run_dir: Path, forensics_dir: Path) -> tuple[Path, dict, li
         or origin.get("eligible_for_promotion") is not False
         or origin.get("source_is_independent_holdout") is not False):
         raise ReviewError("Saved forensics/preflight/batch is incomplete, changed or falsely promoted")
-    video = Path(origin.get("video_path", ""))
-    truth = Path(origin.get("fluid_path", ""))
+    # Resolve copied Google Drive originals by location only. The source
+    # hashes in the frozen Windows provenance remain non-negotiable.
+    if original_paths is not None and set(original_paths) != {"video_path", "fluid_path"}:
+        raise ReviewError("Both original Drive video and FLUID paths are required")
+    video = (Path(original_paths["video_path"]) if original_paths is not None
+             else Path(origin.get("video_path", "")))
+    truth = (Path(original_paths["fluid_path"]) if original_paths is not None
+             else Path(origin.get("fluid_path", "")))
     if (video.is_symlink() or not video.is_file()
         or truth.is_symlink() or not truth.is_file()
         or digest(video) != origin["video_sha256"]
