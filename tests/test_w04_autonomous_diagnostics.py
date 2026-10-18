@@ -155,7 +155,7 @@ def test_full_autonomous_report_writes_all_evidence_files_and_never_overwrites(t
     }
     monkeypatch.setattr(
         module, "_load_original",
-        lambda **kwargs: (
+        lambda *args, **kwargs: (
             predictions, truth, {"synthetic_only": True}, summary,
             {"synthetic_only": True}, "a"*64, lambda path: "b"*64,
         ),
