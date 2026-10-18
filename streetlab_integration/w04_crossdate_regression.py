@@ -56,6 +56,8 @@ def check_inputs(*, protocol_file: Path, lock_file: Path, video: Path,
     left, right = WINDOW
     labelled = set()
     counts: dict[str, int] = {}
+    supported_rows_in_window = 0
+    skipped_blank_geometry = 0
     with truth.open("r", encoding="utf-8-sig", newline="") as stream:
         reader = csv.DictReader(stream)
         if not reader.fieldnames or not {"frame", "id", "cx", "cy", "type"}.issubset(reader.fieldnames):
@@ -73,6 +75,13 @@ def check_inputs(*, protocol_file: Path, lock_file: Path, video: Path,
             cls = str(row.get("type", "")).strip().casefold()
             if cls not in LABELS:
                 continue
+            supported_rows_in_window += 1
+            # The existing FLUID PixelBenchmark normalizer omits rows whose
+            # cx/cy cells are literally empty. Treat them the same way here,
+            # without editing the source CSV or adding fake coordinates.
+            if row.get("cx") in (None, "") or row.get("cy") in (None, ""):
+                skipped_blank_geometry += 1
+                continue
             try:
                 x = float(row["cx"])
                 y = float(row["cy"])
@@ -83,7 +92,11 @@ def check_inputs(*, protocol_file: Path, lock_file: Path, video: Path,
             labelled.add(index)
             counts[cls] = counts.get(cls, 0) + 1
     if not labelled:
-        raise CrossDateError("No supported FLUID truth labels in fixed May-25 120-frame cohort")
+        raise CrossDateError(
+            "No supported FLUID truth labels with valid cx/cy in fixed "
+            f"May-25 120-frame cohort ({skipped_blank_geometry} skipped blank "
+            "coordinate rows, source CSV unchanged)"
+        )
     if capture is None:
         import cv2 as capture
     cap = capture.VideoCapture(str(video))
@@ -122,6 +135,13 @@ def check_inputs(*, protocol_file: Path, lock_file: Path, video: Path,
         "source_video_dimensions": [int(width), int(height)],
         "source_frame_count_reported": int(frames),
         "supported_fluid_truth_points": sum(counts.values()),
+        "supported_fluid_rows_before_blank_coordinate_filter": supported_rows_in_window,
+        "skipped_fluid_rows_with_blank_coordinates": skipped_blank_geometry,
+        "blank_coordinate_handling": (
+            "Skip only literally missing/empty cx or cy, matching the "
+            "existing PixelBenchmark FLUID normalizer; reject malformed "
+            "nonempty or nonfinite coordinate values, never repair CSV."
+        ),
         "supported_fluid_labeled_frames": len(labelled),
         "original_fluid_label_types": counts,
         "same_window_t000_available": False,
