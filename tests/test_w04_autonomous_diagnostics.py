@@ -141,3 +141,40 @@ def test_generated_report_explicitly_blocks_production_and_physical_claims():
     assert "not a blind holdout" in summary.lower()
     assert "No manual review is required" in summary
     assert "No independent" not in summary or "not passed" in summary.lower()
+
+
+def test_full_autonomous_report_writes_all_evidence_files_and_never_overwrites(tmp_path, monkeypatch):
+    import json
+    from streetlab_integration import w04_autonomous_diagnostics as module
+    predictions, truth = cohort()
+    scored = analyze_points(predictions, truth, width=640, height=360)
+    summary = {
+        "source_video_dimensions": [640, 360],
+        "per_class_fluid_label_diagnostics": scored["recomputed_class_diagnostics"]["by_class"],
+        "truth_label_f1": .9142034068136272,
+    }
+    monkeypatch.setattr(
+        module, "_load_original",
+        lambda **kwargs: (
+            predictions, truth, {"synthetic_only": True}, summary,
+            {"synthetic_only": True}, "a"*64, lambda path: "b"*64,
+        ),
+    )
+    dest = tmp_path/"audit_artifacts"
+    result = module.run(run_dir=tmp_path/"fake_run", forensics_dir=tmp_path/"fake_forensics",
+                        output_dir=dest)
+    assert result["independent_holdout_pass"] is False
+    assert result["production_release_approved"] is False
+    assert result["no_new_detector_inference"] is True
+    assert sorted(p.name for p in dest.iterdir()) == [
+        "all_truth_track_diagnostics.csv",
+        "automated_object_audit.json",
+        "predicted_track_class_stability.csv",
+        "research_findings.md",
+    ]
+    assert json.loads((dest/"automated_object_audit.json").read_text())[
+        "HEAVY_truth_tracks_with_class_disagreement"] == 2
+    assert "not a blind holdout" in (dest/"research_findings.md").read_text().lower()
+    with pytest.raises(FileExistsError):
+        module.run(run_dir=tmp_path/"fake_run", forensics_dir=tmp_path/"fake_forensics",
+                   output_dir=dest)
