@@ -87,12 +87,20 @@ def _validate_track_rows(path: Path, first: int, last: int) -> int:
     return count
 
 
-def verify_batch(directory: Path, *, verify_originals: bool = True) -> dict[str,Any]:
+def verify_batch(directory: Path, *, verify_originals: bool = True,
+                 original_paths: dict[str, Path] | None = None) -> dict[str,Any]:
     """Verify saved batch and every policy report against on-disk track bytes.
 
     SHA verification for original video and raw FLUID is compulsory by default;
     synthetic CI callers explicitly opt out and cannot pass as a real holdout.
     """
+    # A Drive/materialized file may have a different location from the
+    # original Windows provenance. Override only the LOOKUP location: the
+    # immutable provenance SHA-256 must still match exact original bytes.
+    # verify_originals=False is explicitly not a real-source verification.
+    if original_paths is not None:
+        if set(original_paths) != {'video_path', 'fluid_path'} or not verify_originals:
+            raise ValueError('Portable source mapping requires BOTH verified original files')
     batch_file=directory/'batch_report.json'
     report=_read(batch_file)
     if report.get('status') != TRACK_STATUS or report.get('eligible_for_promotion') is not False:
@@ -161,8 +169,8 @@ def verify_batch(directory: Path, *, verify_originals: bool = True) -> dict[str,
             raise ValueError('Source manifest cohort/policies drifted')
         if verify_originals:
             for pkey,hkey in (('video_path','video_sha256'),('fluid_path','fluid_sha256')):
-                source=Path(origin[pkey])
-                if not source.is_file() or sha(source)!=origin[hkey]:
+                source = Path(original_paths[pkey]) if original_paths is not None else Path(origin[pkey])
+                if source.is_symlink() or not source.is_file() or sha(source)!=origin[hkey]:
                     raise ValueError(f'Original source missing or altered: {pkey}')
             original_checks_verified=True
     elif verify_originals:
