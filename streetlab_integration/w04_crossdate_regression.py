@@ -14,13 +14,16 @@ from pathlib import Path
 from typing import Any
 
 from .w04_holdout_intake import digest, read_json, validate_lock
+from streetlab_phase3.class_mapping import map_vehicle_class
+from streetlab_phase3.models import VehicleClass
 
 STATUS = "W04_MAY25_CROSSDATE_REGRESSION_RECORDED_NOT_BLIND_HOLDOUT"
 WINDOW = (60, 179)  # 30-frame warmup from absolute source frame 30
 WARMUP = 30
-LABELS = frozenset({"car", "bus", "truck", "motorcycle", "motorbike",
-                    "taxi", "sedan", "moped", "scooter", "heavy truck",
-                    "hgv", "lorry", "motorcycle", "bike", "2w"})
+SUPPORTED_CLASSES = frozenset({
+    VehicleClass.CAR.value, VehicleClass.BUS.value,
+    VehicleClass.HEAVY_VEHICLE.value, VehicleClass.MOTORCYCLE.value,
+})
 
 
 class CrossDateError(ValueError):
@@ -73,7 +76,8 @@ def check_inputs(*, protocol_file: Path, lock_file: Path, video: Path,
             if not left + 1 <= index <= right + 1:
                 continue
             cls = str(row.get("type", "")).strip().casefold()
-            if cls not in LABELS:
+            # Source-class eligibility must match normalize_fluid_pixel_truth.
+            if map_vehicle_class(cls).canonical.value not in SUPPORTED_CLASSES:
                 continue
             supported_rows_in_window += 1
             # The existing FLUID PixelBenchmark normalizer omits rows whose
