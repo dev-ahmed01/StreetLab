@@ -233,6 +233,62 @@ def test_original_FLUID_y_outside_native_frame_fails_closed(tmp_path):
 
 
 
+def test_real_decoder_honors_native_dimensions_without_weakening_w04_default(tmp_path):
+    import numpy as np
+    from streetlab_phase3.video.continuous_box_tracking_lab import sequential_video_rgb_frames
+
+    class FakeVideo:
+        CAP_PROP_POS_FRAMES = 5
+        COLOR_BGR2RGB = 6
+
+        def __init__(self, dims):
+            self.width, self.height = dims
+            self.position = 0
+            self.released = False
+
+        def VideoCapture(self, path):
+            return self
+
+        def isOpened(self):
+            return True
+
+        def set(self, prop, value):
+            assert prop == self.CAP_PROP_POS_FRAMES
+            self.position = int(value)
+            return True
+
+        def read(self):
+            self.position += 1
+            return True, np.zeros((self.height, self.width, 3), dtype=np.uint8)
+
+        def get(self, prop):
+            assert prop == self.CAP_PROP_POS_FRAMES
+            return self.position
+
+        def cvtColor(self, img, flag):
+            assert flag == self.COLOR_BGR2RGB
+            return img
+
+        def release(self):
+            self.released = True
+
+    native = FakeVideo((12, 8))
+    frames = list(sequential_video_rgb_frames(
+        tmp_path/"not_read_from_disk.mp4", 30, 31,
+        cv2_module=native, expected_dimensions=(12, 8),
+    ))
+    assert [i for i, _ in frames] == [30, 31]
+    assert frames[0][1].shape == (8, 12, 3)
+    assert native.released is True
+
+    original_w04 = FakeVideo((12, 8))
+    with pytest.raises(ValueError, match="differ from expected original"):
+        list(sequential_video_rgb_frames(
+            tmp_path/"not_read_from_disk.mp4", 30, 30, cv2_module=original_w04,
+        ))
+    assert original_w04.released is True
+
+
 def test_video_and_truth_must_be_exact_historical_pair_names(tmp_path):
     pp, lp, video, truth, model = files(tmp_path)
     new_video = tmp_path / "renamed_video.mp4"
