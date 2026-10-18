@@ -92,7 +92,7 @@ def check_inputs(*, protocol_file: Path, lock_file: Path, video: Path,
             except (ValueError, TypeError) as exc:
                 raise CrossDateError("Invalid original FLUID geometry in fixed window") from exc
             if not math.isfinite(x) or not math.isfinite(y):
-                raise CrossDateError("Invalid nonfinite FLUID center")
+                raise CrossDateError("Invalid original FLUID nonfinite center")
             labelled.add(index)
             counts[cls] = counts.get(cls, 0) + 1
     if not labelled:
