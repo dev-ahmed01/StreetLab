@@ -20,6 +20,7 @@ on:
       - "scripts/STREETLAB_W04_MAY25_REVIEW_PACKET.ps1"
       - "scripts/STREETLAB_W04_BLIND_REVIEW.ps1"
       - "scripts/STREETLAB_W04_AUTONOMOUS_RESEARCH.ps1"
+      - "tests/test_w04_portable_drive_sources.py"
       - "streetlab_integration/w04_autonomous_diagnostics.py"
       - "tests/test_w04_autonomous_diagnostics.py"
       - "streetlab_integration/w04_blind_physical_review.py"
@@ -90,7 +91,7 @@ jobs:
           python -W error::SyntaxWarning -m py_compile streetlab_integration/research_submission.py
       - name: Research scientific truthfulness and API regression
         run: |
-          python -m pytest -q tests/test_research_submission.py tests/test_research_results.py tests/test_w04_readiness.py tests/test_w04_score_replay.py tests/test_w04_preregistration.py tests/test_w04_holdout_intake.py tests/test_w04_dataset_inventory.py tests/test_w04_crossdate_regression.py tests/test_w04_crossdate_forensics.py tests/test_w04_visual_review_packet.py tests/test_w04_blind_physical_review.py tests/test_w04_autonomous_diagnostics.py tests/test_streetlab_integration_m9.py tests/test_phase2_m6_api.py
+          python -m pytest -q tests/test_research_submission.py tests/test_research_results.py tests/test_w04_readiness.py tests/test_w04_score_replay.py tests/test_w04_preregistration.py tests/test_w04_holdout_intake.py tests/test_w04_dataset_inventory.py tests/test_w04_crossdate_regression.py tests/test_w04_crossdate_forensics.py tests/test_w04_visual_review_packet.py tests/test_w04_blind_physical_review.py tests/test_w04_autonomous_diagnostics.py tests/test_w04_portable_drive_sources.py tests/test_streetlab_integration_m9.py tests/test_phase2_m6_api.py
       - name: Real HTTP access to research page and fail-closed previous holdout
         run: |
           python - <<'PY'
