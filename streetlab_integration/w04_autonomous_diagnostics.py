@@ -340,9 +340,6 @@ def run(*, run_dir: Path, forensics_dir: Path, output_dir: Path) -> dict:
     width, height = summary["source_video_dimensions"]
     result = analyze_points(pred, truth, width=width, height=height)
     if (result["HEAVY_wrong_class_matched_points"]
-            != forensics["recomputed_class_diagnostics"]["by_class"]["HEAVY_VEHICLE"]["class_errors_on_spatial_matches"]
-            if "recomputed_class_diagnostics" in forensics else
-            result["HEAVY_wrong_class_matched_points"]
             != summary["per_class_fluid_label_diagnostics"]["HEAVY_VEHICLE"]["class_errors_on_spatial_matches"]):
         raise AuditError("HEAVY full-cohort source count mismatch")
     result.update({
