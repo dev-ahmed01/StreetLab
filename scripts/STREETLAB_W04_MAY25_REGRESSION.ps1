@@ -48,7 +48,12 @@ if (-not $PreflightOnly) {
 }
 & $Python @ArgList
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "Any completed preflight remains in: $(Join-Path $OutputDir 'preflight.json')"
+    $receipt = Join-Path $OutputDir 'preflight.json'
+    if (Test-Path -LiteralPath $receipt -PathType Leaf) {
+        Write-Host "Completed preflight is available in: $receipt"
+    } else {
+        Write-Host 'Preflight did not complete; no valid preflight.json was written.'
+    }
     throw 'Cross-date experiment failed; frozen source must not be modified to force success.'
 }
 Write-Host "Cross-date run folder: $OutputDir"
