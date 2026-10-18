@@ -3,6 +3,8 @@
 param(
     [string]$RunDir = '',
     [string]$ForensicsDir = '',
+    [string]$SourceVideo = '',
+    [string]$SourceTruth = '',
     [string]$OutputDir = '',
     [string]$Python = '',
     [switch]$SkipLocalTests
@@ -31,6 +33,16 @@ if ([string]::IsNullOrWhiteSpace($OutputDir)) {
     $OutputDir = Join-Path $Artifacts ('w04_autonomous_research_' + (Get-Date -Format 'yyyyMMdd_HHmmss_fff'))
 }
 if (Test-Path -LiteralPath $OutputDir) { throw "Refusing overwrite of existing research outputs: $OutputDir" }
+if ([string]::IsNullOrWhiteSpace($SourceVideo) -ne [string]::IsNullOrWhiteSpace($SourceTruth)) {
+    throw 'Pass both -SourceVideo and -SourceTruth for private Google Drive materialized originals, or neither for original Windows paths.'
+}
+$originals = @()
+if (-not [string]::IsNullOrWhiteSpace($SourceVideo)) {
+    foreach ($src in @($SourceVideo,$SourceTruth)) {
+        if (-not (Test-Path -LiteralPath $src -PathType Leaf)) { throw "Drive-staged original missing: $src" }
+    }
+    $originals = @('--source-video', $SourceVideo, '--source-truth', $SourceTruth)
+}
 Write-Host 'AUTONOMOUS MAY25 OBJECT-LEVEL RESEARCH AUDIT'
 Write-Host 'No physical review or new OpenVINO inference. Original labels, metrics and W04 policy frozen.'
 Write-Host "Original run: $RunDir"
@@ -40,7 +52,7 @@ if (-not $SkipLocalTests) {
     & $Python -m pytest -q tests/test_w04_autonomous_diagnostics.py tests/test_w04_crossdate_forensics.py tests/test_w04_visual_review_packet.py
     if ($LASTEXITCODE -ne 0) { throw 'Pre-run regression tests failed. No real source audit executed.' }
 }
-& $Python -m streetlab_integration.w04_autonomous_diagnostics --run-dir $RunDir --forensics-dir $ForensicsDir --output-dir $OutputDir
+& $Python -m streetlab_integration.w04_autonomous_diagnostics --run-dir $RunDir --forensics-dir $ForensicsDir --output-dir $OutputDir @originals
 if ($LASTEXITCODE -ne 0) { throw 'Source-backed autonomous audit failed. Do not retune, modify original files or claim validation.' }
 Write-Host "FINAL RESEARCH REPORT: $(Join-Path $OutputDir 'research_findings.md')"
 Write-Host "Full objective evidence: $(Join-Path $OutputDir 'automated_object_audit.json')"

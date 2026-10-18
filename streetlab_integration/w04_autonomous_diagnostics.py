@@ -224,7 +224,8 @@ def analyze_points(predicted: Sequence[Any], truth: Sequence[Any], *,
     }
 
 
-def _load_original(run_dir: Path, forensics_dir: Path):
+def _load_original(run_dir: Path, forensics_dir: Path,
+                   original_paths: dict[str, Path] | None = None):
     from streetlab_integration.w04_visual_review_packet import check_sources
     from streetlab_integration.w04_holdout_intake import read_json, digest
     from streetlab_phase3.video.holdout_validation import verify_batch
@@ -233,13 +234,15 @@ def _load_original(run_dir: Path, forensics_dir: Path):
     from streetlab_phase3.video.class_diagnostics import class_diagnostics
     from streetlab_integration.w04_crossdate_forensics import AUDIT_STATUS
 
-    video, sources, events = check_sources(run_dir=run_dir,
-                                           forensics_dir=forensics_dir)
+    video, sources, events = check_sources(
+        run_dir=run_dir, forensics_dir=forensics_dir,
+        original_paths=original_paths,
+    )
     report = read_json(forensics_dir/"regression_forensics.json")
     summary = read_json(run_dir/"cross_date_summary.json")
     if report["status"] != AUDIT_STATUS:
         raise AuditError("Source-based forensic replay must be complete")
-    verified = verify_batch(run_dir/"batch")
+    verified = verify_batch(run_dir/"batch", original_paths=original_paths)
     if (verified.get("original_source_sha256_verified") is not True
         or verified["batch_sha256"] != report["saved_regression_batch_sha256"]
         or verified["policy_count"] != 1):
@@ -262,7 +265,9 @@ def _load_original(run_dir: Path, forensics_dir: Path):
         or track_file.is_symlink() or not track_file.is_file()):
         raise AuditError("Untrusted original track location")
     pred = load_geotrax_pixel_tracks(track_file)
-    with Path(original["fluid_path"]).open(
+    fluid_path = (Path(original_paths["fluid_path"])
+                  if original_paths is not None else Path(original["fluid_path"]))
+    with fluid_path.open(
         "r", encoding="utf-8-sig", newline=""
     ) as stream:
         truth = normalize_fluid_pixel_truth(csv.DictReader(stream))
@@ -342,11 +347,12 @@ def findings_markdown(result: dict) -> str:
     return "\n".join(lines)
 
 
-def run(*, run_dir: Path, forensics_dir: Path, output_dir: Path) -> dict:
+def run(*, run_dir: Path, forensics_dir: Path, output_dir: Path,
+        original_paths: dict[str, Path] | None = None) -> dict:
     if output_dir.exists():
         raise FileExistsError("Refusing to overwrite previous completed research")
     pred, truth, sources, summary, forensics, batch_sha, digest = _load_original(
-        run_dir, forensics_dir)
+        run_dir, forensics_dir, original_paths=original_paths)
     width, height = summary["source_video_dimensions"]
     result = analyze_points(pred, truth, width=width, height=height)
     if (result["HEAVY_wrong_class_matched_points"]
@@ -406,9 +412,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--run-dir", required=True, type=Path)
     parser.add_argument("--forensics-dir", required=True, type=Path)
     parser.add_argument("--output-dir", required=True, type=Path)
+    parser.add_argument("--source-video", type=Path,
+                        help="Drive-staged original 20250525_video.mp4; bytes must match frozen SHA")
+    parser.add_argument("--source-truth", type=Path,
+                        help="Drive-staged original 20250525_video_Traj.csv; bytes must match frozen SHA")
     args = parser.parse_args(argv)
+    if (args.source_video is None) != (args.source_truth is None):
+        parser.error("--source-video and --source-truth must be provided together")
+    source_paths = ({"video_path": args.source_video,
+                     "fluid_path": args.source_truth}
+                    if args.source_video is not None else None)
     result = run(run_dir=args.run_dir, forensics_dir=args.forensics_dir,
-                 output_dir=args.output_dir)
+                 output_dir=args.output_dir, original_paths=source_paths)
     print(json.dumps({
         "status": result["status"],
         "heavy_error_FLUID_tracks": result["HEAVY_truth_tracks_with_class_disagreement"],
