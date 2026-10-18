@@ -187,10 +187,11 @@ def audit(*, run_dir: Path, protocol_folder: Path,
         preflight.get("fixed_fluid_evaluation_frames") != [61, 180] or
         preflight.get("tracker_warmup_frames") != WARMUP):
         raise AuditError("Preflight, frozen policy lock or completed regression source disagrees")
+    verifier_input = verifier
     if verifier is None:
         from streetlab_phase3.video.holdout_validation import verify_batch
         verifier = verify_batch
-    injected = any(x is not None for x in (score_factory, track_reader, truth_reader))
+    injected = any(x is not None for x in (verifier_input, score_factory, track_reader, truth_reader))
     verified = verifier(run_dir / "batch")
     if verified.get("original_source_sha256_verified") is not True:
         raise AuditError("Batch must SHA-verify real original May25 video and FLUID sources")
@@ -291,7 +292,7 @@ def audit(*, run_dir: Path, protocol_folder: Path,
         "postprocess_cpu_median_seconds_per_frame",
     ))
     if injected:
-        audit_status = "SYNTHETIC_FORensics_TEST_NOT_AUTHENTIC_VIDEO_AUDIT"
+        audit_status = "SYNTHETIC_FORENSICS_TEST_NOT_AUTHENTIC_VIDEO_AUDIT"
     else:
         audit_status = AUDIT_STATUS
     return {
