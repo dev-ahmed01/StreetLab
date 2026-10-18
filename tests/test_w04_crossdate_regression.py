@@ -201,7 +201,8 @@ def test_native_metadata_passes_without_resizing_or_retuning(tmp_path, width, he
     assert report["source_video_dimensions"] == [width, height]
     assert report["source_frame_rate_reported"] == fps
     assert report["video_resized_or_resampled"] is False
-    assert report["video_and_truth_coordinates_in_original_native_pixels"] is True
+    assert report["truth_centers_within_native_video_bounds"] is True
+    assert report["truth_to_video_visual_registration_independently_verified"] is False
     assert report["selected_policy"] == "hard_nms_ios_0.30"
     assert report["independent_holdout_pass"] is False
 
