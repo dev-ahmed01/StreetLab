@@ -58,9 +58,18 @@ def analyze_points(predicted: Sequence[Any], truth: Sequence[Any], *,
     if not predictions or not truths:
         raise AuditError("Missing frozen May25 prediction tracks or matching FLUID points")
     for item in (*predictions, *truths):
-        if not (math.isfinite(item.x_px) and math.isfinite(item.y_px)
-                and 0 <= item.x_px < width and 0 <= item.y_px < height):
-            raise AuditError("FLUID or prediction center outside original native video")
+        if not (math.isfinite(item.x_px) and math.isfinite(item.y_px)):
+            raise AuditError("FLUID or prediction center is nonfinite")
+    # Preserve the original scorer even if a predicted track center drifts
+    # just outside the source image. Report it as an objective defect rather
+    # than silently filtering it and changing the frozen class score.
+    pred_out_of_bounds = sum(
+        not (0 <= p.x_px < width and 0 <= p.y_px < height)
+        for p in predictions
+    )
+    if any(not (0 <= t.x_px < width and 0 <= t.y_px < height)
+           for t in truths):
+        raise AuditError("Original FLUID center outside preflight-verified native image")
 
     matches = PixelBenchmark(gate).match_points(predictions, truths, frame_offset=offset)
     diagnostic = class_diagnostics(predictions, truths,
@@ -189,6 +198,7 @@ def analyze_points(predicted: Sequence[Any], truth: Sequence[Any], *,
         "video_dimensions_original_pixels": [width, height],
         "truth_points": len(truths),
         "predicted_points": len(predictions),
+        "predicted_points_outside_native_image_not_filtered": pred_out_of_bounds,
         "matched_points": len(matches),
         "unique_FLUID_truth_tracks": len(by_truth),
         "unique_predicted_tracks": len(by_prediction),
