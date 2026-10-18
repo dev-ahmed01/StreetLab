@@ -118,13 +118,17 @@ def test_no_cohort_or_distance_gate_retuning_allowed(kwargs):
         analyze_points(predictions,truth,**args)
 
 
-def test_out_of_frame_or_missing_original_fails_closed():
+def test_out_of_frame_predictions_reported_not_dropped_and_missing_original_refused():
     predictions,truth=cohort()
     predictions[0]=pred(60,"26",1000.,"CAR")
-    with pytest.raises(AuditError, match="outside"):
-        analyze_points(predictions,truth,width=640,height=360)
+    result=analyze_points(predictions,truth,width=640,height=360)
+    assert result["predicted_points_outside_native_image_not_filtered"] == 1
+    assert result["predicted_points"] == len(predictions)
     with pytest.raises(AuditError,match="Missing"):
         analyze_points([],truth,width=640,height=360)
+    truth[0]=gt(61,"7",1000.,"HEAVY_VEHICLE")
+    with pytest.raises(AuditError,match="FLUID center outside"):
+        analyze_points(predictions,truth,width=640,height=360)
 
 
 def test_generated_report_explicitly_blocks_production_and_physical_claims():
