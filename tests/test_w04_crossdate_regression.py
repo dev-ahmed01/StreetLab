@@ -179,13 +179,115 @@ def test_missing_truth_window_rejected(tmp_path):
         ready(paths)
 
 
-@pytest.mark.parametrize("index,value", [(1, 1920), (2, 1080), (3, 50), (4, 25)])
-def test_wrong_video_dimensions_or_frame_rate_rejected(tmp_path, index, value):
+@pytest.mark.parametrize("index,value", [
+    (1, 600), (1, 8000), (2, 300), (2, 5000),
+    (3, 50), (4, 5), (4, 80), (4, float("nan")),
+])
+def test_unsupported_source_metadata_fails_with_actual_values(tmp_path, index, value):
     paths = files(tmp_path)
     values = Capture().values.copy()
     values[index] = value
-    with pytest.raises(cross.CrossDateError, match="dimensions/FPS"):
+    with pytest.raises(cross.CrossDateError, match="Unsupported original May-25 video metadata"):
         ready(paths, capture=Capture(values))
+
+
+@pytest.mark.parametrize("width,height,fps", [
+    (1920, 1080, 24.), (1280, 720, 29.97), (3840, 2160, 30.),
+])
+def test_native_metadata_passes_without_resizing_or_retuning(tmp_path, width, height, fps):
+    paths = files(tmp_path)
+    values = {1: width, 2: height, 3: 10000., 4: fps}
+    report = ready(paths, capture=Capture(values))
+    assert report["source_video_dimensions"] == [width, height]
+    assert report["source_frame_rate_reported"] == fps
+    assert report["video_resized_or_resampled"] is False
+    assert report["truth_centers_within_native_video_bounds"] is True
+    assert report["truth_to_video_visual_registration_independently_verified"] is False
+    assert report["selected_policy"] == "hard_nms_ios_0.30"
+    assert report["independent_holdout_pass"] is False
+
+
+def test_original_fluid_pixels_cannot_be_silently_scaled_for_smaller_video(tmp_path):
+    paths = files(tmp_path)
+    values = {1: 640, 2: 360, 3: 10000., 4: 30.}
+    # Existing synthetic center x=400 is valid at 640x360.
+    assert ready(paths, capture=Capture(values))["source_video_dimensions"] == [640, 360]
+    paths[3].write_text(
+        "frame,id,cx,cy,type\n"
+        "61,1,900,200,car\n"
+        "62,2,110,250,motorcycle\n",
+    )
+    before = digest(paths[3])
+    with pytest.raises(cross.CrossDateError, match="coordinate/video geometry mismatch"):
+        ready(paths, capture=Capture(values))
+    assert digest(paths[3]) == before
+
+
+def test_original_FLUID_y_outside_native_frame_fails_closed(tmp_path):
+    paths = files(tmp_path)
+    paths[3].write_text(
+        "frame,id,cx,cy,type\n"
+        "61,1,500,900,car\n",
+    )
+    with pytest.raises(cross.CrossDateError, match="first failing"):
+        ready(paths, capture=Capture({1: 1280, 2: 720, 3: 10000, 4: 25}))
+
+
+
+def test_real_decoder_honors_native_dimensions_without_weakening_w04_default(tmp_path):
+    import numpy as np
+    from streetlab_phase3.video.continuous_box_tracking_lab import sequential_video_rgb_frames
+
+    class FakeVideo:
+        CAP_PROP_POS_FRAMES = 5
+        COLOR_BGR2RGB = 6
+
+        def __init__(self, dims):
+            self.width, self.height = dims
+            self.position = 0
+            self.released = False
+
+        def VideoCapture(self, path):
+            return self
+
+        def isOpened(self):
+            return True
+
+        def set(self, prop, value):
+            assert prop == self.CAP_PROP_POS_FRAMES
+            self.position = int(value)
+            return True
+
+        def read(self):
+            self.position += 1
+            return True, np.zeros((self.height, self.width, 3), dtype=np.uint8)
+
+        def get(self, prop):
+            assert prop == self.CAP_PROP_POS_FRAMES
+            return self.position
+
+        def cvtColor(self, img, flag):
+            assert flag == self.COLOR_BGR2RGB
+            return img
+
+        def release(self):
+            self.released = True
+
+    native = FakeVideo((12, 8))
+    frames = list(sequential_video_rgb_frames(
+        tmp_path/"not_read_from_disk.mp4", 30, 31,
+        cv2_module=native, expected_dimensions=(12, 8),
+    ))
+    assert [i for i, _ in frames] == [30, 31]
+    assert frames[0][1].shape == (8, 12, 3)
+    assert native.released is True
+
+    original_w04 = FakeVideo((12, 8))
+    with pytest.raises(ValueError, match="differ from expected original"):
+        list(sequential_video_rgb_frames(
+            tmp_path/"not_read_from_disk.mp4", 30, 30, cv2_module=original_w04,
+        ))
+    assert original_w04.released is True
 
 
 def test_video_and_truth_must_be_exact_historical_pair_names(tmp_path):

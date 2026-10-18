@@ -50,6 +50,14 @@ Some May 25 trajectory rows have empty cx/cy cells. The frozen `normalize_fluid_
 
 Nonempty invalid centers (including NaN/Infinity) still fail closed. A fixed cohort with zero usable labels cannot be evaluated; the script never chooses a different or more favorable interval automatically. The preflight receipt is created only if preflight **passes**. If checks fail before that, the Windows launcher now explicitly says no valid preflight JSON was written.
 
+### May 25 native video geometry and frame rate
+
+The separate May 25 regression **does not assume the W04 May 26 video resolution is universal**. The runner reads original OpenCV metadata and accepts a native source between 640×360 and 7680×4320 at 10–60 FPS, provided the fixed video frames 30–179 exist and all usable FLUID ground-truth centers are within the original video bounds. The valid source frame rate is passed unchanged to ByteTrack instead of silently declaring every video 30 FPS. Each decoded frame is checked against its verified native dimensions. The source is **never resized, cropped for full-frame reference coordinates, resampled, or rewritten**; SAHI uses the already-frozen 640px tile geometry and overlap on the original pixels. The core W04 decoder retains its strict 3840×2160 default.
+
+If the source or annotation geometry is incompatible, the preflight error reports the actual width, height, frame count, FPS, and/or number of FLUID centers outside the native dimensions. **Do not automatically scale or repair the FLUID truth**. Native coordinate bounds alone do not establish genuine video/trajectory correspondence; that remains an independent visual-review requirement.
+
+Because May 25 may differ from May 26 in native resolution, FPS, content, class distributions and sampled windows, the output remains descriptive cross-date regression evidence only, not a controlled site-generalization result. Measured detector latency is for the source's actual pixel dimensions.
+
 ## Scope of conclusions
 
 A May 25 FLUID-label score can be compared **descriptively** with the May 26 tuned W04 metric. The two dates differ in scene composition and sampled window length (120 vs 201 frames), so the numeric difference is **not** a controlled same-window baseline delta, treatment effect, or calibrated generalization certificate. Correct-class precision/recall inherits known FLUID annotation disagreement. No original same-window T000 baseline or two-blind-reviewer physical-object adjudication is available; the sum of detector/tracker/postprocessing medians is not end-to-end p95.

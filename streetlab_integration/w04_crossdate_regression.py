@@ -59,6 +59,7 @@ def check_inputs(*, protocol_file: Path, lock_file: Path, video: Path,
     left, right = WINDOW
     labelled = set()
     counts: dict[str, int] = {}
+    source_pixel_points: list[tuple[float, float, int]] = []
     supported_rows_in_window = 0
     skipped_blank_geometry = 0
     with truth.open("r", encoding="utf-8-sig", newline="") as stream:
@@ -95,6 +96,7 @@ def check_inputs(*, protocol_file: Path, lock_file: Path, video: Path,
                 raise CrossDateError("Invalid original FLUID nonfinite center")
             labelled.add(index)
             counts[cls] = counts.get(cls, 0) + 1
+            source_pixel_points.append((x, y, index))
     if not labelled:
         raise CrossDateError(
             "No supported FLUID truth labels with valid cx/cy in fixed "
@@ -114,10 +116,31 @@ def check_inputs(*, protocol_file: Path, lock_file: Path, video: Path,
         fps = cap.get(capture.CAP_PROP_FPS)
     finally:
         cap.release()
-    if (not all(math.isfinite(float(v)) for v in (width, height, frames, fps))
-        or width != 3840 or height != 2160 or frames < right+1
-        or fps <= 0 or abs(fps - 30.0) > .5):
-        raise CrossDateError("Unexpected May-25 source dimensions/FPS/frame count; no resampling permitted")
+    raw_metadata = {
+        "width": width, "height": height,
+        "frame_count": frames, "fps": fps,
+    }
+    if (not all(math.isfinite(float(v)) for v in raw_metadata.values())
+        or not 640 <= width <= 7680 or not 360 <= height <= 4320
+        or not float(width).is_integer() or not float(height).is_integer()
+        or frames < right + 1 or not 10 <= fps <= 60):
+        raise CrossDateError(
+            f"Unsupported original May-25 video metadata: {raw_metadata}; "
+            "require native 640..7680px width, 360..4320px height, "
+            "at least 180 frames and 10..60 FPS. No resizing or resampling."
+        )
+    # Detection and FLUID benchmark must remain in the SAME pixel geometry.
+    # Never silently rescale truth coordinates to make scoring appear valid.
+    outside = [(frame, x, y) for x, y, frame in source_pixel_points
+               if not (0 <= x < width and 0 <= y < height)]
+    if outside:
+        raise CrossDateError(
+            f"Original May-25 FLUID coordinate/video geometry mismatch: "
+            f"{len(outside)} of {len(source_pixel_points)} usable truth centers "
+            f"outside native {int(width)}x{int(height)} video; "
+            f"first failing (frame,cx,cy)={outside[0]}. "
+            "No automatic label scaling or repair permitted."
+        )
     return {
         "schema_version": 1,
         "status": "W04_MAY25_CROSSDATE_PREFLIGHT_VERIFIED_REGRESSION_ONLY",
@@ -138,6 +161,11 @@ def check_inputs(*, protocol_file: Path, lock_file: Path, video: Path,
         "source_frame_rate_reported": fps,
         "source_video_dimensions": [int(width), int(height)],
         "source_frame_count_reported": int(frames),
+        "truth_centers_within_native_video_bounds": True,
+        "truth_to_video_visual_registration_independently_verified": False,
+        "video_resized_or_resampled": False,
+        "expected_w04_video_dimensions_for_comparison": [3840, 2160],
+        "crossdate_uses_original_source_fps": True,
         "supported_fluid_truth_points": sum(counts.values()),
         "supported_fluid_rows_before_blank_coordinate_filter": supported_rows_in_window,
         "skipped_fluid_rows_with_blank_coordinates": skipped_blank_geometry,
@@ -190,7 +218,10 @@ def execute(*, preflight: dict, video: Path, truth: Path, model_dir: Path,
     )
     left, right = WINDOW
     def raw_stream():
-        for frame, rgb in sequential_video_rgb_frames(video, left-WARMUP, right, cv2_module=cv2):
+        for frame, rgb in sequential_video_rgb_frames(
+            video, left-WARMUP, right, cv2_module=cv2,
+            expected_dimensions=tuple(preflight["source_video_dimensions"]),
+        ):
             boxes, times = capture_boxes(
                 [(frame, rgb)], model, slicer=get_slice_bboxes,
                 predictor=get_prediction, overlap=.20, slice_size=640,
@@ -206,7 +237,9 @@ def execute(*, preflight: dict, video: Path, truth: Path, model_dir: Path,
         "openvino_model_sha256": preflight["model_tree_sha256"],
         "video_frame_window": [left, right],
         "policies": [preflight["selected_policy"]],
-        "source_fps_user_supplied": 30.0,
+        "source_fps_user_supplied": preflight["source_frame_rate_reported"],
+        "video_dimensions_native": preflight["source_video_dimensions"],
+        "video_resized_or_resampled": False,
         "reuses_historical_regression_reference": True,
         "source_is_independent_holdout": False,
     }
@@ -215,7 +248,8 @@ def execute(*, preflight: dict, video: Path, truth: Path, model_dir: Path,
         start_frame=left, end_frame=right, output_dir=batch_output,
         fluid_tracks=truth, configs=[settings],
         tracker_factory=ByteTrackTracker, detection_class=Detections,
-        score_fn=cached_window_scorer(truth, left, right), fps=30.0,
+        score_fn=cached_window_scorer(truth, left, right),
+        fps=preflight["source_frame_rate_reported"],
         provenance=provenance,
     )
     from streetlab_phase3.video.holdout_validation import verify_batch
@@ -236,6 +270,9 @@ def execute(*, preflight: dict, video: Path, truth: Path, model_dir: Path,
         "frozen_w04_model_sha256": preflight["model_tree_sha256"],
         "source_window": [left, right],
         "truth_frame_window": [left+1, right+1],
+        "source_video_dimensions": preflight["source_video_dimensions"],
+        "source_frame_rate_reported": preflight["source_frame_rate_reported"],
+        "uses_native_fps_without_resampling": True,
         "decoded_frames": scored["processed_frames"],
         "evaluation_frames": scored["evaluated_frames"],
         "truth_label_precision": prec, "truth_label_recall": rec,
