@@ -14,8 +14,8 @@ from streetlab_phase3.video.holdout_validation import verify_batch
 from streetlab_integration.w04_visual_review_packet import (
     ReviewError, check_sources,
 )
-from tests.test_phase3_holdout_validation import fixture_batch
-from tests.test_w04_visual_review_packet import original_receipt
+from test_phase3_holdout_validation import fixture_batch
+from test_w04_visual_review_packet import original_receipt
 
 
 def _copies(tmp_path, video, truth):
