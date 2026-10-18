@@ -44,6 +44,12 @@ A successful full run additionally generates:
 
 Failed CPU inference may leave a completed \`preflight.json\` and no batch or score; do not claim a partial experiment as a pass.
 
+### Original FLUID blank-coordinate handling
+
+Some May 25 trajectory rows have empty cx/cy cells. The frozen `normalize_fluid_pixel_truth` scorer excludes those rows; this preflight now applies the **same exclusion** and reports both `supported_fluid_rows_before_blank_coordinate_filter` and `skipped_fluid_rows_with_blank_coordinates`. No CSV is modified, and no coordinates are interpolated or fabricated.
+
+Nonempty invalid centers (including NaN/Infinity) still fail closed. A fixed cohort with zero usable labels cannot be evaluated; the script never chooses a different or more favorable interval automatically. The preflight receipt is created only if preflight **passes**. If checks fail before that, the Windows launcher now explicitly says no valid preflight JSON was written.
+
 ## Scope of conclusions
 
 A May 25 FLUID-label score can be compared **descriptively** with the May 26 tuned W04 metric. The two dates differ in scene composition and sampled window length (120 vs 201 frames), so the numeric difference is **not** a controlled same-window baseline delta, treatment effect, or calibrated generalization certificate. Correct-class precision/recall inherits known FLUID annotation disagreement. No original same-window T000 baseline or two-blind-reviewer physical-object adjudication is available; the sum of detector/tracker/postprocessing medians is not end-to-end p95.
