@@ -202,7 +202,7 @@ def test_original_source_hashes_and_json_csv_event_consistency(tmp_path):
 def test_mutated_source_video_refused(tmp_path):
     run, review, video, truth = original_receipt(tmp_path)
     video.write_bytes(b"tampered fake source")
-    with pytest.raises(ReviewError, match="original May25"):
+    with pytest.raises(ReviewError, match="Original May25"):
         check_sources(run_dir=run, forensics_dir=review)
 
 
