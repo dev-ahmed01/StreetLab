@@ -95,7 +95,7 @@ def make_plan(events: list[dict], max_samples: int = 14) -> list[dict]:
             if count == 1:
                 picks = [group[len(group)//2]]
             else:
-                indices = [int(round(i*(len(group)-1)/(count-1)))
+                indices = [int(i*(len(group)-1)/(count-1))
                            for i in range(count)]
                 picks = [group[i] for i in indices]
             for event in picks:
