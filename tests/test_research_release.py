@@ -1,0 +1,102 @@
+"""Release bundle integrity, conservation and overwrite regression tests."""
+from __future__ import annotations
+
+import hashlib
+import json
+from pathlib import Path
+from zipfile import ZipFile
+
+import pytest
+
+from streetlab_integration.research_release import (
+    NAMES, SOURCES, PRODUCED, ReleaseError, package,
+)
+
+
+def _sha(value: bytes) -> str:
+    return hashlib.sha256(value).hexdigest()
+
+
+def _fixture(folder: Path) -> None:
+    folder.mkdir()
+    blobs = {name: ("test content for " + name).encode("utf-8") for name in NAMES}
+    evidence = {
+        "track": "RESEARCH_SUBMISSION_NO_NEW_FIELD_SURVEY",
+        "research_workflow_status": "RESEARCH_DEMO_EXECUTED_WITH_REPORTED_FAILED_REAL_WORLD_GENERALIZATION",
+        "production_release_approved": False,
+        "external_site_transfer_validated": False,
+        "real_world_intervention_effect_proven": False,
+        "dataset_summaries": {"chennai": {"holdout_generalization_pass": False}},
+        "native_sumo": {"status": "SUMO_EXECUTED_SYNTHETIC_ONLY",
+                        "production_release_approved": False,
+                        "site_specific_field_validation": False},
+    }
+    blobs["submission_evidence.json"] = json.dumps(evidence).encode()
+    manifest = {
+        "classification": "SYNTHETIC_RESEARCH_ONLY",
+        "source_artifacts_sha256": {name: _sha(blobs[name]) for name in SOURCES},
+        "produced_sha256": {name: _sha(blobs[name]) for name in PRODUCED},
+    }
+    blobs["research_results_manifest.json"] = json.dumps(manifest).encode()
+    for name, data in blobs.items():
+        (folder / name).write_bytes(data)
+
+
+def test_release_archive_hashes_and_explicit_scientific_limits(tmp_path):
+    src, out = tmp_path/"research", tmp_path/"release.zip"
+    _fixture(src)
+    result = package(src, out)
+    assert result["file_count"] == len(NAMES)
+    assert result["production_release_approved"] is False
+    assert result["may25_audit_status"] == "NOT_INCLUDED_OR_NOT_VERIFIED"
+    with ZipFile(out) as archive:
+        assert "manifest.json" in archive.namelist()
+        values = json.loads(archive.read("manifest.json"))
+        assert values["release_type"] == "BOUNDED_RESEARCH_PROTOTYPE"
+        assert values["independent_holdout_pass"] is False
+        assert values["field_intervention_effect_proven"] is False
+        assert values["chennai_holdout_generalization_pass"] is False
+        assert "evidence/automated_object_audit.json" not in archive.namelist()
+        for name in NAMES:
+            assert _sha(archive.read("evidence/"+name)) == values["files_sha256"][name]
+        assert b"ASSUMED network" in archive.read("README.txt")
+
+
+def test_tampered_source_rejected_without_output(tmp_path):
+    src, out = tmp_path/"research", tmp_path/"release.zip"
+    _fixture(src)
+    (src/"research_metrics.csv").write_text("changed metric", encoding="utf-8")
+    with pytest.raises(ReleaseError, match="hash mismatch"):
+        package(src, out)
+    assert not out.exists()
+
+
+def test_production_claim_rejected_without_output(tmp_path):
+    src, out = tmp_path/"research", tmp_path/"release.zip"
+    _fixture(src)
+    p=src/"submission_evidence.json"
+    j=json.loads(p.read_text())
+    j["production_release_approved"] = True
+    p.write_text(json.dumps(j))
+    with pytest.raises(ReleaseError):
+        package(src,out)
+    assert not out.exists()
+
+
+def test_original_release_refuses_overwrite_and_preserves_bytes(tmp_path):
+    src, out = tmp_path/"research", tmp_path/"release.zip"
+    _fixture(src)
+    out.write_bytes(b"PROTECTED EXISTING RELEASE")
+    with pytest.raises(FileExistsError):
+        package(src, out)
+    assert out.read_bytes() == b"PROTECTED EXISTING RELEASE"
+
+
+def test_invalid_optional_may25_audit_never_included(tmp_path):
+    src, out = tmp_path/"research", tmp_path/"release.zip"
+    _fixture(src)
+    invalid=tmp_path/"invalid-audit.json"
+    invalid.write_text('{"status":"not_run"}')
+    with pytest.raises(ValueError):
+        package(src, out, invalid)
+    assert not out.exists()
