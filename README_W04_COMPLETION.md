@@ -19,7 +19,7 @@ git pull --ff-only origin main
 .\scripts\STREETLAB_W04_COMPLETION.ps1
 ```
 
-The script finds saved artifacts, verifies frozen policy and SHA links between preregistration, original May25 run, reproduced forensics, full-cohort audit and native SUMO study, and writes unique non-overwriting `artifacts/w04_completion_*/completion_verdict.json` and `completion_verdict.md`.
+The script automatically selects the most recent **hash-consistent chain** of May25 run, matching forensic replay, matching full-cohort audit and actually executed synthetic SUMO study, rather than mistakenly treating a later partial/failed folder as authoritative. It verifies frozen policy and SHA links between preregistration, original May25 run, reproduced forensics, full-cohort audit and native SUMO study, and writes unique non-overwriting `artifacts/w04_completion_*/completion_verdict.json` and `completion_verdict.md`.
 
 This **does not require a further physical review or fresh upload**, and it does not run OpenVINO. With missing files, it writes exact **BLOCKED** phase statuses rather than silently passing. The saved JSON's `original_source_bytes_rehashed_in_this_report=false` flag distinguishes this completion receipt from the separate original source hash-verifying autonomous audit.
 
