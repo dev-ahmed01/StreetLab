@@ -60,3 +60,15 @@ For an occupied web port 8000: **.\scripts\STREETLAB_M8.ps1 -Mode web -Port 8001
 A software-native SUMO PASS is sufficient for a prototype demonstration, NOT calibrated prediction. Dataset labels are not independently verified physical census. Keep the independent M8 field-specific gate untouched and **production_release_approved=false**. For a future externally validated digital twin, use independent site-matched data or a genuine field survey. Do not turn the simulation into a claim that measured Bangalore congestion improved.
 
 The research approach may be acceptable for a software/academic prototype submission, subject to your actual grading rubric and explicit discussion of the frozen failed holdout.
+
+## Downloadable research-prototype evidence bundle
+
+A successful original/native SUMO research run can now be packaged as a self-checking, non-overwriting ZIP:
+
+```powershell
+python -m streetlab_integration.research_release --run-dir artifacts/research_submission_YYYYMMDD_HHMMSS --output artifacts/streetlab_research_bundle.zip
+```
+
+This reads existing successful outputs only. It verifies the source-artifact SHA values and derived figure/table SHA values against the original `research_results_manifest.json`, enforces the failed Chennai holdout and synthetic-only SUMO statuses, and adds `manifest.json` with the ZIP's complete per-file SHA inventory. The workflow's [GitHub Actions research job](https://github.com/dev-ahmed01/StreetLab/actions/workflows/research-submission.yml) also creates an archive download automatically from its own verified **synthetic fixture/native SUMO run**. This Action cannot validate your private May25 Drive footage.
+
+The original May25 autonomous object audit is **not silently bundled or generated**. A previously completed and verified `automated_object_audit.json` can be included explicitly with `--may25-audit PATH`, after the original source SHA-verified runner succeeds. If omitted, the archive manifest honestly states `NOT_INCLUDED_OR_NOT_VERIFIED`. No archive changes the frozen W04 policy, the Chennai failure, or the lack of real-site production approval.
