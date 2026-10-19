@@ -31,22 +31,70 @@ def newest(folder: Path, pattern: str, filename: str):
 
 
 def sources(root: Path):
+    """Find a coherent evidence chain, not necessarily the newest stale copy."""
     folder = root / "artifacts"
-    locks = [p for p in folder.glob("w04_policy_lock_*")
-             if p.is_dir() and (p / "policy_lock.json").is_file()
-             and (p / "holdout_protocol.json").is_file()]
-    lock = max(locks, key=lambda p: p.stat().st_mtime) if locks else None
-    summary = newest(folder, "w04_may25_crossdate_*", "cross_date_summary.json")
+    def candidates(pattern, filename):
+        return sorted(
+            (p / filename for p in folder.glob(pattern)
+             if p.is_dir() and not p.is_symlink()
+             and (p / filename).is_file() and not (p / filename).is_symlink()),
+            key=lambda p: p.parent.stat().st_mtime, reverse=True,
+        )
+    lock_dir = None
+    for file in candidates("w04_policy_lock_*", "policy_lock.json"):
+        protocol = file.parent / "holdout_protocol.json"
+        if not protocol.is_file() or protocol.is_symlink():
+            continue
+        try:
+            validate_lock(read_json(protocol), read_json(file), digest(file))
+            lock_dir = file.parent
+            break
+        except (ValueError, OSError, KeyError, TypeError):
+            continue
+
+    runs = candidates("w04_may25_crossdate_*", "cross_date_summary.json")
+    replays = candidates("w04_may25_forensics_*", "regression_forensics.json")
+    summary = runs[0] if runs else None
+    forensics = replays[0] if replays else None
+    found = False
+    for candidate in runs:
+        pre = candidate.parent / "preflight.json"
+        if not pre.is_file() or pre.is_symlink():
+            continue
+        for receipt in replays:
+            doc = valid_read(receipt)
+            if (doc and matching_hash(candidate, doc.get("saved_regression_summary_sha256"))
+                and matching_hash(pre, doc.get("preflight_sha256"))):
+                summary, forensics, found = candidate, receipt, True
+                break
+        if found:
+            break
+
+    audits = candidates("w04_autonomous_research_*", "automated_object_audit.json")
+    audit = audits[0] if audits else None
+    if summary and forensics:
+        for candidate in audits:
+            doc = valid_read(candidate)
+            if (doc and matching_hash(summary, doc.get("original_saved_regression_summary_sha256"))
+                and matching_hash(forensics, doc.get("original_source_forensics_sha256"))):
+                audit = candidate
+                break
+
+    studies = candidates("research_submission_*", "submission_evidence.json")
+    submission = studies[0] if studies else None
+    for candidate in studies:
+        doc = valid_read(candidate)
+        if (doc and (doc.get("native_sumo") or {}).get("status") == "SUMO_EXECUTED_SYNTHETIC_ONLY"
+            and doc.get("production_release_approved") is False):
+            submission = candidate
+            break
     return dict(
-        policy_lock=lock / "policy_lock.json" if lock else None,
-        protocol=lock / "holdout_protocol.json" if lock else None,
+        policy_lock=lock_dir / "policy_lock.json" if lock_dir else None,
+        protocol=lock_dir / "holdout_protocol.json" if lock_dir else None,
         summary=summary,
         preflight=summary.parent / "preflight.json" if summary else None,
-        forensics=newest(folder, "w04_may25_forensics_*", "regression_forensics.json"),
-        audit=newest(folder, "w04_autonomous_research_*", "automated_object_audit.json"),
-        submission=newest(folder, "research_submission_*", "submission_evidence.json"),
+        forensics=forensics, audit=audit, submission=submission,
     )
-
 
 def valid_read(path):
     if path is None:
