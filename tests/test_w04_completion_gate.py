@@ -180,3 +180,30 @@ def test_output_is_exclusive_and_creates_json_and_markdown(tmp_path):
     with pytest.raises(SystemExit):
         gate.main(["--project-root", str(root),
                    "--output-dir", str(destination)])
+
+
+def test_auto_pairs_hash_consistent_evidence_not_latest_stale_folders(tmp_path):
+    import os
+    import time
+
+    root, good = receipts(tmp_path)
+    folder = root / "artifacts"
+    bad_run = write(folder / "w04_may25_crossdate_stale" / "cross_date_summary.json",
+                    {"status": "HALF_WRITTEN", "independent_holdout_pass": False})
+    bad_forensics = write(folder / "w04_may25_forensics_stale" / "regression_forensics.json",
+                          {"status": "FORGED", "saved_regression_summary_sha256": "0"*64})
+    bad_audit = write(folder / "w04_autonomous_research_stale" / "automated_object_audit.json",
+                      {"status": "UNRELATED", "original_saved_regression_summary_sha256": "0"*64})
+    bad_study = write(folder / "research_submission_stale" / "submission_evidence.json",
+                      {"native_sumo": {"status": "NOT_EXECUTED"}})
+    bad_lock = write(folder / "w04_policy_lock_stale" / "policy_lock.json",
+                      {"selected_policy": "retuned"})
+    write(bad_lock.parent / "holdout_protocol.json", {"status": "RETUNED"})
+    for i, p in enumerate([bad_run, bad_forensics, bad_audit, bad_study, bad_lock]):
+        os.utime(p.parent, (time.time()+100+i, time.time()+100+i))
+    chosen = gate.sources(root)
+    for key in good:
+        assert chosen[key] == good[key], key
+    out = gate.evaluate(chosen)
+    assert out["status"] == gate.READY
+    assert out["production_release_approved"] is False
