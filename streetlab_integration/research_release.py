@@ -126,8 +126,11 @@ def package(run_dir: Path, output: Path, may25_audit: Path | None = None) -> dic
         "No field-effect, real-time inference, or production approval is claimed.\n"
         "manifest.json binds each packaged file to its original SHA256.\n"
     ).encode("utf-8")
+    # Acquire the exclusive filename before entering cleanup logic: existing
+    # completed archives must never be removed on FileExistsError.
+    handle = output.open("xb")
     try:
-        with output.open("xb") as handle:
+        with handle:
             with ZipFile(handle, "w") as archive:
                 for name in sorted(files):
                     archive.writestr(_entry("evidence/" + name), files[name])
