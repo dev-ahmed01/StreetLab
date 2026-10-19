@@ -4,7 +4,8 @@ from copy import deepcopy
 import pytest
 from streetlab_integration.research_audit_display import read_audit, AuditDisplayError
 
-SHA = "a"*64
+VIDEO_SHA = "7ba62d051a0fdd1dd8cb0bb91d32a37fef1ee9f16c3aeadd70e1b820dfa88c82"
+TRUTH_SHA = "ff845d13053065b01c2954a2cdf586fc070214cf896b208734a703692c74c643"
 
 def fixture():
     return {
@@ -14,7 +15,7 @@ def fixture():
         "independent_holdout_pass":False, "production_release_approved":False,
         "no_new_detector_inference":True, "no_changes_to_model_or_tracking_policy":True,
         "no_FLUID_relabeling":True,
-        "original_video_and_FLUID_SHA":{"original_video_sha256":SHA,"original_truth_sha256":SHA},
+        "original_video_and_FLUID_SHA":{"original_video_sha256":VIDEO_SHA,"original_truth_sha256":TRUTH_SHA},
         "recomputed_class_diagnostics":{"truth_points":3,"matched_points":2,"predicted_points":2,
             "by_class":{"CAR":{},"MOTORCYCLE":{},"BUS":{"truth_points":0},
                 "HEAVY_VEHICLE":{"truth_points":3,"spatial_matches":2,"correct_class_matches":1,
