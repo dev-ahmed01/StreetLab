@@ -41,6 +41,10 @@ def read_audit(path: Path) -> dict:
         digest = sources.get(key)
         if not isinstance(digest, str) or len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest):
             raise AuditDisplayError("Original source fingerprint missing")
+    # Bind display to the exact frozen May25 source, not merely any valid SHA.
+    if (sources["original_video_sha256"] != "7ba62d051a0fdd1dd8cb0bb91d32a37fef1ee9f16c3aeadd70e1b820dfa88c82"
+        or sources["original_truth_sha256"] != "ff845d13053065b01c2954a2cdf586fc070214cf896b208734a703692c74c643"):
+        raise AuditDisplayError("Source is not the frozen May25 regression cohort")
     stats = value.get("recomputed_class_diagnostics")
     if not isinstance(stats, dict) or not isinstance(stats.get("by_class"), dict):
         raise AuditDisplayError("Class scorecard absent")
