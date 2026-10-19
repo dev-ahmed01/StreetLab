@@ -36,3 +36,9 @@ FLUID labels cannot independently establish whether a yellow vehicle is a passen
 May25 is a previously inspected **historical regression reference**, May26 W04 is **tuned development**, their 120/201-frame F1 difference is **unpaired/descriptive**, and both may contain source annotation disagreements. Native SUMO is synthetic-only. The Chennai independent holdout transfer failed. No same-window original T000, independently unseen true vehicle labels, external field calibration, or end-to-end CPU p95 exists. **Production remains blocked.** The original W04 model and policy stay frozen until a distinct, genuinely independent evaluation can support a new experiment.
 
 No reviewer forms are necessary to complete this bounded engineering/research analysis. The missing field-quality evidence remains a documented limit, not another task loop.
+
+## Optional read-only web integration
+
+The existing `/research` page includes a May25 full-cohort result panel. The page does **not** compute results, fetch private Drive evidence, or fabricate unique-object counts. When the original-source autonomous runner has successfully created `automated_object_audit.json`, set `STREETLAB_MAY25_AUDIT_PATH` to the absolute path of that file **before starting the local web server**. The endpoint `/api/research/may25-audit` then loads only the completed source-fingerprinted artifact and performs fail-closed object-count and source-method checks. Missing or inconsistent files return HTTP 409 and the page shows *Not verified*. This does not replace the runner's complete source SHA verification.
+
+The preview counts are annotated FLUID track identities and repeated matching events, **not independently confirmed physical vehicles**. BUS recall remains unmeasurable, the Chennai transfer remains failed, the SUMO demonstration remains synthetic, and production release remains blocked.
