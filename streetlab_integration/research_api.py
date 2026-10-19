@@ -4,6 +4,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
+from streetlab_integration.research_audit_display import AuditDisplayError, read_audit
 from streetlab_integration.research_submission import EvidenceError, study
 
 
@@ -26,6 +27,21 @@ def mount_research_routes(app:FastAPI) -> None:
             "production_release_approved":False,
             "sources":report["source_manifest"],
         }
+
+    @app.get("/api/research/may25-audit")
+    def may25_audit() -> dict:
+        # Only an explicit original-source completed artifact can be displayed.
+        # No source files or inferred results are silently loaded from Drive.
+        import os
+        configured = os.environ.get("STREETLAB_MAY25_AUDIT_PATH", "").strip()
+        if not configured:
+            raise HTTPException(status_code=409,
+                detail="Original-source autonomous audit has not been configured")
+        try:
+            return read_audit(Path(configured))
+        except (AuditDisplayError, OSError, ValueError) as exc:
+            raise HTTPException(status_code=409,
+                detail="Original-source autonomous audit is absent or inconsistent") from exc
 
     @app.get("/research",response_class=HTMLResponse)
     def research_page() -> str:
@@ -70,6 +86,13 @@ border-radius:9px;padding:15px}
 <p class="note">Outputs: submission_evidence.json, submission_summary.md, native_sumo_study.json, native_sumo.log and internal simulation files. Each run uses a new timestamped directory. For report-only mode, pass -EvidenceOnly.</p>
 <p>Separately, use the original M8 worker to inspect real footage and report video-run evidence. Never use its inferred tracks as an independent physical census without validation.</p>
 </section>
+<section><h2>May 25 · full-cohort object attribution</h2>
+<div class="cards">
+<div><small>Historical spatial F1</small><div class="stat" id="auditF1">Not verified</div></div>
+<div><small>Distinct HEAVY label-disagreement tracks</small><div class="stat" id="auditHeavy">—</div></div>
+</div>
+<p id="auditStatus" class="note">Original-source full-cohort audit is required. Previous 236 events are frame-level, not unique vehicles.</p>
+</section>
 <section><h2>What the result can support</h2>
 <p><strong>Supported:</strong> reproducible source provenance, previously recorded FLUID model comparison, explicit failure reporting for Chennai heldout transfer, and genuine SUMO computation for a clearly assumed traffic scenario.</p>
 <p><strong>Not supported:</strong> a Bengaluru-specific measured geometry, physically observed turn counts, independently verified original W04 full-video accuracy, traffic signal recommendations for actual deployment, or M8 production release approval.</p>
@@ -77,6 +100,20 @@ border-radius:9px;padding:15px}
 </section>
 </main>
 <script>
+(async()=>{
+ try{
+   const response=await fetch('/api/research/may25-audit');
+   if(!response.ok)throw Error('Original-source object audit not yet verified');
+   const audit=await response.json();
+   document.getElementById('auditF1').textContent=audit.spatial_f1_pct.toFixed(2)+'%';
+   document.getElementById('auditHeavy').textContent=String(audit.heavy_truth_track_ids_with_disagreement);
+   document.getElementById('auditStatus').textContent=audit.heavy_wrong_class_frame_points+
+     ' matched HEAVY class disagreements · '+audit.bus_predicted_unique_track_ids+
+     ' predicted BUS track IDs · FLUID-label relative, not physical truth';
+ }catch(e){
+   document.getElementById('auditStatus').textContent='Awaiting original-source verified autonomous audit; no inferred counts displayed';
+ }
+})();
 (async()=>{
  try{
   const r=await fetch('/api/research/summary');
