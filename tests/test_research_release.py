@@ -36,6 +36,7 @@ def _fixture(folder: Path) -> None:
         "classification": "SYNTHETIC_RESEARCH_ONLY",
         "source_artifacts_sha256": {name: _sha(blobs[name]) for name in SOURCES},
         "produced_sha256": {name: _sha(blobs[name]) for name in PRODUCED},
+        "ancillary_sha256": {name: _sha(blobs[name]) for name in ("submission_summary.md", "native_sumo.log")},
     }
     blobs["research_results_manifest.json"] = json.dumps(manifest).encode()
     for name, data in blobs.items():
@@ -60,6 +61,7 @@ def test_release_archive_hashes_and_explicit_scientific_limits(tmp_path):
         for name in NAMES:
             assert _sha(archive.read("evidence/"+name)) == values["files_sha256"][name]
         assert b"ASSUMED network" in archive.read("README.txt")
+        assert _sha(archive.read("README.txt")) == values["files_sha256"]["README.txt"]
 
 
 def test_tampered_source_rejected_without_output(tmp_path):
@@ -99,4 +101,28 @@ def test_invalid_optional_may25_audit_never_included(tmp_path):
     invalid.write_text('{"status":"not_run"}')
     with pytest.raises(ValueError):
         package(src, out, invalid)
+    assert not out.exists()
+
+
+def test_ancillary_log_or_summary_tampering_rejected(tmp_path):
+    src, out = tmp_path/"research", tmp_path/"release.zip"
+    _fixture(src)
+    for name in ("native_sumo.log", "submission_summary.md"):
+        original = (src/name).read_bytes()
+        (src/name).write_bytes(b"edited after successful research run")
+        with pytest.raises(ReleaseError, match="Ancillary evidence hash mismatch"):
+            package(src,out)
+        assert not out.exists()
+        (src/name).write_bytes(original)
+
+
+def test_unhashed_ancillary_evidence_rejected(tmp_path):
+    src, out = tmp_path/"research", tmp_path/"release.zip"
+    _fixture(src)
+    manifest = src/"research_results_manifest.json"
+    data = json.loads(manifest.read_text())
+    del data["ancillary_sha256"]
+    manifest.write_text(json.dumps(data))
+    with pytest.raises(ReleaseError, match="complete research source set"):
+        package(src,out)
     assert not out.exists()
