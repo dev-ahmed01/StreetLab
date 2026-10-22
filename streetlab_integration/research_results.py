@@ -218,9 +218,19 @@ def write_results(run_dir: Path) -> list[str]:
     files = outputs(_load(evidence_path), _load(native_path), evidence_hash, native_hash)
     names = list(files) + ["research_results_manifest.json"]
     _required(all(not (run_dir / name).exists() for name in names), "Refusing to overwrite existing research results")
+    # Freeze any already produced narrative and native execution log in this run manifest.
+    # A later release must reject changes to either; neither can be reconstructed
+    # from a headline metric after the simulation has finished.
+    ancillary = ("submission_summary.md", "native_sumo.log")
+    ancillary_hashes = {
+        name: hashlib.sha256((run_dir / name).read_bytes()).hexdigest()
+        for name in ancillary if (run_dir / name).is_file()
+        and not (run_dir / name).is_symlink()
+    }
     manifest = {"schema_version": 1, "classification": "SYNTHETIC_RESEARCH_ONLY",
                 "source_artifacts_sha256": {evidence_path.name: evidence_hash, native_path.name: native_hash},
                 "produced_sha256": {name: hashlib.sha256(content.encode("utf-8")).hexdigest() for name, content in files.items()},
+                "ancillary_sha256": ancillary_hashes,
                 "notes": "These hashes bind figures and tables to this simulation run, not to real-world field evidence."}
     for name, content in files.items():
         with (run_dir / name).open("x", encoding="utf-8", newline="") as handle:
