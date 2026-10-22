@@ -6,11 +6,19 @@
 
 **Software:** the repository's `main` branch after the research-release PR merges: https://github.com/dev-ahmed01/StreetLab
 
-**Research evidence:** download the `streetlab-research-demo-evidence` artifact from the successful [research-submission GitHub Actions workflow](https://github.com/dev-ahmed01/StreetLab/actions/workflows/research-submission.yml). The artifact contains a source-hashed `streetlab_research_bundle.zip` generated from an **actual native SUMO run of synthetic network scenarios** in CI. GitHub CI does **not** have the user's private May25 video or W04 OpenVINO model and cannot substantiate independent May25 re-verification.
+**Research evidence:** download the `streetlab-research-demo-evidence` artifact from the latest successful **main-branch** run of the [research-submission GitHub Actions workflow](https://github.com/dev-ahmed01/StreetLab/actions/workflows/research-submission.yml). The artifact contains a source-hashed `streetlab_research_bundle.zip` generated from an **actual native SUMO run of synthetic network scenarios** in CI. GitHub CI does **not** have the user's private May25 video or W04 OpenVINO model and cannot substantiate independent May25 re-verification.
 
 **Historical May25 analysis:** `research/MAY25_FULL_COHORT_REPLAY_2026-10-23.md` records the independently recomputed saved-coordinates/tracking replay of the frozen 120-frame cohort. It is **not** the canonical original-video-SHA-verified `automated_object_audit.json`. Do not set `STREETLAB_MAY25_AUDIT_PATH` to a derivative report or claim the read-only gate succeeded until the original-source runner has created the verified canonical file.
 
 **Six-phase acceptance:** `README_W04_COMPLETION.md` and `streetlab_integration/w04_completion_gate.py` implement the exactly six-phase fail-closed acceptance receipt. A missing canonical source-verified May25 object audit means the full gate remains **BLOCKED** despite the saved-cohort replay; the honest research prototype can still be submitted with its limitations stated clearly.
+
+
+
+### Verify the downloaded submission bundle
+
+The post-merge CI job uploads the documentation and original-label-relative replay alongside the synthetic evidence. Read `submission_build_receipt.json` in the artifact and compare its `commit_sha` with the `main` commit being submitted, then verify SHA-256 of `streetlab_research_bundle.zip`, `README_SUBMISSION.md`, and `MAY25_FULL_COHORT_REPLAY_2026-10-23.md` against the named SHA fields. The archive's internal manifest separately validates its source and generated metrics/figures.
+
+These hashes prove **artifact integrity and code provenance**, not accuracy of external FLUID physical labels, fresh reading of the private original May25 video, a valid independent holdout, or real-road SUMO calibration. A green native synthetic demonstration is sufficient for the bounded software-research prototype only.
 
 ## Demonstrate the product
 
