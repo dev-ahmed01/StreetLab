@@ -7,6 +7,7 @@ from fastapi.responses import HTMLResponse
 from streetlab_integration.research_audit_display import AuditDisplayError, read_audit
 from streetlab_integration.research_page import research_page_html
 from streetlab_integration.research_submission import EvidenceError, study
+from streetlab_integration.research_bundle_view import BundleDisplayError, read_bundle
 
 
 def mount_research_routes(app:FastAPI) -> None:
@@ -43,6 +44,21 @@ def mount_research_routes(app:FastAPI) -> None:
         except (AuditDisplayError, OSError, ValueError) as exc:
             raise HTTPException(status_code=409,
                 detail="Original-source autonomous audit is absent or inconsistent") from exc
+
+    @app.get("/api/research/simulation")
+    def research_simulation() -> dict:
+        # Read only an explicitly configured, already executed local evidence ZIP.
+        # Never infer site-specific results from the separate synthetic demo route.
+        import os
+        configured = os.environ.get("STREETLAB_RESEARCH_BUNDLE_PATH", "").strip()
+        if not configured:
+            raise HTTPException(status_code=409,
+                detail="Source-verified synthetic SUMO research bundle has not been configured")
+        try:
+            return read_bundle(Path(configured))
+        except (BundleDisplayError, ValueError, OSError) as exc:
+            raise HTTPException(status_code=409,
+                detail="Native synthetic research bundle is unavailable or inconsistent") from exc
 
     @app.get("/research",response_class=HTMLResponse)
     def research_page() -> str:
