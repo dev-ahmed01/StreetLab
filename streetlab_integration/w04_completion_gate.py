@@ -40,15 +40,16 @@ def sources(root: Path):
              and (p / filename).is_file() and not (p / filename).is_symlink()),
             key=lambda p: p.parent.stat().st_mtime, reverse=True,
         )
-    lock_dir = None
+    # Gather valid locks first, but only choose the one referenced by the
+    # actual selected May25 preflight (never newest unrelated policy).
+    valid_locks = []
     for file in candidates("w04_policy_lock_*", "policy_lock.json"):
         protocol = file.parent / "holdout_protocol.json"
         if not protocol.is_file() or protocol.is_symlink():
             continue
         try:
             validate_lock(read_json(protocol), read_json(file), digest(file))
-            lock_dir = file.parent
-            break
+            valid_locks.append((file, protocol))
         except (ValueError, OSError, KeyError, TypeError):
             continue
 
@@ -70,6 +71,16 @@ def sources(root: Path):
         if found:
             break
 
+    preflight_path = summary.parent / "preflight.json" if summary else None
+    preflight = valid_read(preflight_path)
+    lock_dir = None
+    for lock_path, protocol_path in valid_locks:
+        if (preflight
+            and matching_hash(lock_path, preflight.get("policy_lock_sha256"))
+            and matching_hash(protocol_path, preflight.get("protocol_sha256"))):
+            lock_dir = lock_path.parent
+            break
+
     audits = candidates("w04_autonomous_research_*", "automated_object_audit.json")
     audit = audits[0] if audits else None
     if summary and forensics:
@@ -84,7 +95,7 @@ def sources(root: Path):
     submission = studies[0] if studies else None
     for candidate in studies:
         doc = valid_read(candidate)
-        if (doc and (doc.get("native_sumo") or {}).get("status") == "SUMO_EXECUTED_SYNTHETIC_ONLY"
+        if (doc and _obj(doc.get("native_sumo")).get("status") == "SUMO_EXECUTED_SYNTHETIC_ONLY"
             and doc.get("production_release_approved") is False):
             submission = candidate
             break
@@ -105,6 +116,11 @@ def valid_read(path):
         return None
 
 
+def _obj(value):
+    """Treat altered nested JSON as absent evidence, never an exception."""
+    return value if isinstance(value, dict) else {}
+
+
 def matching_hash(path, expected):
     return bool(path and isinstance(expected, str) and len(expected) == 64
                 and digest(path) == expected)
@@ -119,7 +135,12 @@ def evaluate(paths):
     if lock and proto and paths["policy_lock"]:
         try:
             validate_lock(proto, lock, digest(paths["policy_lock"]))
-            frozen = True
+            frozen = bool(
+                pre and paths["protocol"] and paths["preflight"]
+                and matching_hash(paths["policy_lock"], pre.get("policy_lock_sha256"))
+                and matching_hash(paths["protocol"], pre.get("protocol_sha256"))
+                and lock.get("source_model_sha256") == pre.get("model_tree_sha256")
+            )
         except (ValueError, KeyError, TypeError, OSError):
             pass
 
@@ -151,7 +172,7 @@ def evaluate(paths):
             == "W04_MAY25_REAL_REGRESSION_REPLAYED_WITH_REVIEW_QUEUE_NOT_BLIND"
         and forensic.get("independent_holdout_pass") is False
     )
-    heavy = ((summary or {}).get("per_class_fluid_label_diagnostics") or {}).get("HEAVY_VEHICLE") or {}
+    heavy = _obj(_obj(_obj(summary).get("per_class_fluid_label_diagnostics")).get("HEAVY_VEHICLE"))
     autonomous = bool(
         regression and audit
         and audit.get("status") == "W04_MAY25_AUTOMATED_LABEL_RELATIVE_OBJECT_AUDIT_COMPLETE"
@@ -170,11 +191,21 @@ def evaluate(paths):
         study
         and study.get("research_workflow_status")
             == "RESEARCH_DEMO_EXECUTED_WITH_REPORTED_FAILED_REAL_WORLD_GENERALIZATION"
-        and (study.get("native_sumo") or {}).get("status") == "SUMO_EXECUTED_SYNTHETIC_ONLY"
-        and ((study.get("dataset_summaries") or {}).get("chennai") or {})
-            .get("holdout_generalization_pass") is False
+        and study.get("track") == "RESEARCH_SUBMISSION_NO_NEW_FIELD_SURVEY"
+        and study.get("field_census_claimed") is False
+        and study.get("datasets_are_from_different_sites") is True
+        and study.get("real_world_intervention_effect_proven") is False
         and study.get("external_site_transfer_validated") is False
         and study.get("production_release_approved") is False
+        and _obj(study.get("native_sumo")).get("status") == "SUMO_EXECUTED_SYNTHETIC_ONLY"
+        and _obj(study.get("native_sumo")).get("site_specific_field_validation") is False
+        and _obj(study.get("native_sumo")).get("simulation_not_real_world_effect") is True
+        and _obj(study.get("native_sumo")).get("production_release_approved") is False
+        and _obj(_obj(study.get("dataset_summaries")).get("chennai")).get("holdout_generalization_pass") is False
+        and _obj(_obj(study.get("dataset_summaries")).get("chennai")).get("capacity_gate_pass") is False
+        and _obj(_obj(study.get("dataset_summaries")).get("chennai")).get("retuning_allowed") is False
+        and _obj(_obj(study.get("dataset_summaries")).get("chennai")).get("calibration_locked") is True
+        and _obj(_obj(study.get("dataset_summaries")).get("fluid_w04")).get("scores_recomputed_in_this_run") is False
     )
     flags = [source, frozen, regression, autonomous, sumo]
     flags.append(all(flags))
