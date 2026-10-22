@@ -16,7 +16,7 @@
 
 ### Verify the downloaded submission bundle
 
-The post-merge CI job uploads the documentation and original-label-relative replay alongside the synthetic evidence. Read `submission_build_receipt.json` in the artifact and compare its `commit_sha` with the `main` commit being submitted, then verify SHA-256 of `streetlab_research_bundle.zip`, `README_SUBMISSION.md`, and `MAY25_FULL_COHORT_REPLAY_2026-10-23.md` against the named SHA fields. The archive's internal manifest separately validates its source and generated metrics/figures.
+The post-merge CI job uploads the documentation and original-label-relative replay alongside the synthetic evidence. After extracting the GitHub Actions artifact, run `python verify_submission_artifact.py --directory .` from the extraction folder; it checks the exact source commit fingerprint, source/figure/log digests, ZIP member inventory and nonproduction claims, and fails on modification. Pass `--commit <40-character-main-commit-sha>` if the exact submitted revision must also be checked. Read `submission_build_receipt.json` in the artifact and compare its `commit_sha` with the `main` commit being submitted, then verify SHA-256 of `streetlab_research_bundle.zip`, `README_SUBMISSION.md`, and `MAY25_FULL_COHORT_REPLAY_2026-10-23.md` against the named SHA fields. The archive's internal manifest separately validates its source and generated metrics/figures.
 
 These hashes prove **artifact integrity and code provenance**, not accuracy of external FLUID physical labels, fresh reading of the private original May25 video, a valid independent holdout, or real-road SUMO calibration. A green native synthetic demonstration is sufficient for the bounded software-research prototype only.
 
