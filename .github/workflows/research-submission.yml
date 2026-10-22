@@ -89,11 +89,14 @@ jobs:
           python-version: '3.12'
       - name: Install actual SUMO engine and its Python TraCI interface
         run: |
-          sudo apt-get update -qq
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq sumo
-          python -m pip install -r requirements.txt pytest opencv-python-headless traci sumolib
-          sumo --version
-          netconvert --version
+          python -m pip install -r requirements.txt pytest opencv-python-headless traci sumolib "eclipse-sumo==1.28.0"
+          SUMO_DIR="$(python -c 'import sumo; print(sumo.SUMO_HOME)')"
+          test -x "$SUMO_DIR/bin/sumo"
+          test -x "$SUMO_DIR/bin/netconvert"
+          echo "SUMO_HOME=$SUMO_DIR" >> "$GITHUB_ENV"
+          echo "$SUMO_DIR/bin" >> "$GITHUB_PATH"
+          "$SUMO_DIR/bin/sumo" --version
+          "$SUMO_DIR/bin/netconvert" --version
       - name: Compile source and verify syntax
         run: python -m compileall -q streetlab_integration streetlab_phase2
       - name: Import native study module without PYTHONPATH (Linux)
