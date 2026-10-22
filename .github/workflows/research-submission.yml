@@ -245,6 +245,19 @@ jobs:
             artifacts/MAY25_FULL_COHORT_REPLAY_2026-10-23.md
             artifacts/research_submission_ci/FAILED_RESEARCH_RUN.txt
           if-no-files-found: warn
+      - name: Preserve public portable audit implementation for offline source-verified replay
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: streetlab-canonical-audit-runtime
+          path: |
+            streetlab_integration/
+            streetlab_phase3/
+            streetlab_phase2/
+            streetlab_phase1/
+            scripts/
+            requirements.txt
+          if-no-files-found: error
 
   windows-powershell-syntax:
     runs-on: windows-latest
