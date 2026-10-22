@@ -2,7 +2,7 @@ name: StreetLab Research Submission - No New Field Survey
 
 on:
   push:
-    branches: [codex/streetlab-research-submission]
+    branches: [main, codex/streetlab-research-submission]
   pull_request:
     paths:
       - "streetlab_integration/research_*"
@@ -72,6 +72,8 @@ jobs:
             data/benchmarks/fluid_fidrt/manifest.json
             docs/PHASE3_W04_CONTINUOUS_201_FINAL_QA_20261009.md
             requirements.txt
+            README_SUBMISSION.md
+            research/MAY25_FULL_COHORT_REPLAY_2026-10-23.md
             scripts/phase2_m6_study_demo.py
             streetlab_phase1
             streetlab_phase2
@@ -160,6 +162,58 @@ jobs:
               assert record['production_release_approved'] is False
           print('Source-bound bounded research release ZIP: PASS')
           PY
+      - name: Verify checkout commit and create submission attestation
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          from zipfile import ZipFile
+
+          output = Path("artifacts")
+          archive = output / "streetlab_research_bundle.zip"
+          assert archive.is_file(), "Native research evidence archive missing"
+          guide = Path("README_SUBMISSION.md")
+          report = Path("research/MAY25_FULL_COHORT_REPLAY_2026-10-23.md")
+          assert guide.is_file() and report.is_file()
+          assert "canonical full-source audit still pending" in report.read_text(encoding="utf-8")
+          assert "not" in guide.read_text(encoding="utf-8").lower()
+          sha = os.environ["GITHUB_SHA"]
+          assert len(sha) == 40 and all(c in "0123456789abcdef" for c in sha)
+          with ZipFile(archive) as z:
+              manifest = json.loads(z.read("manifest.json"))
+              assert manifest["release_type"] == "BOUNDED_RESEARCH_PROTOTYPE"
+              assert manifest["production_release_approved"] is False
+              assert manifest["may25_audit_status"] == "NOT_INCLUDED_OR_NOT_VERIFIED"
+          def digest(data):
+              return hashlib.sha256(data).hexdigest()
+          guide_bytes, report_bytes = guide.read_bytes(), report.read_bytes()
+          (output / guide.name).write_bytes(guide_bytes)
+          (output / report.name).write_bytes(report_bytes)
+          receipt = {
+              "schema_version": 1,
+              "release_scope": "BOUNDED_RESEARCH_PROTOTYPE",
+              "repository": os.environ["GITHUB_REPOSITORY"],
+              "commit_sha": sha,
+              "git_ref": os.environ["GITHUB_REF"],
+              "run_id": os.environ["GITHUB_RUN_ID"],
+              "research_bundle_filename": archive.name,
+              "research_bundle_sha256": digest(archive.read_bytes()),
+              "submission_guide_sha256": digest(guide_bytes),
+              "saved_cohort_replay_sha256": digest(report_bytes),
+              "native_sumo_execution": "ACTUAL_ENGINE_SYNTHETIC_NETWORK_ONLY",
+              "may25_original_video_rehashed_in_ci": False,
+              "canonical_may25_full_source_audit_verified_in_ci": False,
+              "chennai_holdout_generalization_pass": False,
+              "independent_holdout_pass": False,
+              "production_release_approved": False,
+          }
+          saved = output / "submission_build_receipt.json"
+          saved.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\\n", encoding="utf-8")
+          assert json.loads(saved.read_text())["commit_sha"] == sha
+          print("Commit-bound submission artifact generated:", sha)
+          PY
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
@@ -174,6 +228,9 @@ jobs:
             artifacts/research_submission_ci/research_results_manifest.json
             artifacts/research_submission_ci/figure_*.svg
             artifacts/streetlab_research_bundle.zip
+            artifacts/submission_build_receipt.json
+            artifacts/README_SUBMISSION.md
+            artifacts/MAY25_FULL_COHORT_REPLAY_2026-10-23.md
             artifacts/research_submission_ci/FAILED_RESEARCH_RUN.txt
           if-no-files-found: warn
 
