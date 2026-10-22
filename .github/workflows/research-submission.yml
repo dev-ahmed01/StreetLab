@@ -23,6 +23,8 @@ on:
       - "scripts/STREETLAB_W04_COMPLETION.ps1"
       - "streetlab_integration/w04_completion_gate.py"
       - "tests/test_w04_completion_gate.py"
+      - "scripts/verify_submission_artifact.py"
+      - "tests/test_submission_artifact_verifier.py"
       - "tests/test_w04_portable_drive_sources.py"
       - "streetlab_integration/w04_autonomous_diagnostics.py"
       - "tests/test_w04_autonomous_diagnostics.py"
@@ -75,6 +77,7 @@ jobs:
             README_SUBMISSION.md
             research/MAY25_FULL_COHORT_REPLAY_2026-10-23.md
             scripts/phase2_m6_study_demo.py
+            scripts/verify_submission_artifact.py
             streetlab_phase1
             streetlab_phase2
             streetlab_phase3
@@ -99,7 +102,7 @@ jobs:
           python -W error::SyntaxWarning -m py_compile streetlab_integration/research_submission.py
       - name: Research scientific truthfulness and API regression
         run: |
-          python -m pytest -q tests/test_research_submission.py tests/test_research_audit_display.py tests/test_research_page.py tests/test_research_release.py tests/test_research_results.py tests/test_w04_readiness.py tests/test_w04_score_replay.py tests/test_w04_preregistration.py tests/test_w04_holdout_intake.py tests/test_w04_dataset_inventory.py tests/test_w04_crossdate_regression.py tests/test_w04_crossdate_forensics.py tests/test_w04_visual_review_packet.py tests/test_w04_blind_physical_review.py tests/test_w04_autonomous_diagnostics.py tests/test_w04_completion_gate.py tests/test_w04_portable_drive_sources.py tests/test_streetlab_integration_m9.py tests/test_phase2_m6_api.py
+          python -m pytest -q tests/test_research_submission.py tests/test_research_audit_display.py tests/test_research_page.py tests/test_research_release.py tests/test_submission_artifact_verifier.py tests/test_research_results.py tests/test_w04_readiness.py tests/test_w04_score_replay.py tests/test_w04_preregistration.py tests/test_w04_holdout_intake.py tests/test_w04_dataset_inventory.py tests/test_w04_crossdate_regression.py tests/test_w04_crossdate_forensics.py tests/test_w04_visual_review_packet.py tests/test_w04_blind_physical_review.py tests/test_w04_autonomous_diagnostics.py tests/test_w04_completion_gate.py tests/test_w04_portable_drive_sources.py tests/test_streetlab_integration_m9.py tests/test_phase2_m6_api.py
       - name: Real HTTP access to research page and fail-closed previous holdout
         run: |
           python - <<'PY'
@@ -214,6 +217,10 @@ jobs:
           assert json.loads(saved.read_text())["commit_sha"] == sha
           print("Commit-bound submission artifact generated:", sha)
           PY
+      - name: Independently verify downloaded research ZIP and its source commit
+        run: |
+          python scripts/verify_submission_artifact.py --directory artifacts --commit "$GITHUB_SHA"
+          cp scripts/verify_submission_artifact.py artifacts/verify_submission_artifact.py
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
@@ -229,6 +236,7 @@ jobs:
             artifacts/research_submission_ci/figure_*.svg
             artifacts/streetlab_research_bundle.zip
             artifacts/submission_build_receipt.json
+            artifacts/verify_submission_artifact.py
             artifacts/README_SUBMISSION.md
             artifacts/MAY25_FULL_COHORT_REPLAY_2026-10-23.md
             artifacts/research_submission_ci/FAILED_RESEARCH_RUN.txt
