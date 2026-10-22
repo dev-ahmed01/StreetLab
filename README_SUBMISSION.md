@@ -20,6 +20,14 @@ The post-merge CI job uploads the documentation and original-label-relative repl
 
 These hashes prove **artifact integrity and code provenance**, not accuracy of external FLUID physical labels, fresh reading of the private original May25 video, a valid independent holdout, or real-road SUMO calibration. A green native synthetic demonstration is sufficient for the bounded software-research prototype only.
 
+## Display the actual saved native SUMO results (offline)
+
+After downloading the successful main-branch `streetlab-research-demo-evidence` GitHub Actions artifact, extract it locally and place **only** `streetlab_research_bundle.zip` in the repository's `artifacts/` folder. The existing `/research` page reads this file through the new read-only `/api/research/simulation` endpoint, verifies the ZIP member hashes and original source-to-derived-result SHA manifest, and displays **five measured-in-simulator metric medians** for Baseline, Guided detour and Mixed detour.
+
+Alternatively, set `STREETLAB_RESEARCH_BUNDLE_PATH` in the **same terminal environment as the web server** to the extracted research ZIP's absolute path. The endpoint never runs simulations, changes source data, downloads external assets or claims real traffic improvement. Missing, altered, contradictory or extra ZIP files make the page display an unavailable evidence state; no demo numbers are substituted. Even with a good ZIP, the May25 original-video audit remains a separate source-bound requirement.
+
+`tests/test_research_bundle_view.py` exercises complete synthetic fixture packaging, archive validation, local HTTP retrieval and tampering cases. Authentic native-SUMO execution is separately tested by the research-submission GitHub Action.
+
 ## Demonstrate the product
 
 The product runs on Windows with Python 3.12, dependencies in `requirements.txt`, and locally installed SUMO for native simulation. For **an already set up** StreetLab checkout, the existing `STREETLAB_M8.ps1` launcher runs the local web service on `127.0.0.1:8000` (or another supplied port). Open:
