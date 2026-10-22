@@ -129,7 +129,7 @@ jobs:
               "GUIDED_DIVERSION",
               "MIXED_RESPONSE",
           }
-          for branch in summaries.values():
+          for branch_name, branch in summaries.items():
               for metric in (
                   "arrivals_after_decision",
                   "max_approach_queue_vehicles",
@@ -141,8 +141,8 @@ jobs:
                   assert set(stats) == {
                       "min", "mean", "median", "p10", "p90", "max", "spread"
                   }
-                  assert stats["min"] <= stats["p10"] <= stats["median"]
-                  assert stats["median"] <= stats["p90"] <= stats["max"]
+                  assert stats["min"] <= stats["p10"] <= stats["median"], (branch_name, metric, stats)
+                  assert stats["median"] <= stats["p90"] <= stats["max"], (branch_name, metric, stats)
                   assert stats["spread"] >= 0
 
           mixed = summaries["MIXED_RESPONSE"]["metrics"]
