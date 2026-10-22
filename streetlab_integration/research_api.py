@@ -52,8 +52,14 @@ def mount_research_routes(app:FastAPI) -> None:
         import os
         configured = os.environ.get("STREETLAB_RESEARCH_BUNDLE_PATH", "").strip()
         if not configured:
-            raise HTTPException(status_code=409,
-                detail="Source-verified synthetic SUMO research bundle has not been configured")
+            # Permit an already-downloaded bounded artifact at a fixed local
+            # project path. Never fetch externally or invent a simulation.
+            fallback = root / "artifacts" / "streetlab_research_bundle.zip"
+            if fallback.is_file() and not fallback.is_symlink():
+                configured = str(fallback)
+            else:
+                raise HTTPException(status_code=409,
+                    detail="Source-verified synthetic SUMO research bundle has not been configured")
         try:
             return read_bundle(Path(configured))
         except (BundleDisplayError, ValueError, OSError) as exc:
