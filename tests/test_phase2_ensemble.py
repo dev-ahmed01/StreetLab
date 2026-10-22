@@ -230,3 +230,26 @@ def test_ensemble_rejects_ambiguous_or_invalid_runs():
             horizon_s=10.0,
             members=2,
         )
+
+
+
+def test_quantile_roundoff_never_leaves_observed_ensemble_bounds():
+    """Near-constant real SUMO outputs must pass the M4 quantile gate."""
+    from streetlab_phase2.ensemble import summarize_values
+
+    for value in (
+        1.0000000000000002,
+        1.2345678901234567,
+        10.907123456789012,
+        0.0000000123456789,
+        -0.1234567891234567,
+    ):
+        for numbers in (
+            [value] * 4,
+            [value, value, value, value + abs(value) * 1e-14],
+            [value, value, value + abs(value) * 1e-14, value + abs(value) * 1e-14],
+        ):
+            stats = summarize_values(numbers)
+            assert stats["min"] <= stats["p10"] <= stats["median"]
+            assert stats["median"] <= stats["p90"] <= stats["max"]
+            assert stats["spread"] >= 0
