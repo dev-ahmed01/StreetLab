@@ -47,6 +47,8 @@ def test_exporter_creates_bound_result_files(tmp_path):
     evidence, native = sample()
     (tmp_path / "submission_evidence.json").write_text(json.dumps(evidence))
     (tmp_path / "native_sumo_study.json").write_text(json.dumps(native))
+    (tmp_path / "native_sumo.log").write_text("completed native SUMO run\n")
+    (tmp_path / "submission_summary.md").write_text("synthetic run summary\n")
     names = write_results(tmp_path)
     assert "research_results.md" in names and "figure_02_arrivals.svg" in names
     report = (tmp_path / "research_results.md").read_text()
@@ -56,6 +58,8 @@ def test_exporter_creates_bound_result_files(tmp_path):
     assert (tmp_path / "research_metrics.csv").read_text().count("SYNTHETIC_ASSUMPTION_ASSIGNMENT") == 15
     manifest = json.loads((tmp_path / "research_results_manifest.json").read_text())
     assert manifest["source_artifacts_sha256"]["native_sumo_study.json"] == hashlib.sha256((tmp_path / "native_sumo_study.json").read_bytes()).hexdigest()
+    assert manifest["ancillary_sha256"]["native_sumo.log"] == hashlib.sha256((tmp_path / "native_sumo.log").read_bytes()).hexdigest()
+    assert manifest["ancillary_sha256"]["submission_summary.md"] == hashlib.sha256((tmp_path / "submission_summary.md").read_bytes()).hexdigest()
     with pytest.raises(ResultsError, match="overwrite"):
         write_results(tmp_path)
 
