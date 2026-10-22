@@ -126,3 +126,18 @@ def test_unhashed_ancillary_evidence_rejected(tmp_path):
     with pytest.raises(ReleaseError, match="complete research source set"):
         package(src,out)
     assert not out.exists()
+
+
+def test_optional_may25_audit_changed_after_validation_rejected(tmp_path, monkeypatch):
+    from streetlab_integration import research_audit_display
+    src, out = tmp_path/"research", tmp_path/"release.zip"
+    _fixture(src)
+    audit = tmp_path/"completed-may25.json"
+    audit.write_bytes(b"original validated bytes")
+    def mutate_after_validation(path):
+        Path(path).write_bytes(b"replaced after validation")
+        return {"status": "verified_saved_audit_display"}
+    monkeypatch.setattr(research_audit_display, "read_audit", mutate_after_validation)
+    with pytest.raises(ReleaseError, match="May25 audit changed during verification"):
+        package(src, out, audit)
+    assert not out.exists()
