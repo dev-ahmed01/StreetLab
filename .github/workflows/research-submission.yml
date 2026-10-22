@@ -210,7 +210,7 @@ jobs:
               "production_release_approved": False,
           }
           saved = output / "submission_build_receipt.json"
-          saved.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\\n", encoding="utf-8")
+          saved.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8")
           assert json.loads(saved.read_text())["commit_sha"] == sha
           print("Commit-bound submission artifact generated:", sha)
           PY
