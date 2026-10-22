@@ -55,10 +55,14 @@ jobs:
           pytest -q tests/test_streetlab_integration_m1.py tests/test_streetlab_integration_m2.py tests/test_streetlab_integration_m3.py tests/test_streetlab_integration_m4.py tests/test_streetlab_integration_m5.py tests/test_streetlab_integration_m6.py tests/test_streetlab_integration_m7.py tests/test_streetlab_integration_m8.py tests/test_phase2_m6_api.py
       - name: Install genuine SUMO/netconvert for synthetic contract smoke only
         run: |
-          sudo apt-get update -qq
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq sumo
-          sumo --version
-          netconvert --version
+          python -m pip install --disable-pip-version-check "eclipse-sumo==1.28.0"
+          SUMO_DIR="$(python -c 'import sumo; print(sumo.SUMO_HOME)')"
+          test -x "$SUMO_DIR/bin/sumo"
+          test -x "$SUMO_DIR/bin/netconvert"
+          echo "SUMO_HOME=$SUMO_DIR" >> "$GITHUB_ENV"
+          echo "$SUMO_DIR/bin" >> "$GITHUB_PATH"
+          "$SUMO_DIR/bin/sumo" --version
+          "$SUMO_DIR/bin/netconvert" --version
       - name: Run actual native SUMO engine across M4 and M5
         env:
           PYTHONPATH: .

@@ -73,9 +73,14 @@ jobs:
 
       - name: Install SUMO
         run: |
-          sudo apt-get update
-          sudo apt-get install -y sumo sumo-tools
-          echo "SUMO_HOME=/usr/share/sumo" >> "$GITHUB_ENV"
+          python -m pip install --disable-pip-version-check "eclipse-sumo==1.28.0"
+          SUMO_DIR="$(python -c 'import sumo; print(sumo.SUMO_HOME)')"
+          test -x "$SUMO_DIR/bin/sumo"
+          test -x "$SUMO_DIR/bin/netconvert"
+          echo "SUMO_HOME=$SUMO_DIR" >> "$GITHUB_ENV"
+          echo "$SUMO_DIR/bin" >> "$GITHUB_PATH"
+          "$SUMO_DIR/bin/sumo" --version
+          "$SUMO_DIR/bin/netconvert" --version
 
       - name: Run M6 evidence-gated APPLY_DETOUR integration
         run: |
