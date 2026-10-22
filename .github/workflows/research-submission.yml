@@ -245,9 +245,23 @@ jobs:
             artifacts/MAY25_FULL_COHORT_REPLAY_2026-10-23.md
             artifacts/research_submission_ci/FAILED_RESEARCH_RUN.txt
           if-no-files-found: warn
-      - name: Preserve public portable audit implementation for offline source-verified replay
+  portable-audit-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            streetlab_integration
+            streetlab_phase3
+            streetlab_phase2
+            streetlab_phase1
+            scripts
+            requirements.txt
+          sparse-checkout-cone-mode: false
+      - name: Save public code for original private-source audit
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        if: always()
         with:
           name: streetlab-canonical-audit-runtime
           path: |
@@ -257,6 +271,7 @@ jobs:
             streetlab_phase1/
             scripts/
             requirements.txt
+          retention-days: 7
           if-no-files-found: error
 
   windows-powershell-syntax:
