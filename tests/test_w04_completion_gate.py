@@ -62,6 +62,8 @@ def receipts(tmp):
         "source_video_sha256": "e"*64,
         "source_truth_sha256": "f"*64,
         "model_tree_sha256": "d"*64,
+        "policy_lock_sha256": digest(lockp),
+        "protocol_sha256": digest(protop),
     })
     summary = write(run / "cross_date_summary.json", {
         "status": "W04_MAY25_CROSSDATE_REGRESSION_RECORDED_NOT_BLIND_HOLDOUT",
@@ -106,9 +108,24 @@ def receipts(tmp):
     study = write(simdir / "submission_evidence.json", {
         "research_workflow_status":
             "RESEARCH_DEMO_EXECUTED_WITH_REPORTED_FAILED_REAL_WORLD_GENERALIZATION",
-        "native_sumo": {"status": "SUMO_EXECUTED_SYNTHETIC_ONLY"},
+        "track": "RESEARCH_SUBMISSION_NO_NEW_FIELD_SURVEY",
+        "field_census_claimed": False,
+        "datasets_are_from_different_sites": True,
+        "real_world_intervention_effect_proven": False,
+        "native_sumo": {
+            "status": "SUMO_EXECUTED_SYNTHETIC_ONLY",
+            "site_specific_field_validation": False,
+            "simulation_not_real_world_effect": True,
+            "production_release_approved": False,
+        },
         "dataset_summaries": {
-            "chennai": {"holdout_generalization_pass": False}
+            "chennai": {
+                "holdout_generalization_pass": False,
+                "capacity_gate_pass": False,
+                "calibration_locked": True,
+                "retuning_allowed": False,
+            },
+            "fluid_w04": {"scores_recomputed_in_this_run": False},
         },
         "external_site_transfer_validated": False,
         "production_release_approved": False,
@@ -207,3 +224,56 @@ def test_auto_pairs_hash_consistent_evidence_not_latest_stale_folders(tmp_path):
     out = gate.evaluate(chosen)
     assert out["status"] == gate.READY
     assert out["production_release_approved"] is False
+
+def test_mismatched_newer_but_valid_policy_lock_cannot_relabel_old_regression(tmp_path):
+    root, paths = receipts(tmp_path)
+    old = paths["policy_lock"]
+    lock = json.loads(old.read_text())
+    lock["source_model_sha256"] = "9"*64
+    alternative = write(root/"artifacts"/"w04_policy_lock_new"/"policy_lock.json", lock)
+    proto = json.loads(paths["protocol"].read_text())
+    proto["policy_lock_sha256"] = digest(alternative)
+    proto["source_model_sha256"] = "9"*64
+    write(alternative.parent/"holdout_protocol.json", proto)
+    # The legitimate lock must be selected by the preflight hashes, not by timestamp.
+    selected = gate.sources(root)
+    assert selected["policy_lock"] == paths["policy_lock"]
+    assert gate.evaluate(selected)["status"] == gate.READY
+    # Now make the old lock unavailable. An unrelated valid lock cannot complete.
+    paths["policy_lock"].unlink()
+    selected = gate.sources(root)
+    assert selected["policy_lock"] is None
+    assert gate.evaluate(selected)["status"] == gate.BLOCKED
+
+
+@pytest.mark.parametrize("target,field,value", [
+    ("submission", "field_census_claimed", True),
+    ("submission", "real_world_intervention_effect_proven", True),
+    ("submission", "datasets_are_from_different_sites", False),
+    ("submission", "native_sumo", {"status": "SUMO_EXECUTED_SYNTHETIC_ONLY",
+                                   "site_specific_field_validation": True,
+                                   "simulation_not_real_world_effect": True,
+                                   "production_release_approved": False}),
+    ("submission", "dataset_summaries", {"chennai": {"holdout_generalization_pass": False}}),
+    ("summary", "per_class_fluid_label_diagnostics", []),
+    ("submission", "native_sumo", []),
+    ("submission", "dataset_summaries", "invalid"),
+])
+def test_contradictory_or_malformed_nested_evidence_fails_closed(tmp_path, target, field, value):
+    root, paths = receipts(tmp_path)
+    data = json.loads(paths[target].read_text())
+    data[field] = value
+    write(paths[target], data)
+    result = gate.evaluate(gate.sources(root))
+    assert result["status"] == gate.BLOCKED
+    assert result["production_release_approved"] is False
+    assert len(result["phases"]) == 6
+
+
+def test_original_policy_hash_relationship_required_for_completion(tmp_path):
+    root, paths = receipts(tmp_path)
+    pre = json.loads(paths["preflight"].read_text())
+    pre["policy_lock_sha256"] = "0"*64
+    write(paths["preflight"], pre)
+    # Broken preflight/forensics link must fail rather than silently substitute.
+    assert gate.evaluate(gate.sources(root))["status"] == gate.BLOCKED
