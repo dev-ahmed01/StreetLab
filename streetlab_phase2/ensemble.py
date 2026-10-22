@@ -39,7 +39,14 @@ def _percentile(values: list[float], q: float) -> float:
     lower = int(index)
     upper = min(lower + 1, len(ordered) - 1)
     weight = index - lower
-    return ordered[lower] * (1.0 - weight) + ordered[upper] * weight
+    lo, hi = ordered[lower], ordered[upper]
+    # Floating-point interpolation can exceed an endpoint by a few ULPs,
+    # breaking p10 <= median <= p90 <= max for nearly identical scenario
+    # results. Preserve identical values exactly and clamp roundoff only.
+    if lo == hi:
+        return lo
+    interpolated = lo + (hi - lo) * weight
+    return max(lo, min(hi, interpolated))
 
 
 def summarize_values(values: Iterable[float]) -> dict[str, float]:
