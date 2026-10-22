@@ -22,6 +22,9 @@ def test_page_has_small_existing_route_hierarchy():
         assert 'id="'+key+'"' in page
     assert "/api/research/may25-audit" in page
     assert "/api/research/summary" in page
+    assert "/api/research/simulation" in page
+    assert 'id="simulationRows"' in page
+    assert 'id="simulationStatus"' in page
 
 
 def test_page_keeps_scientific_boundary_visible():
