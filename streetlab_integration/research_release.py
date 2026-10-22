@@ -69,8 +69,11 @@ def validate(run_dir: Path, may25_audit: Path | None = None) -> tuple[dict[str, 
     if summary.get("classification") != "SYNTHETIC_RESEARCH_ONLY":
         raise ReleaseError("Results manifest is not synthetic-only")
     source_hashes, produced_hashes = summary.get("source_artifacts_sha256"), summary.get("produced_sha256")
+    ancillary_hashes = summary.get("ancillary_sha256")
     if (not isinstance(source_hashes, dict) or not isinstance(produced_hashes, dict)
-        or set(source_hashes) != set(SOURCES) or set(produced_hashes) != set(PRODUCED)):
+        or set(source_hashes) != set(SOURCES) or set(produced_hashes) != set(PRODUCED)
+        or not isinstance(ancillary_hashes, dict)
+        or set(ancillary_hashes) != {"submission_summary.md", "native_sumo.log"}):
         raise ReleaseError("Results manifest does not cover the complete research source set")
     for name in SOURCES:
         if _digest(files[name]) != source_hashes[name]:
@@ -78,6 +81,9 @@ def validate(run_dir: Path, may25_audit: Path | None = None) -> tuple[dict[str, 
     for name in PRODUCED:
         if _digest(files[name]) != produced_hashes[name]:
             raise ReleaseError("Derived research artifact hash mismatch: " + name)
+    for name, expected in ancillary_hashes.items():
+        if _digest(files[name]) != expected:
+            raise ReleaseError("Ancillary evidence hash mismatch: " + name)
     # Prevent a file changing between validation and archive creation.
     if any(files[name] != _safe_read(run_dir, name) for name in NAMES):
         raise ReleaseError("Source evidence changed while preparing bundle")
@@ -85,10 +91,11 @@ def validate(run_dir: Path, may25_audit: Path | None = None) -> tuple[dict[str, 
     if may25_audit is not None:
         from streetlab_integration.research_audit_display import read_audit
         # The autonomous audit runner itself must already have checked full source SHA.
-        read_audit(Path(may25_audit))
-        audit_bytes = Path(may25_audit).read_bytes()
-        if len(audit_bytes) > 10_000_000:
-            raise ReleaseError("May25 audit too large")
+        audit_path = Path(may25_audit)
+        audit_bytes = _safe_read(audit_path.parent, audit_path.name)
+        read_audit(audit_path)
+        if audit_bytes != _safe_read(audit_path.parent, audit_path.name):
+            raise ReleaseError("May25 audit changed during verification")
         files["automated_object_audit.json"] = audit_bytes
         audit_status = "COMPLETED_SAVED_AUDIT_INCLUDED_LABEL_RELATIVE"
     manifest = {
@@ -126,6 +133,9 @@ def package(run_dir: Path, output: Path, may25_audit: Path | None = None) -> dic
         "No field-effect, real-time inference, or production approval is claimed.\n"
         "manifest.json binds each packaged file to its original SHA256.\n"
     ).encode("utf-8")
+    # README is generated deterministically; the manifest is the only
+    # deliberately excluded file because it cannot hash itself.
+    manifest["files_sha256"]["README.txt"] = _digest(readme)
     # Acquire the exclusive filename before entering cleanup logic: existing
     # completed archives must never be removed on FileExistsError.
     handle = output.open("xb")
