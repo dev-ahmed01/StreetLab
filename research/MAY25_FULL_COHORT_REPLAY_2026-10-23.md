@@ -47,6 +47,31 @@ Top-two **and** top-five HEAVY disagreement concentration: **100%**. The result 
 
 Across the full replay, 42 matched points had a near alternative spatial association (at most 10 pixels worse and within the frozen 50-pixel gate). Nine were wrong-class matches; **zero** of the 236 HEAVY disagreements met the near-alternative criterion. This ambiguity count is based on the same saved coordinate replay and awaits upstream source audit, as above.
 
+## Predicted-track class stability
+
+Across **132 saved predicted track IDs**, **116** emitted one model class throughout their saved frames; **16** emitted more than one class. This is **temporal model-class stability**, not corroboration of FLUID vehicle taxonomy or physical correctness.
+
+| Model track ID | Scored frames | Model labels across saved frames |
+|---|---:|---|
+| 56 | 117 | MOTORCYCLE 116, CAR 1 |
+| 40 | 104 | HEAVY_VEHICLE 103, CAR 1 |
+| 80 | 100 | HEAVY_VEHICLE 99, BUS 1 |
+| 5 | 75 | CAR 74, HEAVY_VEHICLE 1 |
+| 67 | 74 | CAR 56, BUS 18 |
+| 97 | 64 | BUS 57, CAR 7 |
+| 54 | 54 | MOTORCYCLE 43, CAR 11 |
+| 108 | 50 | CAR 33, HEAVY_VEHICLE 17 |
+| 100 | 48 | HEAVY_VEHICLE 39, BUS 7, CAR 2 |
+| 94 | 34 | CAR 28, HEAVY_VEHICLE 6 |
+| 75 | 26 | CAR 18, MOTORCYCLE 8 |
+| 85 | 20 | MOTORCYCLE 13, CAR 7 |
+| 35 | 15 | CAR 13, BUS 2 |
+| 116 | 13 | HEAVY_VEHICLE 9, CAR 4 |
+| 93 | 9 | BUS 8, HEAVY_VEHICLE 1 |
+| 88 | 2 | CAR 1, HEAVY_VEHICLE 1 |
+
+Dominant model class per predicted ID: CAR 66, MOTORCYCLE 48, HEAVY_VEHICLE 10 and BUS 8 (note: **12** distinct IDs emitted BUS at least once). The HEAVY→CAR disagreement pairs (FLUID 7 ↔ model 26, FLUID 36 ↔ model 29) were themselves stable CAR predictions and must not be reinterpreted as independent physical class validation.
+
 ## BUS predictions and why accuracy is unknown
 
 There were **185 BUS prediction-frame records belonging to 12 distinct predicted track IDs**. One BUS record was spatially associated to a FLUID CAR; **184** BUS records had no FLUID point within the post-assignment match. The three largest model BUS identities were ID 97 (57 BUS frames), ID 110 (45), and ID 81 (36). **BUS FLUID truth count was zero**; neither BUS precision against physical reality nor BUS recall can be calculated. Unmatched predictions cannot automatically be called physically false detections.
