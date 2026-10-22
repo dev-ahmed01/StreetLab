@@ -65,6 +65,13 @@ pre{white-space:pre-wrap;word-break:break-word;background:#f5f8f6;
 .result{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}
 .result>div{padding:14px;border:1px solid #ebf0ed;border-radius:10px;font-size:11px;color:#6a7c77}
 .result strong{display:block;font:700 14px Manrope,sans-serif;color:#2d4f48;margin:8px 0}
+.data-grid{width:100%;border-collapse:collapse;margin:16px 0;font-size:12px;line-height:1.6}
+.data-grid th,.data-grid td{text-align:left;padding:12px 10px;border-bottom:1px solid #e7eee9;vertical-align:middle}
+.data-grid th{font-weight:600;color:#577067;background:#f5f9f7}
+.data-grid td:not(:first-child){font-variant-numeric:tabular-nums;font-weight:600;color:#234f44}
+.scroll-x{max-width:100%;overflow-x:auto}
+.evidence-note{font-size:11px;color:#647870;line-height:1.7}
+
 footer{margin-top:26px;font-size:11px;color:#83938e}
 @media(max-width:1050px){.grids{grid-template-columns:repeat(2,1fr)}.shell{grid-template-columns:175px 1fr}main{padding:26px}}
 @media(max-width:690px){.topbar{padding:15px 19px}.toplinks{gap:12px}.shell{display:block}.nav{border-right:0;border-bottom:1px solid #e3eae7;padding:10px 13px;flex-direction:row;overflow-x:auto}.nav-label,.nav .tail{display:none}.nav a{white-space:nowrap;padding:9px 12px}main{padding:20px 15px 35px}.grids,.two,.result{grid-template-columns:1fr 1fr}.page-title{display:block}h1{font-size:25px}}
@@ -123,8 +130,13 @@ footer{margin-top:26px;font-size:11px;color:#83938e}
     <div>02 <strong>Guided detour</strong> Controlled modeled alternative</div>
     <div>03 <strong>Mixed detour</strong> Paired synthetic comparison</div>
   </div>
-  <p class="context">Execute the existing reproducible local research runner. The results describe a modeled scenario, not measured road improvement.</p>
-  <pre> .\scripts\STREETLAB_RESEARCH.ps1</pre>
+  <p class="context">Results appear only when the previously executed native SUMO research ZIP passes source and SHA integrity checks. These are modeled outcomes, not measurements of road improvement.</p>
+  <p class="statusline" id="simulationStatus" role="status" aria-live="polite">Checking local synthetic SUMO evidence.</p>
+  <div class="scroll-x" id="simulationTable" hidden><table class="data-grid" aria-label="Verified synthetic scenario comparison">
+    <thead><tr><th scope="col">Metric</th><th scope="col">Baseline</th><th scope="col">Guided detour</th><th scope="col">Mixed detour</th></tr></thead>
+    <tbody id="simulationRows"></tbody>
+  </table></div>
+  <p class="evidence-note" id="simulationNote"></p>
   <div class="buttonrow"><a href="/reports">Open evidence reports</a><a class="secondary" href="/">Observe a project</a></div>
 </section>
 <section class="pane" id="boundaries">
@@ -164,6 +176,52 @@ footer{margin-top:26px;font-size:11px;color:#83938e}
   }catch(e){
     document.getElementById("auditStatus").textContent=
       "Original-source audit unavailable or inconsistent. Distinct-track counts remain unverified.";
+  }
+})();
+(async function(){
+  const status=document.getElementById("simulationStatus");
+  const table=document.getElementById("simulationTable");
+  const rows=document.getElementById("simulationRows");
+  const note=document.getElementById("simulationNote");
+  try{
+    const response=await fetch("/api/research/simulation",{cache:"no-store"});
+    if(!response.ok)throw Error("Source-checked research ZIP absent");
+    const data=await response.json();
+    if(data.status!=="VERIFIED_NATIVE_SUMO_SYNTHETIC_RESEARCH" ||
+       data.production_release_approved!==false ||
+       data.independent_holdout_pass!==false ||
+       data.chennai_holdout_generalization_pass!==false ||
+       !Array.isArray(data.metrics))throw Error("Unsupported source status");
+    const branches=["BASELINE","DETOUR_GUIDED","DETOUR_MIXED"];
+    for(const metric of data.metrics){
+      const tr=document.createElement("tr");
+      const name=document.createElement("td");
+      name.textContent=metric.label+" ("+metric.unit+")";
+      tr.appendChild(name);
+      for(const branch of branches){
+        const td=document.createElement("td");
+        const value=metric.medians[branch];
+        if(typeof value!=="number" || !Number.isFinite(value))throw Error("Invalid figure");
+        td.textContent=value.toFixed(2);
+        tr.appendChild(td);
+      }
+      rows.appendChild(tr);
+    }
+    table.hidden=false;
+    status.textContent="Verified saved SUMO simulation · "+data.ensemble_members+
+      " assumed assignment members · historical source-hashed ZIP";
+    const lower=(data.reduced_arrival_branches||[]).length;
+    note.textContent=(lower ? "Trade-off: modeled arrivals were lower in "+lower+
+      " detour scenario(s). " : "")+
+      "All rows are synthetic model medians, not observed field results. "+
+      "Chennai generalization failed; independent holdout and production release are not approved.";
+  }catch(e){
+    rows.textContent="";
+    table.hidden=true;
+    status.textContent="No verified native SUMO research ZIP is available in this local session.";
+    note.textContent="Download the saved research evidence and configure "+
+      "STREETLAB_RESEARCH_BUNDLE_PATH to its streetlab_research_bundle.zip, or place it in artifacts/. "+
+      "The interface never substitutes demo-only numbers.";
   }
 })();
 </script>
