@@ -47,6 +47,7 @@ on:
       - "tests/test_research_submission.py"
       - "tests/test_research_audit_display.py"
       - "tests/test_research_page.py"
+      - "tests/test_research_bundle_view.py"
       - "tests/test_research_release.py"
       - ".github/workflows/research-submission.yml"
   workflow_dispatch:
@@ -105,7 +106,7 @@ jobs:
           python -W error::SyntaxWarning -m py_compile streetlab_integration/research_submission.py
       - name: Research scientific truthfulness and API regression
         run: |
-          python -m pytest -q tests/test_research_submission.py tests/test_research_audit_display.py tests/test_research_page.py tests/test_research_release.py tests/test_submission_artifact_verifier.py tests/test_research_results.py tests/test_w04_readiness.py tests/test_w04_score_replay.py tests/test_w04_preregistration.py tests/test_w04_holdout_intake.py tests/test_w04_dataset_inventory.py tests/test_w04_crossdate_regression.py tests/test_w04_crossdate_forensics.py tests/test_w04_visual_review_packet.py tests/test_w04_blind_physical_review.py tests/test_w04_autonomous_diagnostics.py tests/test_w04_completion_gate.py tests/test_w04_portable_drive_sources.py tests/test_streetlab_integration_m9.py tests/test_phase2_m6_api.py
+          python -m pytest -q tests/test_research_submission.py tests/test_research_audit_display.py tests/test_research_page.py tests/test_research_release.py tests/test_research_bundle_view.py tests/test_submission_artifact_verifier.py tests/test_research_results.py tests/test_w04_readiness.py tests/test_w04_score_replay.py tests/test_w04_preregistration.py tests/test_w04_holdout_intake.py tests/test_w04_dataset_inventory.py tests/test_w04_crossdate_regression.py tests/test_w04_crossdate_forensics.py tests/test_w04_visual_review_packet.py tests/test_w04_blind_physical_review.py tests/test_w04_autonomous_diagnostics.py tests/test_w04_completion_gate.py tests/test_w04_portable_drive_sources.py tests/test_streetlab_integration_m9.py tests/test_phase2_m6_api.py
       - name: Real HTTP access to research page and fail-closed previous holdout
         run: |
           python - <<'PY'
@@ -244,6 +245,34 @@ jobs:
             artifacts/MAY25_FULL_COHORT_REPLAY_2026-10-23.md
             artifacts/research_submission_ci/FAILED_RESEARCH_RUN.txt
           if-no-files-found: warn
+  portable-audit-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            streetlab_integration
+            streetlab_phase3
+            streetlab_phase2
+            streetlab_phase1
+            scripts
+            requirements.txt
+          sparse-checkout-cone-mode: false
+      - name: Save public code for original private-source audit
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: streetlab-canonical-audit-runtime
+          path: |
+            streetlab_integration/
+            streetlab_phase3/
+            streetlab_phase2/
+            streetlab_phase1/
+            scripts/
+            requirements.txt
+          retention-days: 7
+          if-no-files-found: error
 
   windows-powershell-syntax:
     runs-on: windows-latest

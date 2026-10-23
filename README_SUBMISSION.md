@@ -8,9 +8,9 @@
 
 **Research evidence:** download the `streetlab-research-demo-evidence` artifact from the latest successful **main-branch** run of the [research-submission GitHub Actions workflow](https://github.com/dev-ahmed01/StreetLab/actions/workflows/research-submission.yml). The artifact contains a source-hashed `streetlab_research_bundle.zip` generated from an **actual native SUMO run of synthetic network scenarios** in CI. GitHub CI does **not** have the user's private May25 video or W04 OpenVINO model and cannot substantiate independent May25 re-verification.
 
-**Historical May25 analysis:** `research/MAY25_FULL_COHORT_REPLAY_2026-10-23.md` records the independently recomputed saved-coordinates/tracking replay of the frozen 120-frame cohort. It is **not** the canonical original-video-SHA-verified `automated_object_audit.json`. Do not set `STREETLAB_MAY25_AUDIT_PATH` to a derivative report or claim the read-only gate succeeded until the original-source runner has created the verified canonical file.
+**Historical May25 analysis:** `research/MAY25_FULL_COHORT_REPLAY_2026-10-23.md` records the earlier saved-coordinate-only replay. The canonical full-source runner was subsequently executed on the SHA-verified original May25 video and FLUID CSV; its results, fingerprints and scientific limitations are documented in [the canonical source-verification report](research/MAY25_CANONICAL_SOURCE_VERIFICATION_2026-10-23.md). The completed canonical derived audit is held separately as an offline submission artifact, not committed along with private video/CSV data. Configure `STREETLAB_MAY25_AUDIT_PATH` to the extracted `automated_object_audit.json` (never to the earlier replay Markdown).
 
-**Six-phase acceptance:** `README_W04_COMPLETION.md` and `streetlab_integration/w04_completion_gate.py` implement the exactly six-phase fail-closed acceptance receipt. A missing canonical source-verified May25 object audit means the full gate remains **BLOCKED** despite the saved-cohort replay; the honest research prototype can still be submitted with its limitations stated clearly.
+**Six-phase acceptance:** `README_W04_COMPLETION.md` and `streetlab_integration/w04_completion_gate.py` implement the exactly six-phase fail-closed acceptance receipt. Using the original SHA-verified May25 audit, matching policy/protocol/forensics receipts and executed synthetic SUMO evidence, this gate has now returned **`RESEARCH_PROTOTYPE_COMPLETE_WITH_LIMITATIONS` (6/6 phases)** in the private research execution environment. A fresh public GitHub checkout will correctly remain BLOCKED until the private artifacts are provided locally. This result is **not** an independent holdout or real-site release.
 
 
 
@@ -19,6 +19,14 @@
 The post-merge CI job uploads the documentation and original-label-relative replay alongside the synthetic evidence. After extracting the GitHub Actions artifact, run `python verify_submission_artifact.py --directory .` from the extraction folder; it checks the exact source commit fingerprint, source/figure/log digests, ZIP member inventory and nonproduction claims, and fails on modification. Pass `--commit <40-character-main-commit-sha>` if the exact submitted revision must also be checked. Read `submission_build_receipt.json` in the artifact and compare its `commit_sha` with the `main` commit being submitted, then verify SHA-256 of `streetlab_research_bundle.zip`, `README_SUBMISSION.md`, and `MAY25_FULL_COHORT_REPLAY_2026-10-23.md` against the named SHA fields. The archive's internal manifest separately validates its source and generated metrics/figures.
 
 These hashes prove **artifact integrity and code provenance**, not accuracy of external FLUID physical labels, fresh reading of the private original May25 video, a valid independent holdout, or real-road SUMO calibration. A green native synthetic demonstration is sufficient for the bounded software-research prototype only.
+
+## Display the actual saved native SUMO results (offline)
+
+After downloading the successful main-branch `streetlab-research-demo-evidence` GitHub Actions artifact, extract it locally and place **only** `streetlab_research_bundle.zip` in the repository's `artifacts/` folder. The existing `/research` page reads this file through the new read-only `/api/research/simulation` endpoint, verifies the ZIP member hashes and original source-to-derived-result SHA manifest, and displays **five measured-in-simulator metric medians** for Baseline, Guided detour and Mixed detour.
+
+Alternatively, set `STREETLAB_RESEARCH_BUNDLE_PATH` in the **same terminal environment as the web server** to the extracted research ZIP's absolute path. The endpoint never runs simulations, changes source data, downloads external assets or claims real traffic improvement. Missing, altered, contradictory or extra ZIP files make the page display an unavailable evidence state; no demo numbers are substituted. Even with a good ZIP, the May25 original-video audit remains a separate source-bound requirement.
+
+`tests/test_research_bundle_view.py` exercises complete synthetic fixture packaging, archive validation, local HTTP retrieval and tampering cases. Authentic native-SUMO execution is separately tested by the research-submission GitHub Action.
 
 ## Demonstrate the product
 
