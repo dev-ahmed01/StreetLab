@@ -82,11 +82,17 @@ jobs:
           if (git ls-files | Select-String '^(?:\.venv/|.*__pycache__/|.*\.pyc$)') {
             throw "Generated Python runtime files are tracked"
           }
-          foreach ($script in @('scripts/STREETLAB_M8.ps1','scripts/STREETLAB_M9.ps1')) {
+          foreach ($script in @('scripts/STREETLAB_M8.ps1','scripts/STREETLAB_M9.ps1','scripts/STREETLAB_DOCKER.ps1')) {
             $t=$null
             $e=$null
             [System.Management.Automation.Language.Parser]::ParseFile(
               (Join-Path $PWD $script), [ref]$t,[ref]$e) | Out-Null
             if ($e.Count -gt 0) {throw "Malformed PowerShell launcher: $script"}
           }
-          Write-Host 'Clean Windows check and both launcher parsers passed'
+          & ./scripts/STREETLAB_DOCKER.ps1 -Mode Initialize
+          $line = (Get-Content .env | Where-Object { $_ -like 'STREETLAB_ACCESS_PASSWORD=*' })
+          if (-not $line -or $line.Split('=',2)[1].Length -lt 40 -or $line -match 'REPLACE_WITH_') {
+            throw 'Generated local password is not cryptographically strong'
+          }
+          Remove-Item .env -Force
+          Write-Host 'Clean Windows launcher parsers and secure bootstrap passed'
