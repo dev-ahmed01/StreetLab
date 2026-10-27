@@ -1,0 +1,106 @@
+name: StreetLab Container Full-Journey Checks
+
+on:
+  pull_request:
+    paths:
+      - Dockerfile
+      - .dockerignore
+      - compose.yaml
+      - compose.worker.yaml
+      - scripts/container_e2e.py
+      - scripts/container_healthcheck.py
+      - README_CONTAINER.md
+      - .github/workflows/container-e2e.yml
+      - requirements.txt
+      - streetlab_phase2/**
+      - streetlab_integration/**
+  push:
+    branches: [main]
+    paths:
+      - Dockerfile
+      - .dockerignore
+      - compose.yaml
+      - scripts/container_e2e.py
+      - scripts/container_healthcheck.py
+      - .github/workflows/container-e2e.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  docker-real-http-mp4-native-sumo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            .dockerignore
+            Dockerfile
+            compose.yaml
+            compose.worker.yaml
+            .env.example
+            requirements.txt
+            README_CONTAINER.md
+            scripts
+            streetlab_phase1
+            streetlab_phase2
+            streetlab_phase3
+            streetlab_integration
+            data/models/sumo_persona_priors.csv
+            data/processed/phase1_final_heldout_validation.json
+            data/raw/ChennaiTrajectoryData2.45-3.00PM.xlsx
+            data/raw/ChennaiTrajectoryData3.00-3.15PM.xlsx
+            data/benchmarks/fluid_fidrt/manifest.json
+            docs/PHASE3_W04_CONTINUOUS_201_FINAL_QA_20261009.md
+      - name: Validate local compose configuration
+        run: |
+          cp .env.example .env
+          docker compose -f compose.yaml config --quiet
+          docker compose -f compose.yaml -f compose.worker.yaml --profile inference config --quiet
+      - name: Build real native SUMO image
+        run: docker build --target web -t streetlab:e2e .
+      - name: Start authenticated server with named state volume
+        run: |
+          docker volume create streetlab-e2e-state
+          docker run -d --name streetlab-e2e \
+            -p 127.0.0.1:18001:8000 \
+            -e STREETLAB_SECURITY_MODE=basic \
+            -e STREETLAB_ACCESS_PASSWORD=CI_local_only_test_password_2026 \
+            -e STREETLAB_MAY25_AUDIT_PATH=/app/artifacts/absent-audit.json \
+            -e STREETLAB_RESEARCH_BUNDLE_PATH=/app/artifacts/absent-bundle.zip \
+            -v streetlab-e2e-state:/app/.streetlab-m5 \
+            streetlab:e2e
+          for i in $(seq 1 60); do
+            if docker exec streetlab-e2e python scripts/container_healthcheck.py; then break; fi
+            if [ "$i" -eq 60 ]; then docker logs streetlab-e2e; exit 1; fi
+            sleep 2
+          done
+      - name: Real-video ingestion and project HTTP acceptance
+        run: docker exec streetlab-e2e python scripts/container_e2e.py
+      - name: Restart and verify saved source and queued job
+        run: |
+          docker restart streetlab-e2e
+          for i in $(seq 1 30); do
+            if docker exec streetlab-e2e python scripts/container_healthcheck.py; then break; fi
+            if [ "$i" -eq 30 ]; then docker logs streetlab-e2e; exit 1; fi
+            sleep 2
+          done
+          docker exec streetlab-e2e python scripts/container_e2e.py --verify-persisted
+      - name: Run genuine native SUMO paired decision experiment inside image
+        run: |
+          docker exec streetlab-e2e python -m scripts.phase2_m6_study_demo \
+            --project-root /app --workdir /tmp/streetlab-container-sumo \
+            --output /tmp/streetlab-container-sumo-report.json --members 2
+          docker exec streetlab-e2e python -c "import json; x=json.load(open('/tmp/streetlab-container-sumo-report.json')); assert x['guardrails']['confidence_fabricated'] is False; print('CONTAINER_NATIVE_SUMO_PASS')"
+      - name: On failure capture server logs
+        if: failure()
+        run: docker logs streetlab-e2e || true
+      - name: Remove temporary test container and volume
+        if: always()
+        run: |
+          docker rm -f streetlab-e2e || true
+          docker volume rm streetlab-e2e-state || true
