@@ -1,0 +1,29 @@
+name: streetlab
+services:
+  web:
+    build:
+      context: .
+      target: web
+    image: streetlab:local
+    init: true
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${STREETLAB_PORT:-8000}:8000"
+    environment:
+      STREETLAB_SECURITY_MODE: basic
+      STREETLAB_ACCESS_PASSWORD: ${STREETLAB_ACCESS_PASSWORD:?Set a 20+ character random password in .env}
+      STREETLAB_RESEARCH_BUNDLE_PATH: /app/artifacts/streetlab_research_bundle.zip
+      STREETLAB_MAY25_AUDIT_PATH: /app/artifacts/automated_object_audit.json
+    volumes:
+      - streetlab_state:/app/.streetlab-m5
+      - ./artifacts:/app/artifacts:ro
+    read_only: true
+    tmpfs:
+      - /tmp:size=512m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 256
+volumes:
+  streetlab_state:
