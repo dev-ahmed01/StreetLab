@@ -40,7 +40,7 @@ def check(root: Path, strict: bool=True) -> dict:
         is_data=name.startswith("data/")
         if (any(c in FORBIDDEN_TOP or c.startswith(".venv") or c=="__pycache__"
                 for c in components) or suffix in FORBIDDEN_EXT
-            or p.name in {".env",".DS_Store"} or p.name.startswith(".env.")):
+            or p.name in {".env",".DS_Store"} or (p.name.startswith(".env.") and p.name != ".env.example")):
             issues.append("Forbidden tracked local/generated/secret file: "+name)
         if not is_data and (name.endswith(".parquet") or name.endswith(".xlsx")
                             or name.endswith(".csv") and not name.startswith("tests/")):
@@ -54,7 +54,7 @@ def check(root: Path, strict: bool=True) -> dict:
         if n>5_000_000 and not is_data:
             issues.append("Oversized nonresearch tracked asset (>5MB): "+name)
         if n>1_000_000: largest.append((name,n))
-        if (name.startswith(SOURCE_ROOTS) or name.startswith(".github/")) and suffix in SCANNABLE_EXT:
+        if ((name.startswith(SOURCE_ROOTS) or name.startswith(".github/")) and suffix in SCANNABLE_EXT) or p.name == ".env.example":
             if n>5_000_000:
                 continue
             buf=local.read_bytes()
