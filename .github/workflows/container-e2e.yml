@@ -75,7 +75,7 @@ jobs:
             -v streetlab-e2e-state:/app/.streetlab-m5 \
             streetlab:e2e
           for i in $(seq 1 60); do
-            if docker exec streetlab-e2e python scripts/container_healthcheck.py; then break; fi
+            if docker exec streetlab-e2e python scripts/container_healthcheck.py >/dev/null 2>&1; then break; fi
             if [ "$i" -eq 60 ]; then docker logs streetlab-e2e; exit 1; fi
             sleep 2
           done
@@ -85,14 +85,14 @@ jobs:
         run: |
           docker restart streetlab-e2e
           for i in $(seq 1 30); do
-            if docker exec streetlab-e2e python scripts/container_healthcheck.py; then break; fi
+            if docker exec streetlab-e2e python scripts/container_healthcheck.py >/dev/null 2>&1; then break; fi
             if [ "$i" -eq 30 ]; then docker logs streetlab-e2e; exit 1; fi
             sleep 2
           done
           docker exec streetlab-e2e python scripts/container_e2e.py --verify-persisted
       - name: Run genuine native SUMO paired decision experiment inside image
         run: |
-          docker exec streetlab-e2e python -m scripts.phase2_m6_study_demo \
+          docker exec -e STREETLAB_SECURITY_MODE=local -e STREETLAB_ACCESS_PASSWORD= streetlab-e2e python -m scripts.phase2_m6_study_demo \
             --project-root /app --workdir /tmp/streetlab-container-sumo \
             --output /tmp/streetlab-container-sumo-report.json --members 2
           docker exec streetlab-e2e python -c "import json; x=json.load(open('/tmp/streetlab-container-sumo-report.json')); assert x['guardrails']['confidence_fabricated'] is False; print('CONTAINER_NATIVE_SUMO_PASS')"
