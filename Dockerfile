@@ -2,7 +2,7 @@
 FROM python:3.12-slim-bookworm AS base
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_DISABLE_PIP_VERSION_CHECK=1
 WORKDIR /app
-RUN apt-get update && apt-get install -y --no-install-recommends libglib2.0-0 libgl1 libgomp1 ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends libglib2.0-0 libgl1 libgomp1 libxrender1 libx11-6 libxext6 libfontconfig1 libfreetype6 libsm6 libice6 ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY requirements.txt .
 RUN python -m pip install --no-cache-dir -r requirements.txt opencv-python-headless traci sumolib "eclipse-sumo==1.28.0" && \
     sumo --version && netconvert --version
