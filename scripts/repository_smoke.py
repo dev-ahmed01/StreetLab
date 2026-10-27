@@ -78,9 +78,10 @@ def run() -> None:
                     status,body=request(base,path)
                     assert status==409,(path,status,body[:500])
                     detail=json.loads(body)["detail"]
-                    assert isinstance(detail,str) and "unavailable" in detail.lower() or (
-                        path.endswith("may25-audit") and "not been configured" in detail
-                    ),(path,detail)
+                    assert isinstance(detail,str),(path,detail)
+                    expected=("absent or inconsistent" if path.endswith("may25-audit")
+                              else "unavailable or inconsistent")
+                    assert expected in detail.lower(),(path,detail)
                 status,body=request(base,"/api/projects",method="POST",body={"name":"HTTP integration smoke"})
                 assert status==201,(status,body)
                 project=json.loads(body)
