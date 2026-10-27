@@ -4,7 +4,18 @@ This Docker setup runs the real StreetLab web UI, native SUMO, video ingestion,
 SQLite job queue and research evidence viewer. It is an academic software
 prototype, not a field-calibrated traffic signal controller.
 
-## Run on Windows Docker Desktop / WSL2
+## One-command Windows start
+
+With Docker Desktop running, use the new launcher from the repository root:
+
+    .\scripts\STREETLAB_DOCKER.ps1 -Mode Start
+
+It generates a unique private password in .env, creates artifacts/ if needed,
+and starts the local app. Log in as streetlab with the password in .env.
+Use -Mode Status, Logs or Stop to manage it. Extract the separate private
+frozen W04 model pack under private/ before using -WithWorker.
+
+## Manual Docker Compose start on Windows Docker Desktop / WSL2
 
 1. Copy .env.example to .env and replace the placeholder with a unique random
    password of at least 20 printable characters. Keep .env private.
