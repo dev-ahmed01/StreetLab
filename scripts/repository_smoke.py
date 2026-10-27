@@ -69,10 +69,26 @@ def run() -> None:
                 # summaries, while refusing absent private May25 audit and
                 # absent saved native SUMO ZIP (never fabricated demo data).
                 status,body=request(base,"/api/research/summary")
-                assert status==200,("research summary",status,body[:500])
-                summary=json.loads(body)
-                assert summary["production_release_approved"] is False
-                assert summary["chennai"]["holdout_generalization_pass"] is False
+                # Consolidation CI intentionally sparse-checks out no data/;
+                # a full local clone contains the six immutable source files.
+                # Both states must be explicit rather than returning 500 or
+                # quietly showing placeholder research metrics.
+                frozen_sources=(
+                    "data/processed/phase1_final_heldout_validation.json",
+                    "data/benchmarks/fluid_fidrt/manifest.json",
+                    "docs/PHASE3_W04_CONTINUOUS_201_FINAL_QA_20261009.md",
+                    "data/models/sumo_persona_priors.csv",
+                    "data/raw/ChennaiTrajectoryData2.45-3.00PM.xlsx",
+                    "data/raw/ChennaiTrajectoryData3.00-3.15PM.xlsx",
+                )
+                if all((root / rel).is_file() for rel in frozen_sources):
+                    assert status==200,("research summary",status,body[:500])
+                    summary=json.loads(body)
+                    assert summary["production_release_approved"] is False
+                    assert summary["chennai"]["holdout_generalization_pass"] is False
+                else:
+                    assert status==409,("missing research source",status,body[:500])
+                    assert "unavailable or inconsistent" in json.loads(body)["detail"]
                 for path in ("/api/research/may25-audit",
                              "/api/research/simulation"):
                     status,body=request(base,path)
