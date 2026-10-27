@@ -44,6 +44,10 @@ def run() -> None:
             env["PYTHONPATH"]=str(root)
             env["STREETLAB_SECURITY_MODE"]="local"
             env.pop("STREETLAB_ACCESS_PASSWORD",None)
+            # The clean-checkout smoke must not inherit private research
+            # paths or accidentally turn a developer audit into CI proof.
+            env["STREETLAB_MAY25_AUDIT_PATH"]=str(Path(td)/"missing_original_audit.json")
+            env["STREETLAB_RESEARCH_BUNDLE_PATH"]=str(Path(td)/"missing_native_sumo.zip")
             proc=subprocess.Popen(
                 [sys.executable,"-m","uvicorn","streetlab_phase2.api:app",
                  "--host","127.0.0.1","--port",str(port),"--no-access-log"],
@@ -58,9 +62,42 @@ def run() -> None:
                         time.sleep(.1)
                 else: raise RuntimeError("Timed out waiting for local Uvicorn")
                 for page in ("/","/reports","/release","/fieldwork","/calibration",
-                             "/baseline","/scenarios"):
+                             "/baseline","/scenarios","/research"):
                     status,_=request(base,page)
                     assert status==200,(page,status)
+                # A clean checkout must expose real frozen research source
+                # summaries, while refusing absent private May25 audit and
+                # absent saved native SUMO ZIP (never fabricated demo data).
+                status,body=request(base,"/api/research/summary")
+                # Consolidation CI intentionally sparse-checks out no data/;
+                # a full local clone contains the six immutable source files.
+                # Both states must be explicit rather than returning 500 or
+                # quietly showing placeholder research metrics.
+                frozen_sources=(
+                    "data/processed/phase1_final_heldout_validation.json",
+                    "data/benchmarks/fluid_fidrt/manifest.json",
+                    "docs/PHASE3_W04_CONTINUOUS_201_FINAL_QA_20261009.md",
+                    "data/models/sumo_persona_priors.csv",
+                    "data/raw/ChennaiTrajectoryData2.45-3.00PM.xlsx",
+                    "data/raw/ChennaiTrajectoryData3.00-3.15PM.xlsx",
+                )
+                if all((root / rel).is_file() for rel in frozen_sources):
+                    assert status==200,("research summary",status,body[:500])
+                    summary=json.loads(body)
+                    assert summary["production_release_approved"] is False
+                    assert summary["chennai"]["holdout_generalization_pass"] is False
+                else:
+                    assert status==409,("missing research source",status,body[:500])
+                    assert "unavailable or inconsistent" in json.loads(body)["detail"]
+                for path in ("/api/research/may25-audit",
+                             "/api/research/simulation"):
+                    status,body=request(base,path)
+                    assert status==409,(path,status,body[:500])
+                    detail=json.loads(body)["detail"]
+                    assert isinstance(detail,str),(path,detail)
+                    expected=("absent or inconsistent" if path.endswith("may25-audit")
+                              else "unavailable or inconsistent")
+                    assert expected in detail.lower(),(path,detail)
                 status,body=request(base,"/api/projects",method="POST",body={"name":"HTTP integration smoke"})
                 assert status==201,(status,body)
                 project=json.loads(body)
@@ -81,7 +118,7 @@ def run() -> None:
                 status,_=request(base,"/api/projects/not-a-uuid/fieldwork-plan")
                 assert status in {404,409},("Malformed project should not expose internals",status)
                 assert (Path(td)/".streetlab-m5"/"video_jobs.sqlite3").is_file()
-                print("Black-box real HTTP: PASS (pages, create/query project, evidence gates, localhost guard, SQLite durability)")
+                print("Black-box real HTTP: PASS (pages, research source/fail-closed gates, create/query project, localhost guard, SQLite durability)")
             finally:
                 proc.terminate()
                 try:proc.wait(timeout=8)
