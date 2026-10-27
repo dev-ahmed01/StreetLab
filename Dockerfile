@@ -5,9 +5,6 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends libglib2.0-0 libgl1 libgomp1 ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY requirements.txt .
 RUN python -m pip install --no-cache-dir -r requirements.txt opencv-python-headless traci sumolib "eclipse-sumo==1.28.0" && \
-    SUMO_DIR="$(python -c 'import sumo; print(sumo.SUMO_HOME)')" && \
-    ln -s "$SUMO_DIR/bin/sumo" /usr/local/bin/sumo && \
-    ln -s "$SUMO_DIR/bin/netconvert" /usr/local/bin/netconvert && \
     sumo --version && netconvert --version
 COPY . /app
 RUN useradd -u 10001 -m -s /usr/sbin/nologin streetlab && \
